@@ -107,39 +107,42 @@ d=json.load(sys.stdin); print(d["status"], d.get("conclusion") or "-")')
 # The ops workflow and the deploy job both post their transcript to an issue,
 # because Actions log downloads come from a storage host that a locked-down
 # network usually cannot reach.
+#
+# Note the endpoint: the *repository* comments list, filtered down, rather than
+# the per-issue one. `/issues/{n}/comments` accepts no sort parameter and
+# returns oldest first, so asking it for one comment hands you the first
+# transcript ever posted, for ever. That looks like a stale result rather than
+# a bug, which is exactly how it got missed the first time.
 ops_issue_number() {
-	[[ -n "${OPS_ISSUE:-}" ]] && { printf '%s' "$OPS_ISSUE"; return 0; }
-	OPS_ISSUE="$(gh_api GET "/repos/$REPO/issues?state=all&per_page=100" |
+	gh_api GET "/repos/$REPO/issues?state=all&per_page=100" |
 		python3 -c '
 import json,sys
 for i in json.load(sys.stdin):
     if i["title"].strip().lower()=="ops log" and "pull_request" not in i:
-        print(i["number"]); break')"
-	[[ -n "$OPS_ISSUE" ]] || return 1
-	printf '%s' "$OPS_ISSUE"
+        print(i["number"]); break'
 }
 
-# Prints the newest comment. With an argument, prints nothing unless a comment
-# newer than that id exists — otherwise a run that has not posted yet reads as
-# the previous run's output, which is worse than no output at all.
-latest_ops_comment() {
-	local after="${1:-0}" issue
-	issue="$(ops_issue_number)" || return 1
-	gh_api GET "/repos/$REPO/issues/$issue/comments?per_page=1&sort=created&direction=desc" |
+# _ops_comment FIELD [after-id] — newest comment on the ops issue.
+# With an after-id, prints nothing unless a newer one exists: a run that has
+# not posted yet must read as "no output", never as the previous run's output.
+_ops_comment() {
+	local field="$1" after="${2:-0}" issue
+	issue="$(ops_issue_number)"
+	[[ -n "$issue" ]] || { [[ "$field" == "id" ]] && printf '0'; return 0; }
+	gh_api GET "/repos/$REPO/issues/comments?sort=created&direction=desc&per_page=20" |
 		python3 -c '
 import json,sys
-after=int(sys.argv[1])
-c=json.load(sys.stdin)
-if c and c[0]["id"]>after:
-    print(c[0]["body"])' "$after"
+field, issue, after = sys.argv[1], sys.argv[2], int(sys.argv[3])
+for c in json.load(sys.stdin):
+    if c["issue_url"].rsplit("/", 1)[-1] != issue:
+        continue
+    if c["id"] > after:
+        print(c["id"] if field == "id" else c["body"])
+    break
+else:
+    if field == "id":
+        print(0)' "$field" "$issue" "$after"
 }
 
-latest_ops_comment_id() {
-	local issue
-	issue="$(ops_issue_number)" || { printf '0'; return 0; }
-	gh_api GET "/repos/$REPO/issues/$issue/comments?per_page=1&sort=created&direction=desc" |
-		python3 -c '
-import json,sys
-c=json.load(sys.stdin)
-print(c[0]["id"] if c else 0)'
-}
+latest_ops_comment() { _ops_comment body "${1:-0}"; }
+latest_ops_comment_id() { _ops_comment id 0; }
