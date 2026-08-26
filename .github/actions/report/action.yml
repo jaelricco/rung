@@ -1,0 +1,54 @@
+name: Report to the ops log
+description: >
+  Posts a transcript as a comment on the issue titled "ops log". Actions log
+  downloads are served from a storage host that restricted networks routinely
+  block, while the issues API is plain api.github.com — so this is what makes a
+  run's output readable from a sandbox, a phone, or an agent.
+
+inputs:
+  title:
+    required: true
+  file:
+    description: Path to the transcript. A missing file is reported as such rather than failing.
+    required: true
+  outcome:
+    required: false
+    default: ""
+  token:
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        TITLE: ${{ inputs.title }}
+        FILE: ${{ inputs.file }}
+        OUTCOME: ${{ inputs.outcome }}
+        RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      run: |
+        set -euo pipefail
+        [ -f "$FILE" ] || echo "(no output was captured)" > "$FILE"
+        # Comments cap at 65536 characters. Keep the tail: that is where the
+        # error is.
+        tail -c 60000 "$FILE" > /tmp/report-trimmed.txt
+
+        number=$(gh issue list --state all --search 'ops log in:title' --limit 1 \
+                   --json number --jq '.[0].number // empty')
+        if [ -z "$number" ]; then
+          url=$(gh issue create --title "ops log" \
+            --body "Transcripts from deploys, failed builds and \`ops\` runs are posted here.")
+          number=${url##*/}
+        fi
+
+        {
+          printf '### %s%s\n\n' "$TITLE" "${OUTCOME:+ — $OUTCOME}"
+          printf 'run: %s\n\n' "$RUN_URL"
+          printf '```\n'
+          cat /tmp/report-trimmed.txt
+          printf '\n```\n'
+        } > /tmp/report-comment.md
+
+        gh issue comment "$number" --body-file /tmp/report-comment.md
+        cat /tmp/report-comment.md >> "$GITHUB_STEP_SUMMARY"

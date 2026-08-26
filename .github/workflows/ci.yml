@@ -28,46 +28,75 @@ jobs:
   backend:
     name: Go build
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
           go-version: "1.24"
           cache-dependency-path: backend/go.sum
-      - name: Verify dependencies are pinned
+      - name: Build, vet and test
         working-directory: backend
-        # go.sum is committed now, so a build must not need to resolve
-        # anything. If this fails, someone added an import without running
-        # `go mod tidy`.
-        run: go mod download && go mod verify
-      - name: Build
-        working-directory: backend
-        run: go build -v ./...
-      - name: Vet
-        working-directory: backend
-        run: go vet ./...
-      - name: Test
-        working-directory: backend
-        run: go test ./...
+        # One step, teed to a file. The failure report below reads that file:
+        # a sandbox with no route to the log storage host cannot read an
+        # Actions log, so the transcript has to travel through the API.
+        #
+        # `go mod verify` rather than `go mod tidy`: go.sum and the indirect
+        # requirements are committed, so a build resolves nothing. If this
+        # fails, an import was added without running `go mod tidy`.
+        run: |
+          set -o pipefail
+          {
+            echo "== go mod download && verify"; go mod download && go mod verify
+            echo "== go build";                  go build -v ./...
+            echo "== go vet";                    go vet ./...
+            echo "== go test";                   go test ./...
+          } 2>&1 | tee "$RUNNER_TEMP/backend.log"
+
+      - name: Report the failure
+        if: failure()
+        uses: ./.github/actions/report
+        with:
+          title: "go build failed"
+          file: ${{ runner.temp }}/backend.log
+          token: ${{ github.token }}
 
   frontend:
     name: SvelteKit build
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - name: Install
+      - name: Install and build
         working-directory: frontend
-        run: npm install --no-audit --no-fund
-      - name: Build
-        working-directory: frontend
-        run: npm run build
+        run: |
+          set -o pipefail
+          {
+            npm install --no-audit --no-fund
+            npm run build
+          } 2>&1 | tee "$RUNNER_TEMP/frontend.log"
+
+      - name: Report the failure
+        if: failure()
+        uses: ./.github/actions/report
+        with:
+          title: "svelte build failed"
+          file: ${{ runner.temp }}/frontend.log
+          token: ${{ github.token }}
 
   compose:
     name: Compose config
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
     steps:
       - uses: actions/checkout@v4
       - name: Validate compose.yaml
@@ -80,8 +109,18 @@ jobs:
           docker compose -f compose.yaml -f compose.build.yaml config --quiet
       - name: Shellcheck the deploy scripts
         run: |
+          set -o pipefail
           sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
-          shellcheck -S warning infra/*.sh bin/deploy bin/ops bin/lib.sh
+          shellcheck -S warning infra/*.sh bin/deploy bin/ops bin/lib.sh 2>&1 \
+            | tee "$RUNNER_TEMP/compose.log"
+
+      - name: Report the failure
+        if: failure()
+        uses: ./.github/actions/report
+        with:
+          title: "compose or shellcheck failed"
+          file: ${{ runner.temp }}/compose.log
+          token: ${{ github.token }}
 
   images:
     name: Build and push images
@@ -217,32 +256,9 @@ jobs:
 
       - name: Report
         if: always() && steps.check.outputs.configured == 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          TAG: ${{ needs.images.outputs.tag }}
-          RESULT: ${{ steps.remote.outcome }}
-          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-        run: |
-          # Same reasoning as the ops workflow: the deploy transcript has to be
-          # readable over the plain API, not only from the log storage host.
-          out=/tmp/remote-output.txt
-          [ -f "$out" ] || echo "(the deploy step produced no output)" > "$out"
-          tail -c 60000 "$out" > /tmp/trimmed.txt
-          number=$(gh issue list --state all --search 'ops log in:title' --limit 1 \
-                     --json number --jq '.[0].number // empty')
-          if [ -z "$number" ]; then
-            url=$(gh issue create --title "ops log" \
-              --body "Output from every deploy and \`ops\` run is posted here.")
-            number=${url##*/}
-          fi
-          {
-            echo "### deploy \`$TAG\` — $RESULT"
-            echo
-            echo "run: $RUN_URL"
-            echo
-            echo '```'
-            cat /tmp/trimmed.txt
-            echo '```'
-          } > /tmp/comment.md
-          gh issue comment "$number" --body-file /tmp/comment.md
-          cat /tmp/comment.md >> "$GITHUB_STEP_SUMMARY"
+        uses: ./.github/actions/report
+        with:
+          title: "deploy `${{ needs.images.outputs.tag }}`"
+          outcome: ${{ steps.remote.outcome }}
+          file: /tmp/remote-output.txt
+          token: ${{ github.token }}

@@ -143,39 +143,9 @@ jobs:
 
       - name: Report
         if: always()
-        env:
-          GH_TOKEN: ${{ github.token }}
-          ACTION: ${{ inputs.action }}
-          RESULT: ${{ steps.remote.outcome }}
-          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-        run: |
-          # Actions log downloads are served from a storage host that a
-          # restricted network often can't reach. An issue comment comes back
-          # over the plain API, so `bin/ops` can read the result from anywhere
-          # the GitHub API is reachable — and it doubles as an audit trail.
-          out=/tmp/remote-output.txt
-          [ -f "$out" ] || echo "(the remote step produced no output)" > "$out"
-          # Comments cap at 65536 characters; keep the tail, which is where
-          # errors are.
-          tail -c 60000 "$out" > /tmp/trimmed.txt
-
-          number=$(gh issue list --state all --search 'ops log in:title' --limit 1 \
-                     --json number --jq '.[0].number // empty')
-          if [ -z "$number" ]; then
-            url=$(gh issue create --title "ops log" \
-              --body "Output from every \`ops\` workflow run is posted here. Closing the issue is fine; the workflow reuses it either way.")
-            number=${url##*/}
-          fi
-
-          {
-            echo "### \`$ACTION\` — $RESULT"
-            echo
-            echo "run: $RUN_URL"
-            echo
-            echo '```'
-            cat /tmp/trimmed.txt
-            echo '```'
-          } > /tmp/comment.md
-
-          gh issue comment "$number" --body-file /tmp/comment.md
-          cat /tmp/comment.md >> "$GITHUB_STEP_SUMMARY"
+        uses: ./.github/actions/report
+        with:
+          title: "`${{ inputs.action }}`"
+          outcome: ${{ steps.remote.outcome }}
+          file: /tmp/remote-output.txt
+          token: ${{ github.token }}
