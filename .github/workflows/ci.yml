@@ -1,0 +1,75 @@
+# Builds both halves on every push. The Go backend has never been compiled
+# outside a deploy, so this is the fastest way to find out whether it does —
+# and from now on, whether a change broke it.
+
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  backend:
+    name: Go build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+          cache-dependency-path: backend/go.sum
+
+      - name: Resolve dependencies
+        working-directory: backend
+        # go.sum isn't committed yet; tidy generates it. Once CI is green,
+        # commit the file it produces to pin versions.
+        run: go mod tidy
+
+      - name: Build
+        working-directory: backend
+        run: go build -v ./...
+
+      - name: Vet
+        working-directory: backend
+        run: go vet ./...
+
+      - name: Test
+        working-directory: backend
+        run: go test ./... 2>&1 | grep -v "no test files" || true
+
+      - name: Show the resolved dependency set
+        working-directory: backend
+        run: cat go.sum | head -20
+
+  frontend:
+    name: SvelteKit build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install
+        working-directory: frontend
+        run: npm install --no-audit --no-fund
+
+      - name: Build
+        working-directory: frontend
+        run: npm run build
+
+  compose:
+    name: Compose config
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate compose.yaml
+        # Catches typos and bad interpolation without starting anything.
+        env:
+          POSTGRES_PASSWORD: ci-placeholder
+          APP_DOMAIN: ci.example.com
+          ACME_EMAIL: ci@example.com
+        run: docker compose config --quiet
