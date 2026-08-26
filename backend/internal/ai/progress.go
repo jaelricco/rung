@@ -19,6 +19,10 @@ type Progress struct {
 	Detail  string `json:"detail,omitempty"`
 	Done    int    `json:"done,omitempty"`
 	Total   int    `json:"total,omitempty"`
+	// Indeterminate marks the one phase that cannot report a fraction of
+	// itself: web search is a single request that says nothing until it
+	// returns. The browser sweeps the bar rather than inventing a number.
+	Indeterminate bool `json:"indeterminate,omitempty"`
 }
 
 // progressSink writes Progress to an SSE stream. A nil stream makes every
@@ -48,11 +52,14 @@ func (p *progressSink) report(u Progress) {
 
 // ---------- trackers: deltas in, Progress out ----------
 
-// Reasoning happens before any answer text, so it owns the first slice of the
-// bar. The spans below are where each phase starts and ends.
+// The phases run in order and each owns a slice of the bar: research, then
+// reasoning, then writing. Research cannot report a fraction of itself, so it
+// holds at its floor and sweeps; the two after it are measured.
 const (
-	thinkingFloor   = 6
-	thinkingCeiling = 22
+	researchFloor   = 4
+	researchCeiling = 12
+	thinkingFloor   = 13
+	thinkingCeiling = 26
 	writingCeiling  = 92
 	// How much reasoning counts as "a lot", in characters of summary.
 	thinkingFull = 5000

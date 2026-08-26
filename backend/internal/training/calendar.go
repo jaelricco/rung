@@ -147,6 +147,87 @@ func (s *Service) CompleteSession(w http.ResponseWriter, r *http.Request) {
 	httpx.JSON(w, http.StatusOK, map[string]string{"status": "completed"})
 }
 
+// UncompleteSession undoes a tick. A calendar you cannot correct is one people
+// stop trusting after the first misclick.
+func (s *Service) UncompleteSession(w http.ResponseWriter, r *http.Request) {
+	me := auth.MustUser(r.Context())
+	tag, err := s.pool.Exec(r.Context(), `
+		update planned_sessions set completed_at = null, workout_id = null
+		where id = $1 and user_id = $2`, r.PathValue("id"), me.ID)
+	if err != nil {
+		httpx.Fail(w, http.StatusInternalServerError, "Couldn't update that session.")
+		return
+	}
+	if tag.RowsAffected() == 0 {
+		httpx.Fail(w, http.StatusNotFound, "That planned session doesn't exist.")
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]string{"status": "scheduled"})
+}
+
+// PlanSummary is a saved plan as the calendar lists it: enough to recognise it
+// and to see how far through it the athlete is.
+type PlanSummary struct {
+	ID        string    `json:"id"`
+	Title     string    `json:"title"`
+	Goal      string    `json:"goal"`
+	StartsOn  string    `json:"starts_on"`
+	EndsOn    *string   `json:"ends_on"`
+	Weeks     int       `json:"weeks"`
+	Sessions  int       `json:"sessions"`
+	Completed int       `json:"completed"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+// ListPlans returns the athlete's saved plans, newest first.
+func (s *Service) ListPlans(w http.ResponseWriter, r *http.Request) {
+	me := auth.MustUser(r.Context())
+	rows, err := s.pool.Query(r.Context(), `
+		select p.id, p.title, p.goal, to_char(p.starts_on, 'YYYY-MM-DD'), p.weeks, p.created_at,
+		       count(ps.id), count(ps.completed_at), to_char(max(ps.scheduled_on), 'YYYY-MM-DD')
+		from plans p
+		left join planned_sessions ps on ps.plan_id = p.id
+		where p.user_id = $1
+		group by p.id
+		order by p.created_at desc
+		limit 50`, me.ID)
+	if err != nil {
+		httpx.Fail(w, http.StatusInternalServerError, "Couldn't load your plans.")
+		return
+	}
+	defer rows.Close()
+
+	out := []PlanSummary{}
+	for rows.Next() {
+		var p PlanSummary
+		if err := rows.Scan(&p.ID, &p.Title, &p.Goal, &p.StartsOn, &p.Weeks, &p.CreatedAt,
+			&p.Sessions, &p.Completed, &p.EndsOn); err != nil {
+			httpx.Fail(w, http.StatusInternalServerError, "Couldn't read your plans.")
+			return
+		}
+		out = append(out, p)
+	}
+	httpx.JSON(w, http.StatusOK, out)
+}
+
+// DeletePlan removes a plan and, with it, every session it put on the
+// calendar. Sessions already logged as workouts are untouched: the workout is
+// what happened, the planned session was only the intention.
+func (s *Service) DeletePlan(w http.ResponseWriter, r *http.Request) {
+	me := auth.MustUser(r.Context())
+	tag, err := s.pool.Exec(r.Context(),
+		`delete from plans where id = $1 and user_id = $2`, r.PathValue("id"), me.ID)
+	if err != nil {
+		httpx.Fail(w, http.StatusInternalServerError, "Couldn't remove that plan.")
+		return
+	}
+	if tag.RowsAffected() == 0 {
+		httpx.Fail(w, http.StatusNotFound, "That plan doesn't exist.")
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]string{"status": "deleted"})
+}
+
 // CalendarICS exports the calendar so it can be subscribed to from a phone.
 func (s *Service) CalendarICS(w http.ResponseWriter, r *http.Request) {
 	me := auth.MustUser(r.Context())

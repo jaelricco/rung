@@ -25,7 +25,10 @@ func Load() Config {
 		DatabaseURL:       os.Getenv("DATABASE_URL"),
 		Addr:              envOr("API_ADDR", ":8080"),
 		AnthropicKey:      os.Getenv("ANTHROPIC_API_KEY"),
-		AnthropicModel:    envOr("ANTHROPIC_MODEL", "claude-sonnet-5"),
+		// Opus by default: plan writing is the app's hardest call — a ladder
+		// of progressions weighed against one athlete's records — and it is
+		// where the difference between model tiers actually shows up.
+		AnthropicModel:    envOr("ANTHROPIC_MODEL", "claude-opus-5"),
 		AnthropicThinking: envOr("ANTHROPIC_THINKING", "adaptive"),
 		SearchToolVersion: envOr("WEB_SEARCH_TOOL_VERSION", "web_search_20250305"),
 		AppOrigin:         os.Getenv("APP_ORIGIN"),

@@ -52,7 +52,7 @@ func TestPlanTokensCoversReasoningAndCaps(t *testing.T) {
 	if got := planTokens(24); got <= 8000 {
 		t.Fatalf("an 8-week plan got %d tokens, too tight for reasoning plus answer", got)
 	}
-	if got := planTokens(168); got != 48000 {
-		t.Fatalf("the ceiling should cap at 48000, got %d", got)
+	if got := planTokens(168); got != 64000 {
+		t.Fatalf("the ceiling should cap at 64000, got %d", got)
 	}
 }

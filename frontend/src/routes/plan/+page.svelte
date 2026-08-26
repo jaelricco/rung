@@ -1,24 +1,31 @@
 <script>
 	import { api } from '$lib/api.js';
 	import AiProgress from '$lib/AiProgress.svelte';
+	import SessionDetail from '$lib/SessionDetail.svelte';
+	import { weekSlots, sessionShape, isoDate, mondayOf } from '$lib/week.js';
 
 	let skill = $state('');
 	let weeks = $state(8);
 	let daysPerWeek = $state(3);
 	let notes = $state('');
-	let save = $state(true);
+	let research = $state(true);
+	let startsOn = $state(isoDate(mondayOf(new Date())));
 
 	let plan = $state(null);
-	let saved = $state(false);
+	let warnings = $state([]);
 	let error = $state('');
 	let busy = $state(false);
 	let progress = $state(null);
 
-	const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+	let savedPlanId = $state('');
+	let saving = $state(false);
+	let saveError = $state('');
 
 	async function generate() {
 		error = '';
 		plan = null;
+		warnings = [];
+		savedPlanId = '';
 		busy = true;
 		progress = { label: 'Starting', percent: 0 };
 		try {
@@ -28,13 +35,15 @@
 					skill,
 					weeks: Number(weeks),
 					days_per_week: Number(daysPerWeek),
+					starts_on: startsOn,
 					notes,
-					save
+					no_research: !research,
+					save: false
 				},
 				(update) => (progress = update)
 			);
 			plan = result.plan;
-			saved = result.saved;
+			warnings = result.warnings ?? [];
 		} catch (e) {
 			error = e.message;
 		} finally {
@@ -43,19 +52,59 @@
 		}
 	}
 
-	let byWeek = $derived(
-		(plan?.sessions ?? []).reduce((acc, s) => {
-			(acc[s.week] ??= []).push(s);
-			return acc;
-		}, {})
-	);
+	// Generating and scheduling are separate on purpose: a plan is worth
+	// reading before it becomes eight weeks of appointments.
+	async function addToCalendar() {
+		saving = true;
+		saveError = '';
+		try {
+			const result = await api.post('/plans', { plan, goal: skill, starts_on: startsOn });
+			savedPlanId = result.plan_id;
+		} catch (e) {
+			saveError = e.message;
+		} finally {
+			saving = false;
+		}
+	}
+
+	// The plan arrives as a flat list of sessions; the week is the unit people
+	// actually read it in.
+	let byWeek = $derived.by(() => {
+		const sessions = plan?.sessions ?? [];
+		const weeksInPlan = [...new Set(sessions.map((s) => s.week))].sort((a, b) => a - b);
+		return weeksInPlan.map((week) => {
+			const inWeek = sessions.filter((s) => s.week === week);
+			return {
+				week,
+				slots: weekSlots(inWeek, (s) => s.day_of_week),
+				sessions: inWeek.length,
+				sets: inWeek.reduce(
+					(total, s) => total + (s.blocks ?? []).reduce((n, b) => n + (Number(b.sets) || 0), 0),
+					0
+				),
+				deload: inWeek.some((s) => (s.load ?? '').toLowerCase() === 'deload'),
+				phase: (plan?.phases ?? []).find((p) => phaseCovers(p, week))
+			};
+		});
+	});
+
+	// Phases name their span as "1-3" or "4", which is the only place the
+	// week-to-phase mapping exists.
+	function phaseCovers(phase, week) {
+		const [from, to] = String(phase?.weeks ?? '')
+			.split(/[^0-9]+/)
+			.filter(Boolean)
+			.map(Number);
+		if (!from) return false;
+		return week >= from && week <= (to ?? from);
+	}
 </script>
 
 <p class="eyebrow" style="margin-top:2rem">Programming</p>
 <h1>Build a plan</h1>
-<p class="muted" style="margin-top:0.6rem;max-width:52ch">
-	The plan is written against your logged records and any open injury, using only exercises in the
-	library.
+<p class="muted" style="margin-top:0.6rem;max-width:56ch">
+	The coach researches how the skill is actually trained, then writes against your logged records
+	and any open injury, using only exercises in the library.
 </p>
 <div class="bar"></div>
 
@@ -72,6 +121,10 @@
 		<label for="days">Days per week</label>
 		<input id="days" type="number" min="1" max="7" bind:value={daysPerWeek} />
 	</div>
+	<div>
+		<label for="starts">Starts on</label>
+		<input id="starts" type="date" bind:value={startsOn} />
+	</div>
 </div>
 
 <div class="field" style="margin-top:0.6rem">
@@ -80,8 +133,8 @@
 </div>
 
 <label style="display:flex;align-items:center;gap:0.5rem;text-transform:none;letter-spacing:0">
-	<input type="checkbox" bind:checked={save} style="width:auto" />
-	Add the sessions to my calendar
+	<input type="checkbox" bind:checked={research} style="width:auto" />
+	Research the skill first. Slower, and the plan knows what the ladder to it looks like.
 </label>
 
 {#if error}
@@ -94,9 +147,11 @@
 
 {#if busy && progress}
 	<div style="margin-top:1rem">
+		<!-- Research is a single web-search request that reports nothing until it
+		     returns, so the bar sweeps rather than inventing a percentage. -->
 		<AiProgress
 			label={progress.label}
-			percent={progress.percent}
+			percent={progress.indeterminate ? null : progress.percent}
 			detail={progress.detail}
 			done={progress.done}
 			total={progress.total}
@@ -109,6 +164,25 @@
 	<h2>{plan.title}</h2>
 	<p class="prose" style="margin-top:0.6rem">{plan.summary}</p>
 
+	<div class="row" style="margin-top:1rem;align-items:center">
+		{#if savedPlanId}
+			<p class="muted" style="margin:0;flex:1 1 auto">
+				On your calendar from {startsOn}. <a href="/calendar">Open the calendar</a>.
+			</p>
+		{:else}
+			<button style="flex:0 0 auto" onclick={addToCalendar} disabled={saving}>
+				{saving ? 'Adding' : 'Add to my calendar'}
+			</button>
+			<p class="muted" style="margin:0;font-size:0.85rem;flex:1 1 200px">
+				Schedules every session from {startsOn}.
+			</p>
+		{/if}
+	</div>
+
+	{#if saveError}
+		<div class="notice error" style="margin-top:0.7rem">{saveError}</div>
+	{/if}
+
 	{#if plan.restrictions?.length}
 		<div class="notice" style="margin-top:0.9rem">
 			<strong>Adjusted for:</strong>
@@ -120,48 +194,143 @@
 		</div>
 	{/if}
 
-	{#if saved}
-		<p class="muted" style="font-size:0.85rem;margin-top:0.7rem">Added to your calendar.</p>
+	{#if warnings.length}
+		<div class="notice error" style="margin-top:0.7rem">
+			<strong>Trimmed before you saw it:</strong>
+			<ul style="margin:0.4rem 0 0;padding-left:1.1rem">
+				{#each warnings as warning}
+					<li>{warning}</li>
+				{/each}
+			</ul>
+		</div>
 	{/if}
 
-	{#each Object.entries(byWeek) as [week, sessions] (week)}
-		<div class="bar"></div>
-		<p class="eyebrow">Week {week}</p>
-		<div style="display:grid;gap:0.7rem;margin-top:0.6rem">
-			{#each sessions as session}
+	{#if plan.phases?.length || plan.progression_rules?.length || plan.test}
+		<div class="grid" style="margin-top:1rem">
+			{#each plan.phases ?? [] as phase (phase.weeks)}
 				<div class="panel">
-					<p class="eyebrow">{DAYS[(session.day_of_week ?? 1) - 1] ?? '—'}</p>
-					<p style="font-weight:600;margin:0.15rem 0 0.1rem">{session.title}</p>
-					<p class="muted" style="font-size:0.85rem;margin:0 0 0.6rem">{session.focus}</p>
-
-					{#if session.warmup_protocols?.length}
-						<p class="mono muted" style="font-size:0.78rem;margin:0 0 0.5rem">
-							Warm-up: {session.warmup_protocols.join(', ')}
-						</p>
-					{/if}
-
-					<table>
-						<tbody>
-							{#each session.blocks ?? [] as block}
-								<tr>
-									<td style="width:38%">{block.exercise_slug}</td>
-									<td class="mono">{block.sets} × {block.prescription}</td>
-									<td class="mono muted" style="width:22%">
-										{block.rest_seconds ? `${block.rest_seconds}s rest` : ''}
-									</td>
-								</tr>
-								{#if block.notes}
-									<tr>
-										<td colspan="3" class="muted" style="font-size:0.82rem;padding-top:0">
-											{block.notes}
-										</td>
-									</tr>
-								{/if}
-							{/each}
-						</tbody>
-					</table>
+					<p class="eyebrow">Weeks {phase.weeks}</p>
+					<p style="font-weight:600;margin:0.2rem 0 0.2rem">{phase.name}</p>
+					<p class="muted" style="font-size:0.85rem;margin:0">{phase.aim}</p>
 				</div>
 			{/each}
 		</div>
+
+		{#if plan.progression_rules?.length}
+			<p class="eyebrow" style="margin-top:1.2rem">How the load moves</p>
+			<ul class="muted" style="margin:0.3rem 0 0;padding-left:1.1rem;font-size:0.9rem">
+				{#each plan.progression_rules as rule}
+					<li>{rule}</li>
+				{/each}
+			</ul>
+		{/if}
+
+		{#if plan.test}
+			<p class="eyebrow" style="margin-top:1.2rem">The test</p>
+			<p style="margin:0.2rem 0 0;font-size:0.92rem">{plan.test}</p>
+		{/if}
+	{/if}
+
+	{#each byWeek as week (week.week)}
+		<div class="bar"></div>
+		<p class="eyebrow">
+			Week {week.week}{#if week.phase}{' · '}{week.phase.name}{/if}
+		</p>
+
+		<!-- Four rows of two: Monday and Tuesday, then a break, and so on. -->
+		<div class="week-grid">
+			{#each week.slots as slot (slot.day)}
+				<!-- One square per day, whatever it holds: two sessions on a Tuesday
+				     stack inside the square rather than pushing the grid out of shape. -->
+				<div class="panel day" class:rest={!slot.items.length}>
+					<div class="day-head">
+						<p class="eyebrow" style="margin:0">{slot.name}</p>
+						{#if slot.items[0]?.load}
+							<span
+								class="chip"
+								class:hard={slot.items[0].load === 'hard'}
+								class:deload={slot.items[0].load === 'deload'}>{slot.items[0].load}</span
+							>
+						{/if}
+					</div>
+
+					{#if slot.items.length}
+						{#each slot.items as session, i (i)}
+							<div style="margin-top:0.15rem">
+								<p style="font-weight:600;margin:0 0 0.1rem">{session.title}</p>
+								<p class="muted" style="font-size:0.85rem;margin:0">{session.focus}</p>
+								<p class="mono muted" style="font-size:0.74rem;margin:0.35rem 0 0">
+									{sessionShape(session)}{#if session.duration_minutes}{` · ${session.duration_minutes} min`}{/if}
+								</p>
+								<details style="margin-top:0.5rem">
+									<summary class="eyebrow" style="cursor:pointer">The session</summary>
+									<div style="margin-top:0.5rem">
+										<SessionDetail {session} />
+									</div>
+								</details>
+							</div>
+						{/each}
+					{:else}
+						<p class="muted" style="margin:0.1rem 0 0;font-size:0.85rem">Rest</p>
+					{/if}
+				</div>
+			{/each}
+
+			<!-- The eighth square: what the week adds up to. -->
+			<div class="panel day summary">
+				<p class="eyebrow" style="margin:0">Week {week.week}</p>
+				<p class="stat" style="margin:0.1rem 0 0;font-size:1.15rem">
+					{week.sessions} sessions · {week.sets} sets
+				</p>
+				{#if week.deload}
+					<p class="muted" style="font-size:0.82rem;margin:0.35rem 0 0">
+						Lighter week. Volume drops, intensity holds.
+					</p>
+				{:else if week.phase}
+					<p class="muted" style="font-size:0.82rem;margin:0.35rem 0 0">{week.phase.aim}</p>
+				{/if}
+			</div>
+		</div>
 	{/each}
+
+	{#if plan.research}
+		<div class="bar"></div>
+		<h2>What the coach read</h2>
+		<p class="muted" style="font-size:0.88rem;margin:0.3rem 0 0.8rem">
+			{plan.research.searches_used} searches{#if plan.research.cached}, reused from earlier
+				research{/if}. The plan was written against these.
+		</p>
+		{#if plan.research.summary}
+			<p class="prose panel">{plan.research.summary}</p>
+		{/if}
+		{#if plan.research.progression?.length}
+			<p class="eyebrow" style="margin-top:1rem">The ladder</p>
+			<table style="margin-top:0.4rem">
+				<thead>
+					<tr><th>Rung</th><th>Exercises</th><th>Hold to</th></tr>
+				</thead>
+				<tbody>
+					{#each plan.research.progression as stage, i (i)}
+						<tr>
+							<td>{stage.stage}</td>
+							<td class="mono muted">{(stage.exercise_slugs ?? []).join(', ')}</td>
+							<td>{stage.standard}</td>
+						</tr>
+					{/each}
+				</tbody>
+			</table>
+		{/if}
+		{#if plan.research.sources?.length}
+			<p class="eyebrow" style="margin-top:1rem">Sources</p>
+			<ul style="margin:0.3rem 0 0;padding-left:1.1rem;font-size:0.88rem">
+				{#each plan.research.sources as source (source.url)}
+					<li>
+						<a href={source.url} target="_blank" rel="noreferrer noopener"
+							>{source.title || source.url}</a
+						>
+					</li>
+				{/each}
+			</ul>
+		{/if}
+	{/if}
 {/if}

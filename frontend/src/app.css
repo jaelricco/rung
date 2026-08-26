@@ -170,6 +170,74 @@ h2 {
 	grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
 }
 
+/* --- the training week: four rows of two, Monday first, the way a week is
+   read off a wall. The eighth square carries the week's own summary, so the
+   block is a complete rectangle rather than a row with a gap in it. --- */
+.week-grid {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 0.7rem;
+	margin-top: 0.6rem;
+}
+@media (max-width: 620px) {
+	.week-grid {
+		grid-template-columns: minmax(0, 1fr);
+	}
+}
+
+.day {
+	display: flex;
+	flex-direction: column;
+	gap: 0.15rem;
+	min-height: 7.5rem;
+}
+/* A rest day is drawn, not omitted: the gaps between hard days are part of
+   the programme. */
+.day.rest {
+	background: none;
+	border-style: dashed;
+	color: var(--muted);
+	justify-content: center;
+	min-height: 4.5rem;
+}
+.day.done {
+	border-left: 2px solid var(--good);
+}
+.day.today {
+	border-color: var(--signal);
+}
+/* The summary square closes the rectangle. */
+.day.summary {
+	background: var(--panel-lift);
+}
+
+.day-head {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 0.5rem;
+}
+
+.chip {
+	font-family: var(--mono);
+	font-size: 0.66rem;
+	text-transform: uppercase;
+	letter-spacing: 0.1em;
+	color: var(--muted);
+	border: 1px solid var(--line);
+	border-radius: 999px;
+	padding: 0.05rem 0.45rem;
+	white-space: nowrap;
+}
+.chip.hard {
+	color: var(--signal);
+	border-color: var(--signal);
+}
+.chip.deload {
+	color: var(--good);
+	border-color: var(--good);
+}
+
 /* --- the rig: five plates loaded onto a bar, one per tier --- */
 .rig {
 	display: flex;

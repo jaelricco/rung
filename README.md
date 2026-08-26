@@ -252,12 +252,27 @@ holds a threshold table mapping records to tiers. Edit the numbers there and the
 whole app — dashboards, prompts, plan difficulty — follows. Two athletes with
 the same log always get the same level.
 
-**The model chooses from libraries; it does not invent.** Every coaching call is
-handed the exercise table and the protocol list in
+**The model chooses from libraries; it does not invent, and it is checked.**
+Every coaching call is handed the exercise table and the protocol list in
 `internal/training/injuries.go`, and is told those are the only things it may
-prescribe. This is what stops hallucinated exercises and freestyle rehab
-protocols. Growing the app's vocabulary means adding rows, not loosening the
-prompt.
+prescribe. Then `validatePlan` in `internal/ai/plans.go` holds it to that: a
+block naming a slug that does not exist is dropped, a session that loses every
+block goes with it, and what was dropped is returned to the browser as a
+warning. A slug the athlete cannot log is not a small error — it never reaches
+the level calculation and the block is silent about what it wanted. Growing the
+app's vocabulary means adding rows, not loosening the prompt, which is why the
+library carries the progressions each skill is actually built from: negatives,
+band-assisted work, tuck and straddle steps, lean drills and joint preparation.
+
+**A plan starts with research, not with recall.** Before writing anything, the
+coach searches for how the named skill is actually trained: the progression
+ladder, the standard each rung is held to, how the week is usually laid out,
+the accessory work, and what tends to go wrong. Findings come back mapped onto
+library slugs, anything invented is pruned, and the pages the search really
+retrieved are shown to the athlete under the plan. `skill_research` caches it
+per skill for 60 days — what a front lever needs does not change between two
+athletes, only what *this* athlete needs from it does, and that comes from the
+snapshot. `no_research: true` skips the pass for a faster, cheaper plan.
 
 **Open injuries are a hard filter.** They are part of the snapshot passed into
 every prompt, and the model is required to say what it removed and why.
@@ -275,11 +290,36 @@ reasoning, since current models think before they write and both come out of
 the same budget, which is why `planTokens` sizes the ceiling to the plan being
 asked for. And the deltas drive the progress bar: the browser sends
 `Accept: text/event-stream` to `/ai/skill-plan`, `/ai/review` or `/ai/recovery`
-and gets `progress` events (`{stage, label, percent, detail, done, total}`)
-until a final `done` event carrying the same JSON body the endpoint has always
+and gets `progress` events
+(`{stage, label, percent, detail, done, total, indeterminate}`) until a final
+`done` event carrying the same JSON body the endpoint has always
 returned. The percentage is measured work — reasoning received, then sessions
 written out of the number asked for — not a timer. Any client that does not ask
-for the stream gets the single JSON body, unchanged.
+for the stream gets the single JSON body, unchanged. The one phase that cannot
+report a fraction of itself is the research search — a single request that says
+nothing until it returns — so it sets `indeterminate` and the bar sweeps while
+the elapsed time ticks, rather than inventing a number.
+
+**Opus writes the training.** `ANTHROPIC_MODEL` defaults to `claude-opus-5`.
+Plan writing is the hardest call the app makes — a ladder of progressions
+weighed against one athlete's records, with an injury as a hard constraint —
+and it is where the difference between model tiers shows up in the output.
+Set `claude-sonnet-5` in `.env` for a cheaper, faster server; nothing else
+changes.
+
+**The week is the unit, so the week is what you see.** Both the plan preview
+and the calendar lay a week out as four rows of two — Monday and Tuesday, then
+a break, and so on — with rest days drawn rather than omitted, because the gaps
+between hard sessions are part of the programme. The eighth square carries what
+the week adds up to. `src/lib/week.js` deals the sessions into the squares;
+both pages use it, so a session looks the same whether it is being considered
+or being done.
+
+**Generating a plan and committing to it are separate.** `/ai/skill-plan`
+answers with a plan; `POST /plans` is what puts it on the calendar, and the
+plan is re-checked against the library on the way in rather than trusted for
+having been ours a minute ago. A plan is worth reading before it becomes eight
+weeks of appointments.
 
 **Event dates are verified, not trusted.** See the section below.
 
@@ -375,7 +415,12 @@ POST   /api/v1/injuries/{id}/resolve
 GET    /api/v1/calendar?from=&to=
 GET    /api/v1/calendar.ics
 POST   /api/v1/sessions/{id}/complete
-POST   /api/v1/ai/skill-plan     {skill, weeks, days_per_week, starts_on?, notes?, save}
+DELETE /api/v1/sessions/{id}/complete
+GET    /api/v1/plans
+POST   /api/v1/plans            {plan, goal, starts_on}
+DELETE /api/v1/plans/{id}
+POST   /api/v1/ai/skill-plan     {skill, weeks, days_per_week, starts_on?, notes?,
+                                  save, no_research?}
 POST   /api/v1/ai/review
 POST   /api/v1/ai/recovery
        ^ these three also answer with a progress stream instead of one JSON
@@ -408,15 +453,16 @@ Built and working:
 - Exercise library, session logging, records, computed level tiers
 - Injury tracking and the curated protocol library
 - AI skill plans, training review, recovery and nutrition guidance
-- Calendar storage, planned sessions, ICS export
+- Calendar storage, planned sessions, ICS export, plan deletion
 - Park search backed by OpenStreetMap
 - Event discovery via web search, with source verification and a review queue
-- Frontend: sign in, overview, log a session, generate a plan, browse events
+- Frontend: sign in, overview, log a session, generate a plan, the calendar,
+  browse events
 
 Not built yet:
 
-- **Frontend for calendar, parks and injuries** — the endpoints are all live.
-  The parks page needs MapLibre GL, which needs no API token.
+- **Frontend for parks and injuries** — the endpoints are all live. The parks
+  page needs MapLibre GL, which needs no API token.
 - **Event-specific plans** — `savePlan` already accepts an `event_id`; the
   prompt needs a variant that periodises backwards from a competition date.
 - **Scheduled discovery** — `RunDiscovery` is ready to be called from a cron
