@@ -1,12 +1,10 @@
 package ai
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -16,24 +14,40 @@ import (
 
 const anthropicURL = "https://api.anthropic.com/v1/messages"
 
+// defaultMaxTokens is deliberately roomy. Current models think before they
+// answer and thinking is spent out of the same budget, so a tight ceiling
+// truncates the turn before any answer text exists.
+const defaultMaxTokens = 16000
+
 var ErrNotConfigured = errors.New("no Anthropic API key is configured")
 
 type Client struct {
 	key           string
 	model         string
 	searchVersion string
+	thinking      string
+	baseURL       string
 	http          *http.Client
 	pool          *pgxpool.Pool
 }
 
-func NewClient(pool *pgxpool.Pool, key, model, searchVersion string) *Client {
+func NewClient(pool *pgxpool.Pool, key, model, searchVersion, thinking string) *Client {
+	// No client-wide timeout: a streamed plan can legitimately run for
+	// minutes, and each caller sets its own deadline on the context. The
+	// header timeout still catches an API that never answers at all — it is
+	// generous because a web search turn, which is not streamed, sends no
+	// headers until the whole turn is finished.
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.ResponseHeaderTimeout = 240 * time.Second
+
 	return &Client{
 		key:           key,
 		model:         model,
 		searchVersion: searchVersion,
+		thinking:      thinking,
+		baseURL:       anthropicURL,
 		pool:          pool,
-		// Search turns are slower than plain completions.
-		http: &http.Client{Timeout: 240 * time.Second},
+		http:          &http.Client{Transport: transport},
 	}
 }
 
@@ -44,102 +58,61 @@ type message struct {
 	Content string `json:"content"`
 }
 
-type apiRequest struct {
-	Model     string    `json:"model"`
-	MaxTokens int       `json:"max_tokens"`
-	System    string    `json:"system,omitempty"`
-	Messages  []message `json:"messages"`
+type thinkingConfig struct {
+	Type string `json:"type"`
+	// A summarised chain of thought is what the progress indicator reports
+	// while the model is still reasoning. Without it the stream is silent
+	// until the first answer token.
+	Display string `json:"display,omitempty"`
 }
 
+type apiRequest struct {
+	Model     string          `json:"model"`
+	MaxTokens int             `json:"max_tokens"`
+	System    string          `json:"system,omitempty"`
+	Messages  []message       `json:"messages"`
+	Stream    bool            `json:"stream,omitempty"`
+	Thinking  *thinkingConfig `json:"thinking,omitempty"`
+}
+
+// thinkingConfig returns what to send as the thinking parameter. Adaptive is
+// right for every current model. Older models take a token budget instead and
+// reject "adaptive", so ANTHROPIC_THINKING=off keeps them working.
+func (c *Client) thinkingConfig() *thinkingConfig {
+	switch strings.ToLower(c.thinking) {
+	case "off", "disabled", "none":
+		return nil
+	default:
+		return &thinkingConfig{Type: "adaptive", Display: "summarized"}
+	}
+}
+
+// apiResponse is only ever parsed for its error: a failed request answers a
+// streaming call with an ordinary JSON body.
 type apiResponse struct {
-	Content []struct {
-		Type string `json:"type"`
-		Text string `json:"text"`
-	} `json:"content"`
-	StopReason string `json:"stop_reason"`
-	Usage      struct {
-		InputTokens  int `json:"input_tokens"`
-		OutputTokens int `json:"output_tokens"`
-	} `json:"usage"`
 	Error *struct {
 		Type    string `json:"type"`
 		Message string `json:"message"`
 	} `json:"error"`
 }
 
-// Complete sends one prompt and returns the concatenated text. Every call is
-// written to ai_calls, successful or not, so cost and bad output are traceable.
+// Complete sends one prompt and returns the answer text. Every call is written
+// to ai_calls, successful or not, so cost and bad output are traceable.
 func (c *Client) Complete(ctx context.Context, userID, purpose, system, prompt string, maxTokens int) (string, error) {
-	if !c.Configured() {
-		return "", ErrNotConfigured
-	}
-
-	body, err := json.Marshal(apiRequest{
-		Model:     c.model,
-		MaxTokens: maxTokens,
-		System:    system,
-		Messages:  []message{{Role: "user", Content: prompt}},
-	})
-	if err != nil {
-		return "", err
-	}
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, anthropicURL, bytes.NewReader(body))
-	if err != nil {
-		return "", err
-	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("x-api-key", c.key)
-	req.Header.Set("anthropic-version", "2023-06-01")
-
-	started := time.Now()
-	resp, err := c.http.Do(req)
-	if err != nil {
-		c.record(ctx, userID, purpose, prompt, "", 0, 0, time.Since(started), false)
-		return "", fmt.Errorf("reaching the model failed: %w", err)
-	}
-	defer resp.Body.Close()
-
-	raw, err := io.ReadAll(io.LimitReader(resp.Body, 4<<20))
-	if err != nil {
-		c.record(ctx, userID, purpose, prompt, "", 0, 0, time.Since(started), false)
-		return "", err
-	}
-
-	var parsed apiResponse
-	if err := json.Unmarshal(raw, &parsed); err != nil {
-		c.record(ctx, userID, purpose, prompt, string(raw), 0, 0, time.Since(started), false)
-		return "", fmt.Errorf("unexpected response from the model: %s", truncate(string(raw), 200))
-	}
-	if resp.StatusCode != http.StatusOK {
-		msg := resp.Status
-		if parsed.Error != nil {
-			msg = parsed.Error.Message
-		}
-		c.record(ctx, userID, purpose, prompt, msg, 0, 0, time.Since(started), false)
-		return "", fmt.Errorf("model returned an error: %s", msg)
-	}
-
-	var sb strings.Builder
-	for _, block := range parsed.Content {
-		if block.Type == "text" {
-			sb.WriteString(block.Text)
-		}
-	}
-	out := sb.String()
-	c.record(ctx, userID, purpose, prompt, out,
-		parsed.Usage.InputTokens, parsed.Usage.OutputTokens, time.Since(started), true)
-
-	if strings.TrimSpace(out) == "" {
-		return "", errors.New("the model returned an empty response")
-	}
-	return out, nil
+	return c.CompleteStream(ctx, userID, purpose, system, prompt, maxTokens, nil)
 }
 
 // CompleteJSON asks for JSON and unmarshals into dst, tolerating a model that
 // wraps its answer in a code fence or adds a sentence around it.
 func (c *Client) CompleteJSON(ctx context.Context, userID, purpose, system, prompt string, maxTokens int, dst any) error {
-	out, err := c.Complete(ctx, userID, purpose, system, prompt, maxTokens)
+	return c.CompleteJSONStream(ctx, userID, purpose, system, prompt, maxTokens, nil, dst)
+}
+
+// CompleteJSONStream is CompleteJSON with progress reporting.
+func (c *Client) CompleteJSONStream(ctx context.Context, userID, purpose, system, prompt string,
+	maxTokens int, onDelta func(Delta), dst any) error {
+
+	out, err := c.CompleteStream(ctx, userID, purpose, system, prompt, maxTokens, onDelta)
 	if err != nil {
 		return err
 	}
@@ -182,6 +155,9 @@ func truncate(s string, n int) string {
 
 func (c *Client) record(ctx context.Context, userID, purpose, prompt, completion string,
 	in, out int, took time.Duration, ok bool) {
+	if c.pool == nil {
+		return
+	}
 	// Logging must never block or fail the request it describes.
 	logCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 	defer cancel()

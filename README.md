@@ -195,6 +195,21 @@ every prompt, and the model is required to say what it removed and why.
 token counts and duration. When a plan comes out wrong you can see exactly what
 was asked.
 
+**Model calls are streamed, and the wait is shown as a real percentage.** Every
+completion goes through `internal/ai/stream.go`, which reads the API's
+server-sent events. Two things come out of that. The turn's own accounting is
+visible, so a call that ends without an answer says why instead of "the model
+returned an empty response" — the usual cause is a token ceiling spent on
+reasoning, since current models think before they write and both come out of
+the same budget, which is why `planTokens` sizes the ceiling to the plan being
+asked for. And the deltas drive the progress bar: the browser sends
+`Accept: text/event-stream` to `/ai/skill-plan`, `/ai/review` or `/ai/recovery`
+and gets `progress` events (`{stage, label, percent, detail, done, total}`)
+until a final `done` event carrying the same JSON body the endpoint has always
+returned. The percentage is measured work — reasoning received, then sessions
+written out of the number asked for — not a timer. Any client that does not ask
+for the stream gets the single JSON body, unchanged.
+
 **Event dates are verified, not trusted.** See the section below.
 
 **Parks come from OpenStreetMap.** `internal/parks` queries the Overpass API for
@@ -292,6 +307,8 @@ POST   /api/v1/sessions/{id}/complete
 POST   /api/v1/ai/skill-plan     {skill, weeks, days_per_week, starts_on?, notes?, save}
 POST   /api/v1/ai/review
 POST   /api/v1/ai/recovery
+       ^ these three also answer with a progress stream instead of one JSON
+         body when the request carries Accept: text/event-stream
 POST   /api/v1/parks/refresh?lat=&lng=
 GET    /api/v1/events?discipline=&country=&from=&to=&include_unconfirmed=
 POST   /api/v1/events/discover        {discipline, country, from, to, force}

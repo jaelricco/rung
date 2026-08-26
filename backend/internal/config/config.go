@@ -12,19 +12,23 @@ type Config struct {
 	Addr           string
 	AnthropicKey   string
 	AnthropicModel string
+	// AnthropicThinking is "adaptive" (every current model) or "off" for a
+	// model old enough to reject the adaptive thinking parameter.
+	AnthropicThinking string
 	SearchToolVersion string
-	SecureCookies  bool
-	AppOrigin      string
+	SecureCookies     bool
+	AppOrigin         string
 }
 
 func Load() Config {
 	return Config{
-		DatabaseURL:    os.Getenv("DATABASE_URL"),
-		Addr:           envOr("API_ADDR", ":8080"),
-		AnthropicKey:   os.Getenv("ANTHROPIC_API_KEY"),
-		AnthropicModel: envOr("ANTHROPIC_MODEL", "claude-sonnet-5"),
+		DatabaseURL:       os.Getenv("DATABASE_URL"),
+		Addr:              envOr("API_ADDR", ":8080"),
+		AnthropicKey:      os.Getenv("ANTHROPIC_API_KEY"),
+		AnthropicModel:    envOr("ANTHROPIC_MODEL", "claude-sonnet-5"),
+		AnthropicThinking: envOr("ANTHROPIC_THINKING", "adaptive"),
 		SearchToolVersion: envOr("WEB_SEARCH_TOOL_VERSION", "web_search_20250305"),
-		AppOrigin:      os.Getenv("APP_ORIGIN"),
+		AppOrigin:         os.Getenv("APP_ORIGIN"),
 		// Cookies are Secure unless explicitly disabled for a plain-HTTP test box.
 		SecureCookies: !strings.EqualFold(os.Getenv("INSECURE_COOKIES"), "true"),
 	}

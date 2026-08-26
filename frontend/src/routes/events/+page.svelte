@@ -1,5 +1,6 @@
 <script>
 	import { api } from '$lib/api.js';
+	import AiProgress from '$lib/AiProgress.svelte';
 
 	const DISCIPLINES = [
 		'', 'weighted', 'statics', 'dynamics', 'streetlifting', 'freestyle', 'endurance', 'mixed'
@@ -118,6 +119,17 @@
 	</button>
 	<button class="ghost" onclick={load} disabled={loading}>Refresh list</button>
 </div>
+
+{#if searching}
+	<!-- Discovery runs web search server-side and reports no fraction, so the
+	     bar sweeps rather than showing a percentage it would have to invent. -->
+	<div style="margin-top:1rem">
+		<AiProgress
+			label="Searching the web for events, then checking every date against its source"
+			percent={null}
+		/>
+	</div>
+{/if}
 
 {#if error}
 	<div class="notice error" style="margin-top:1rem">{error}</div>
