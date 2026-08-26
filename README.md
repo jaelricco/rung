@@ -1,0 +1,334 @@
+# Calisthenics training app
+
+A training log that computes your level from what you actually lift and hold, and
+uses that to write plans. Go API, SvelteKit frontend, Postgres with PostGIS, all
+behind Caddy on a single server.
+
+No local development environment is needed. The server is the only place
+anything runs.
+
+---
+
+## The server
+
+| | |
+| --- | --- |
+| Type | `cx33` — 4 vCPU x86, 8 GB RAM, 80 GB |
+| Location | `nbg1` (Nuremberg) or `fsn1` (Falkenstein) |
+| Image | Ubuntu 24.04 |
+| Backups | on |
+
+8 GB rather than 4 is the one sizing decision that matters, and it isn't about
+traffic. Images are built on the server, so a SvelteKit build and a Go compile
+run while Postgres and the app hold their memory. On a 4 GB box that gets
+OOM-killed mid-deploy. If you'd rather run a 4 GB server, move image builds into
+CI and have the server pull prebuilt images instead.
+
+x86 over ARM for two reasons: Hetzner's June 2026 price adjustment removed the
+ARM price advantage, and `postgis/postgis` ARM64 availability is inconsistent.
+On x86 that question doesn't arise.
+
+### Creating it: the short way
+
+Open `infra/cloud-init.yaml`, edit the values at the top of the
+`/root/setup.env` block, and paste the whole file into the **Cloud config**
+field on Hetzner's server creation page. The server installs Docker, hardens
+itself, clones this repo, generates its own database password, and starts the
+stack on first boot. Nothing to SSH into.
+
+Do not put your Anthropic API key in that file. Cloud config is readable from
+inside the server at `169.254.169.254` for the life of the machine. The stack
+runs fine without the key — coaching endpoints return 503 — and the login
+banner tells you the one command to add it afterwards.
+
+### Creating it: scripted
+
+If you'd rather have it reproducible from your own machine:
+
+```bash
+hcloud context create calisthenics   # prompts for the token, stores it locally
+bash infra/provision.sh
+```
+
+Never paste a Hetzner API token into a chat, an issue, or a commit. It can
+create and destroy servers and spend money.
+
+---
+
+## First deployment, the manual way
+
+Only needed if you skipped the cloud config above.
+
+**1. Push this repo to GitHub.**
+
+Public is fine and slightly better: the repo holds no secrets — `.env` is
+generated on the server and gitignored — and a public repo means unlimited
+Actions minutes and no clone credential sitting in the server's cloud config.
+
+**2. On the fresh Hetzner box, as root:**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/YOU/YOUR-REPO/main/infra/bootstrap.sh -o bootstrap.sh
+bash bootstrap.sh https://github.com/YOU/YOUR-REPO.git
+```
+
+That installs Docker, creates a `deploy` user, turns on the firewall, disables
+SSH password login, clones the repo into `/srv/calisthenics`, and generates a
+database password.
+
+**3. Point your domain at the server.** An `A` record for `APP_DOMAIN` to the
+server's IPv4. Caddy asks Let's Encrypt for a certificate the first time it
+starts, so DNS has to resolve before step 5.
+
+**4. Fill in the rest of `.env`:**
+
+```bash
+ssh deploy@YOUR-SERVER
+nano /srv/calisthenics/.env     # APP_DOMAIN, ACME_EMAIL, ANTHROPIC_API_KEY
+```
+
+**5. Bring it up:**
+
+```bash
+cd /srv/calisthenics && make deploy
+```
+
+First build takes a few minutes. Migrations run automatically at API startup —
+there is no separate migrate step.
+
+---
+
+## Deploying after that
+
+Set three repository secrets — `DEPLOY_HOST`, `DEPLOY_USER` (`deploy`), and
+`DEPLOY_SSH_KEY` (a private key whose public half is in
+`/home/deploy/.ssh/authorized_keys`; generate a separate one for CI rather than
+reusing your own) — and every push to the default branch deploys itself.
+
+Or, on the server, `make deploy`.
+
+`.github/dependabot.yml` watches Go modules, npm, the Dockerfiles and the
+workflow actions. Since there's no local environment where you'd notice an
+advisory, those PRs are how you find out.
+
+### Why GitHub rather than GitLab
+
+Two reasons, both about this project specifically. GitHub's free tier gives
+2,000 private-repo CI minutes a month against GitLab's 400 — which doesn't
+matter for the one-minute SSH deploy, but does the moment image builds move off
+the server into CI, at four to six minutes a run. And Dependabot covers private
+repos free, where GitLab's dependency scanning is an Ultimate feature; with no
+local environment, automated dependency PRs are the only thing that will ever
+tell you about a CVE.
+
+GitLab is the better answer if you later want to self-host the forge — CE is
+free and its runners are unlimited — or if the source itself has to stay in the
+EU.
+
+Other commands, all run from `/srv/calisthenics`:
+
+| Command | What it does |
+| --- | --- |
+| `make logs` | Follow logs from every container |
+| `make ps` | Container status and health |
+| `make psql` | Open a database shell |
+| `make migrate-status` | Show which migrations have run |
+| `make backup` | Dump the database into `./backups` |
+| `make rebuild` | Force a full rebuild and recreate |
+
+---
+
+## How it fits together
+
+```
+                 ┌─────────┐
+    :443 ────────│  Caddy  │  TLS, one certificate per domain
+                 └────┬────┘
+             /api/*   │   everything else
+              ┌───────┴───────┐
+              ▼               ▼
+        ┌──────────┐    ┌──────────┐
+        │ api (Go) │    │ web (SK) │
+        └────┬─────┘    └──────────┘
+             ▼
+      ┌─────────────┐
+      │  Postgres   │  + PostGIS for park search
+      └─────────────┘
+```
+
+Only Caddy publishes ports. The API and database are reachable solely on the
+compose network, so nothing has to be firewalled off by hand.
+
+### Where the design decisions live
+
+**Level is computed, never asked of the model.** `internal/training/level.go`
+holds a threshold table mapping records to tiers. Edit the numbers there and the
+whole app — dashboards, prompts, plan difficulty — follows. Two athletes with
+the same log always get the same level.
+
+**The model chooses from libraries; it does not invent.** Every coaching call is
+handed the exercise table and the protocol list in
+`internal/training/injuries.go`, and is told those are the only things it may
+prescribe. This is what stops hallucinated exercises and freestyle rehab
+protocols. Growing the app's vocabulary means adding rows, not loosening the
+prompt.
+
+**Open injuries are a hard filter.** They are part of the snapshot passed into
+every prompt, and the model is required to say what it removed and why.
+
+**Every model call is logged.** `ai_calls` records the prompt, the completion,
+token counts and duration. When a plan comes out wrong you can see exactly what
+was asked.
+
+**Event dates are verified, not trusted.** See the section below.
+
+**Parks come from OpenStreetMap.** `internal/parks` queries the Overpass API for
+`leisure=fitness_station` and related tags, caches results in PostGIS, and
+serves them by distance. The map has real data on day one instead of an empty
+table.
+
+---
+
+## How event discovery is kept honest
+
+Web search grounds the model in real pages and, critically, returns **citations**:
+every answer carries the URLs the API actually fetched. That turns the problem
+from "trust the model" into "check its work", and the checking happens in Go.
+
+A candidate event has to clear three gates before anyone sees it as fact:
+
+1. **Its source must be a page the search really retrieved.** The model's cited
+   `source_url` is looked up in the set of URLs the API returned. A URL that
+   isn't in that set was invented, and the candidate is discarded outright. This
+   is the single highest-value check in the pipeline — it catches plausible-looking
+   URLs that don't exist.
+2. **That page must still answer us.** The server fetches it directly and
+   requires a 200.
+3. **The date and the name must literally appear in the page text.** The date is
+   matched in the many forms event pages use — `2026-09-12`, `12.09.2026`,
+   `12. September 2026`, `September 12, 2026` — across English, German, French,
+   Italian and Spanish month names, with the year required nearby so
+   "12 September" can't match the wrong year. The name check requires a
+   distinctive word, ignoring filler like "cup", "open" and "calisthenics".
+
+The result of those gates is stored as `confidence`:
+
+| Value | Meaning | Shown by default |
+| --- | --- | --- |
+| `date_confirmed` | Date and name both found on a live source page | yes |
+| `human_confirmed` | Someone checked it by hand | yes |
+| `source_live` | Page loads but the date or name wasn't found | review queue only |
+| `rejected` | Fabricated source, dead link, or no date stated | never |
+
+A human decision always outranks a machine check and is never downgraded by a
+later re-run. Every upcoming event is re-verified weekly, because event pages
+move dates and quietly disappear; a source that stops confirming drops out of
+the verified list on its own.
+
+Discovery runs are cached for 24 hours per query shape in `discovery_runs`.
+Search bills at $10 per 1,000 searches on top of tokens, and a run uses up to
+eight, so a hundred users browsing the same region must not trigger a hundred
+runs.
+
+### What this still can't do
+
+- **Instagram-only events stay invisible.** A lot of smaller competitions are
+  announced in a story or a post and nowhere else. Search doesn't index that
+  well, and there's no page to verify against.
+- **JavaScript-rendered dates fail the text check.** A site that loads its
+  schedule client-side will come back as `source_live` with a note saying so.
+  It's a false negative, not a wrong date, and the review queue catches it.
+- **A wrong date on the organiser's own page verifies successfully.** The check
+  proves the app is faithfully reporting the source, not that the source is
+  right.
+- **Nothing here is a substitute for the entry deadline.** Always link out.
+
+---
+
+## API
+
+Public:
+
+```
+GET    /healthz
+POST   /api/v1/auth/register     {email, password, display_name}
+POST   /api/v1/auth/login        {email, password}
+POST   /api/v1/auth/logout
+GET    /api/v1/exercises
+GET    /api/v1/protocols?region=wrist
+GET    /api/v1/parks?lat=&lng=&radius_km=
+```
+
+Requires a session cookie:
+
+```
+GET    /api/v1/me
+PATCH  /api/v1/me                {display_name?, bodyweight_kg?}
+GET    /api/v1/workouts?limit=30
+POST   /api/v1/workouts          {performed_at?, notes, rpe, sets[]}
+DELETE /api/v1/workouts/{id}
+GET    /api/v1/level
+GET    /api/v1/injuries
+POST   /api/v1/injuries          {region, severity, description}
+POST   /api/v1/injuries/{id}/resolve
+GET    /api/v1/calendar?from=&to=
+GET    /api/v1/calendar.ics
+POST   /api/v1/sessions/{id}/complete
+POST   /api/v1/ai/skill-plan     {skill, weeks, days_per_week, starts_on?, notes?, save}
+POST   /api/v1/ai/review
+POST   /api/v1/ai/recovery
+POST   /api/v1/parks/refresh?lat=&lng=
+GET    /api/v1/events?discipline=&country=&from=&to=&include_unconfirmed=
+POST   /api/v1/events/discover        {discipline, country, from, to, force}
+POST   /api/v1/events/{id}/confirm    {confirmed, note}
+POST   /api/v1/events/{id}/recheck
+POST   /api/v1/events/{id}/register   {goal}
+DELETE /api/v1/events/{id}/register
+```
+
+A set carries one of four shapes, and the database enforces it:
+
+| `kind` | Required fields |
+| --- | --- |
+| `reps` | `reps` |
+| `weighted_reps` | `reps`, `weight_kg` (added load only) |
+| `static_hold` | `hold_seconds` |
+| `skill_attempt` | `success` |
+
+---
+
+## Status
+
+Built and working:
+
+- Accounts, sessions, argon2id passwords
+- Exercise library, session logging, records, computed level tiers
+- Injury tracking and the curated protocol library
+- AI skill plans, training review, recovery and nutrition guidance
+- Calendar storage, planned sessions, ICS export
+- Park search backed by OpenStreetMap
+- Event discovery via web search, with source verification and a review queue
+- Frontend: sign in, overview, log a session, generate a plan, browse events
+
+Not built yet:
+
+- **Frontend for calendar, parks and injuries** — the endpoints are all live.
+  The parks page needs MapLibre GL, which needs no API token.
+- **Event-specific plans** — `savePlan` already accepts an `event_id`; the
+  prompt needs a variant that periodises backwards from a competition date.
+- **Scheduled discovery** — `RunDiscovery` is ready to be called from a cron
+  loop for a fixed set of regions, rather than only on user demand.
+- **Password reset** — needs an email sender wired up.
+- **Rate limiting on the AI endpoints** — right now a user can generate plans in
+  a loop. Add a per-user cap before opening signups.
+
+---
+
+## Notes
+
+- `go.sum` is generated inside the Docker build on first run. Once you have a
+  build you are happy with, commit the generated file to pin dependencies.
+- The API returns human-readable error strings; the frontend shows them
+  verbatim, so write them as messages a user should see.
+- Cookies are `Secure` by default. Only set `INSECURE_COOKIES=true` if you are
+  testing over plain HTTP on an IP address.
