@@ -1,53 +1,42 @@
 #cloud-config
 #
-# Paste this into the "Cloud config" field when you create the Hetzner server.
-# The server installs Docker, hardens itself, clones the repo, writes its own
-# .env and starts the stack — no SSH step, no bootstrap script.
+# Paste into the "Cloud config" field when CREATING a Hetzner server. It is read
+# once, at creation, and cannot be added to a server that already exists — for
+# those, use infra/bootstrap.sh instead.
 #
-# ─── EDIT THESE FOUR LINES BEFORE PASTING ────────────────────────────────────
-# They are in the write_files block below, under /root/setup.env:
+# This file deliberately does almost nothing itself: it creates the deploy user,
+# clones the repo, and hands over to infra/setup.sh, which is the single place
+# server setup is defined. Keeping the logic in the repo means the two entry
+# points can't drift apart.
 #
-#   REPO_URL      your repository, e.g. https://github.com/you/calisthenics.git
-#   APP_DOMAIN    the domain you'll point at this server
-#   ACME_EMAIL    where Let's Encrypt sends expiry warnings
-#   TIMEZONE      leave as Europe/Zurich or change it
+# ─── EDIT THE VALUES IN /root/setup.env BELOW ────────────────────────────────
 #
-# ─── ONE SECURITY NOTE, PLEASE READ ──────────────────────────────────────────
-# Everything in this file is readable from inside the server at any time, from
-# the metadata endpoint at 169.254.169.254. Any process on the box can read it.
+#   REPO_URL     https://github.com/you/calisthenics.git
+#   APP_DOMAIN   the domain you'll point at this server
+#   ACME_EMAIL   where Let's Encrypt sends expiry warnings
+#   GIT_USER / GIT_TOKEN   only for a private repo, see the note below
 #
-# So: do NOT put your Anthropic API key here. The stack starts fine without it
-# (coaching endpoints return 503 until it's set), and the last line of the
-# finish message tells you the one command to add it afterwards. The database
-# password is generated on the machine and never passes through this file.
+# ─── ONE SECURITY NOTE ───────────────────────────────────────────────────────
+# Everything here stays readable from inside the server at 169.254.169.254 for
+# the life of the machine. Any process on the box can read it.
 #
-# Same applies to a private repo. If yours is private, use a read-only,
-# repo-scoped credential and accept that it's metadata-readable — or make the
-# repo public and leave GIT_TOKEN empty.
+# So do NOT put your Anthropic API key here. The stack runs fine without it —
+# coaching endpoints return 503 — and the login banner shows the one command to
+# add it afterwards. The database password is generated on the machine and never
+# passes through this file.
 #
-#   GitHub   A fine-grained token with read-only Contents on that one repo,
-#            and nothing else. Set GIT_USER="x-access-token".
-#   GitLab   A deploy token with scope read_repository, if you ever move.
-#            Its username goes in GIT_USER.
-#
-# Better still: this repository contains no secrets — .env is generated on the
-# server and is gitignored — so you can simply make it public and leave both
-# GIT_USER and GIT_TOKEN empty. That removes the credential from metadata
-# entirely, and makes GitHub Actions minutes unlimited into the bargain.
+# For a private repo, use a GitHub fine-grained token with read-only Contents on
+# that one repo and set GIT_USER="x-access-token", accepting that it is
+# metadata-readable. Better: this repo holds no secrets, so make it public and
+# leave both empty.
 
 timezone: Europe/Zurich
 package_update: true
-package_upgrade: true
 
 packages:
+  - git
   - ca-certificates
   - curl
-  - git
-  - ufw
-  - fail2ban
-  - make
-  - unattended-upgrades
-  - jq
 
 users:
   - name: deploy
@@ -63,149 +52,49 @@ write_files:
       REPO_URL="https://github.com/YOU/YOUR-REPO.git"
       APP_DOMAIN="training.example.com"
       ACME_EMAIL="you@example.com"
-      # Only needed for a private repo. See the note at the top of this file.
       GIT_USER="x-access-token"
       GIT_TOKEN=""
 
-  - path: /etc/ssh/sshd_config.d/99-hardening.conf
-    permissions: '0644'
-    content: |
-      PasswordAuthentication no
-      PermitRootLogin prohibit-password
-      KbdInteractiveAuthentication no
-      X11Forwarding no
-
-  - path: /etc/apt/apt.conf.d/20auto-upgrades
-    permissions: '0644'
-    content: |
-      APT::Periodic::Update-Package-Lists "1";
-      APT::Periodic::Unattended-Upgrade "1";
-
-  - path: /root/setup.sh
+  - path: /root/clone-and-setup.sh
     permissions: '0700'
     content: |
       #!/usr/bin/env bash
       set -euo pipefail
       exec > >(tee -a /var/log/calisthenics-setup.log) 2>&1
-      echo "=== setup started $(date -Is) ==="
 
       source /root/setup.env
       APP_DIR=/srv/calisthenics
 
       if [[ "$REPO_URL" == *YOUR-REPO* ]]; then
-        echo "REPO_URL was left at its placeholder. Edit /root/setup.env and rerun /root/setup.sh."
+        echo "REPO_URL is still the placeholder. Fix /root/setup.env and rerun this script."
         exit 1
       fi
 
-      echo "--- swap"
-      # Docker builds the frontend and the Go binary on this machine. Swap is
-      # cheap insurance against an OOM kill during a deploy.
-      if [[ ! -f /swapfile ]]; then
-        fallocate -l 2G /swapfile
-        chmod 600 /swapfile
-        mkswap /swapfile
-        swapon /swapfile
-        echo '/swapfile none swap sw 0 0' >> /etc/fstab
-        sysctl -w vm.swappiness=10
-        echo 'vm.swappiness=10' > /etc/sysctl.d/99-swappiness.conf
-      fi
-
-      echo "--- docker"
-      install -m 0755 -d /etc/apt/keyrings
-      curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
-      chmod a+r /etc/apt/keyrings/docker.asc
-      echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" \
-        > /etc/apt/sources.list.d/docker.list
-      apt-get update -qq
-      apt-get install -y -qq docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-      systemctl enable --now docker
-      usermod -aG docker deploy
-
-      echo "--- ssh key for deploy"
+      # Copy the SSH key Hetzner injected into root across to deploy, before
+      # setup.sh restricts root login.
       if [[ -f /root/.ssh/authorized_keys ]]; then
         install -d -m 700 -o deploy -g deploy /home/deploy/.ssh
-        install -m 600 -o deploy -g deploy /root/.ssh/authorized_keys /home/deploy/.ssh/authorized_keys
+        install -m 600 -o deploy -g deploy \
+          /root/.ssh/authorized_keys /home/deploy/.ssh/authorized_keys
       fi
 
-      echo "--- firewall"
-      ufw --force reset >/dev/null
-      ufw default deny incoming
-      ufw default allow outgoing
-      ufw allow OpenSSH
-      ufw allow 80/tcp
-      ufw allow 443/tcp
-      ufw --force enable
-      systemctl enable --now fail2ban
-
-      echo "--- clone"
       CLONE_URL="$REPO_URL"
-      if [[ -n "$GIT_TOKEN" ]]; then
-        # Username:token form, which both GitHub and GitLab accept.
+      if [[ -n "${GIT_TOKEN:-}" ]]; then
+        # username:token form, which GitHub and GitLab both accept.
         CLONE_URL="${REPO_URL/https:\/\//https://${GIT_USER:-x-access-token}:$GIT_TOKEN@}"
       fi
+
       mkdir -p "$APP_DIR"
       chown deploy:deploy "$APP_DIR"
       if [[ ! -d "$APP_DIR/.git" ]]; then
         sudo -u deploy git clone "$CLONE_URL" "$APP_DIR"
       fi
       # Don't leave the token sitting in .git/config.
-      if [[ -n "$GIT_TOKEN" ]]; then
-        sudo -u deploy git -C "$APP_DIR" remote set-url origin "$REPO_URL"
-      fi
+      sudo -u deploy git -C "$APP_DIR" remote set-url origin "$REPO_URL"
 
-      echo "--- environment"
-      if [[ ! -f "$APP_DIR/.env" ]]; then
-        DB_PASSWORD="$(openssl rand -base64 36 | tr -dc 'A-Za-z0-9' | head -c 32)"
-        cat > "$APP_DIR/.env" <<ENVFILE
-      APP_DOMAIN=$APP_DOMAIN
-      ACME_EMAIL=$ACME_EMAIL
-      POSTGRES_USER=cali
-      POSTGRES_PASSWORD=$DB_PASSWORD
-      POSTGRES_DB=cali
-      ANTHROPIC_API_KEY=
-      ANTHROPIC_MODEL=claude-sonnet-5
-      WEB_SEARCH_TOOL_VERSION=web_search_20250305
-      ENVFILE
-        chown deploy:deploy "$APP_DIR/.env"
-        chmod 600 "$APP_DIR/.env"
-      fi
-
-      echo "--- build and start"
-      cd "$APP_DIR"
-      sudo -u deploy docker compose up -d --build --remove-orphans
-
-      echo "--- nightly database backup"
-      install -d -o deploy -g deploy "$APP_DIR/backups"
-      cat > /etc/cron.d/calisthenics-backup <<'CRON'
-      30 3 * * * deploy cd /srv/calisthenics && /usr/bin/make backup >/dev/null 2>&1
-      35 3 * * * deploy find /srv/calisthenics/backups -name '*.sql.gz' -mtime +14 -delete
-      CRON
-      chmod 644 /etc/cron.d/calisthenics-backup
-
-      IPV4="$(curl -fsS --max-time 5 https://ipv4.icanhazip.com 2>/dev/null || hostname -I | awk '{print $1}')"
-      cat > /etc/motd <<MOTD
-
-        Calisthenics training app
-        ─────────────────────────
-        Directory   /srv/calisthenics
-        Status      make ps
-        Logs        make logs
-        Deploy      make deploy
-        Setup log   /var/log/calisthenics-setup.log
-
-        Point $APP_DOMAIN at $IPV4 if you haven't.
-        Caddy keeps retrying the certificate until DNS resolves.
-
-        Coaching features need a key:
-          nano /srv/calisthenics/.env    # set ANTHROPIC_API_KEY
-          cd /srv/calisthenics && docker compose up -d
-
-      MOTD
-
-      echo "=== setup finished $(date -Is) ==="
+      exec bash "$APP_DIR/infra/setup.sh"
 
 runcmd:
-  - systemctl restart ssh || systemctl restart sshd
-  - bash /root/setup.sh
+  - bash /root/clone-and-setup.sh
 
 final_message: "Server ready after $UPTIME seconds. See /var/log/calisthenics-setup.log"

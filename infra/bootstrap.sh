@@ -1,107 +1,88 @@
 #!/usr/bin/env bash
-# One-time setup for a fresh Hetzner Ubuntu 24.04 server.
+# Set up a Hetzner server that already exists.
 #
-# Run as root on the new box:
-#   bash bootstrap.sh git@github.com:you/calisthenics.git
+# From your machine:
+#   scp infra/bootstrap.sh root@YOUR-IP:/root/
+#   ssh root@YOUR-IP
+#   bash /root/bootstrap.sh \
+#       https://github.com/YOU/YOUR-REPO.git \
+#       training.example.com \
+#       you@example.com
 #
-# Afterwards: fill in /srv/calisthenics/.env, then run `make deploy` there.
+# Creates the deploy user, clones the repo, then hands over to infra/setup.sh
+# in the repo, which is where the actual setup lives. Safe to rerun.
 
 set -euo pipefail
 
 REPO_URL="${1:-}"
-APP_DIR="/srv/calisthenics"
-DEPLOY_USER="deploy"
+APP_DOMAIN="${2:-}"
+ACME_EMAIL="${3:-}"
+APP_DIR=/srv/calisthenics
+DEPLOY_USER=deploy
 
 if [[ $EUID -ne 0 ]]; then
 	echo "Run this as root." >&2
 	exit 1
 fi
 
-echo "==> Updating packages"
+if [[ -z "$REPO_URL" || -z "$APP_DOMAIN" || -z "$ACME_EMAIL" ]]; then
+	cat >&2 <<USAGE
+Usage: bash bootstrap.sh <repo-url> <app-domain> <acme-email>
+
+  repo-url     https://github.com/you/calisthenics.git
+               For a private repo, embed a read-only token:
+               https://x-access-token:TOKEN@github.com/you/calisthenics.git
+  app-domain   the domain whose A record points at this server
+  acme-email   where Let's Encrypt sends expiry warnings
+USAGE
+	exit 1
+fi
+
+echo "==> Installing git"
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq
-apt-get upgrade -y -qq
-apt-get install -y -qq ca-certificates curl git ufw fail2ban unattended-upgrades make
-
-echo "==> Installing Docker"
-if ! command -v docker >/dev/null 2>&1; then
-	install -m 0755 -d /etc/apt/keyrings
-	curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
-	chmod a+r /etc/apt/keyrings/docker.asc
-	echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] \
-https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" \
-		>/etc/apt/sources.list.d/docker.list
-	apt-get update -qq
-	apt-get install -y -qq docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-fi
-systemctl enable --now docker
+apt-get install -y -qq git ca-certificates curl
 
 echo "==> Creating the ${DEPLOY_USER} user"
 if ! id -u "$DEPLOY_USER" >/dev/null 2>&1; then
 	adduser --disabled-password --gecos "" "$DEPLOY_USER"
 fi
-usermod -aG docker "$DEPLOY_USER"
+usermod -aG sudo "$DEPLOY_USER"
+echo "${DEPLOY_USER} ALL=(ALL) NOPASSWD:ALL" >"/etc/sudoers.d/90-${DEPLOY_USER}"
+chmod 440 "/etc/sudoers.d/90-${DEPLOY_USER}"
 
-# Carry root's authorized keys over so you can still get in as deploy.
+# Carry root's authorized keys across so you can still log in after root login
+# is restricted.
 if [[ -f /root/.ssh/authorized_keys ]]; then
 	install -d -m 700 -o "$DEPLOY_USER" -g "$DEPLOY_USER" "/home/${DEPLOY_USER}/.ssh"
 	install -m 600 -o "$DEPLOY_USER" -g "$DEPLOY_USER" \
 		/root/.ssh/authorized_keys "/home/${DEPLOY_USER}/.ssh/authorized_keys"
+else
+	echo "!! No key found at /root/.ssh/authorized_keys." >&2
+	echo "!! Add one to /home/${DEPLOY_USER}/.ssh/authorized_keys before you log out," >&2
+	echo "!! or this script will lock you out when it disables password login." >&2
 fi
 
-echo "==> Firewall"
-ufw --force reset >/dev/null
-ufw default deny incoming
-ufw default allow outgoing
-ufw allow OpenSSH
-ufw allow 80/tcp
-ufw allow 443/tcp
-ufw --force enable
-
-echo "==> Hardening SSH"
-cat >/etc/ssh/sshd_config.d/99-hardening.conf <<'SSHCONF'
-PasswordAuthentication no
-PermitRootLogin prohibit-password
-KbdInteractiveAuthentication no
-X11Forwarding no
-SSHCONF
-systemctl restart ssh || systemctl restart sshd
-
-echo "==> Automatic security updates"
-cat >/etc/apt/apt.conf.d/20auto-upgrades <<'AUTOCONF'
-APT::Periodic::Update-Package-Lists "1";
-APT::Periodic::Unattended-Upgrade "1";
-AUTOCONF
-
-echo "==> Preparing ${APP_DIR}"
+echo "==> Cloning ${REPO_URL}"
 mkdir -p "$APP_DIR"
-chown "${DEPLOY_USER}:${DEPLOY_USER}" "$APP_DIR"
-
-if [[ -n "$REPO_URL" ]]; then
-	if [[ -d "${APP_DIR}/.git" ]]; then
-		echo "    repository already present, leaving it alone"
-	else
-		sudo -u "$DEPLOY_USER" git clone "$REPO_URL" "$APP_DIR"
-	fi
-	if [[ ! -f "${APP_DIR}/.env" && -f "${APP_DIR}/.env.example" ]]; then
-		sudo -u "$DEPLOY_USER" cp "${APP_DIR}/.env.example" "${APP_DIR}/.env"
-		sudo -u "$DEPLOY_USER" sed -i \
-			"s|^POSTGRES_PASSWORD=.*|POSTGRES_PASSWORD=$(openssl rand -base64 32 | tr -d '/+=')|" \
-			"${APP_DIR}/.env"
-		echo "    wrote ${APP_DIR}/.env with a generated database password"
-	fi
+chown "$DEPLOY_USER:$DEPLOY_USER" "$APP_DIR"
+if [[ -d "$APP_DIR/.git" ]]; then
+	echo "    repository already present, pulling"
+	sudo -u "$DEPLOY_USER" git -C "$APP_DIR" pull --ff-only || true
+else
+	sudo -u "$DEPLOY_USER" git clone "$REPO_URL" "$APP_DIR"
 fi
 
-cat <<'DONE'
+# Strip any token out of the stored remote so it isn't left in .git/config.
+CLEAN_URL="$(sed -E 's#https://[^@/]+@#https://#' <<<"$REPO_URL")"
+sudo -u "$DEPLOY_USER" git -C "$APP_DIR" remote set-url origin "$CLEAN_URL"
 
-==> Done.
+echo "==> Writing /root/setup.env"
+cat >/root/setup.env <<ENVFILE
+APP_DOMAIN="$APP_DOMAIN"
+ACME_EMAIL="$ACME_EMAIL"
+ENVFILE
+chmod 600 /root/setup.env
 
-Next:
-  1. ssh in as deploy:            ssh deploy@<server-ip>
-  2. edit the remaining values:   nano /srv/calisthenics/.env
-                                  (APP_DOMAIN, ACME_EMAIL, ANTHROPIC_API_KEY)
-  3. point your domain's A record at this server's IP
-  4. bring it up:                 cd /srv/calisthenics && make deploy
-
-Caddy requests the TLS certificate on first start, so DNS must resolve first.
-DONE
+echo "==> Handing over to infra/setup.sh"
+exec bash "$APP_DIR/infra/setup.sh"

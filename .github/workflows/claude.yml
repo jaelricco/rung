@@ -1,0 +1,49 @@
+# Tag @claude in an issue or a pull request comment and it works on the repo,
+# pushing a branch and opening a PR. Runs on GitHub's runner — nothing to
+# install locally.
+#
+# Setup:
+#   1. Install the app: https://github.com/apps/claude  (grant it this repo)
+#   2. Settings → Secrets and variables → Actions → new secret
+#        ANTHROPIC_API_KEY = sk-ant-...
+#   3. Merge this file.
+#
+# To avoid storing a key at all, use Workload Identity Federation instead:
+# register https://token.actions.githubusercontent.com as an issuer in
+# Console → Settings → Workload identity, then drop the anthropic_api_key line
+# below. The id-token: write permission is already granted.
+
+name: Claude
+
+on:
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+  issues:
+    types: [opened, assigned]
+
+jobs:
+  claude:
+    # Only wake up when actually mentioned, so ordinary comments cost nothing.
+    if: |
+      contains(github.event.comment.body, '@claude') ||
+      contains(github.event.issue.body, '@claude')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude_args: |
+            --max-turns 25
+            --append-system-prompt "This is a Go + SvelteKit calisthenics training app deployed by Docker Compose on a single Hetzner server. Backend dependencies are deliberately limited to pgx: routing is stdlib net/http ServeMux, migrations are an embedded runner in internal/db, and the Anthropic client is plain net/http. Do not add frameworks or ORMs. Athlete level is computed in Go from the threshold table in internal/training/level.go and is never asked of a model. Coaching prompts may only prescribe exercises and protocols that exist in the database or in internal/training/injuries.go. Event dates must clear the verification gates in internal/events/verify.go before being shown as fact. Server setup lives only in infra/setup.sh."

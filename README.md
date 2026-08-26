@@ -28,15 +28,30 @@ x86 over ARM for two reasons: Hetzner's June 2026 price adjustment removed the
 ARM price advantage, and `postgis/postgis` ARM64 availability is inconsistent.
 On x86 that question doesn't arise.
 
-### Creating it: the short way
+### Setting it up
 
-Open `infra/cloud-init.yaml`, edit the values at the top of the
-`/root/setup.env` block, and paste the whole file into the **Cloud config**
-field on Hetzner's server creation page. The server installs Docker, hardens
-itself, clones this repo, generates its own database password, and starts the
-stack on first boot. Nothing to SSH into.
+Setup is defined once, in `infra/setup.sh`. Two entry points reach it:
 
-Do not put your Anthropic API key in that file. Cloud config is readable from
+**Server doesn't exist yet** — edit the `/root/setup.env` values in
+`infra/cloud-init.yaml` and paste the file into the **Cloud config** field on
+Hetzner's creation page. The server configures itself on first boot. Note that
+cloud config is read only at creation; it cannot be added to a running server,
+and a rebuild replays whatever was stored at creation time.
+
+**Server already exists** — run the bootstrap over SSH:
+
+```bash
+scp infra/bootstrap.sh root@YOUR-IP:/root/
+ssh root@YOUR-IP
+bash /root/bootstrap.sh https://github.com/YOU/YOUR-REPO.git training.example.com you@example.com
+```
+
+Either path ends the same way: Docker installed, `deploy` user created, ufw and
+fail2ban on, SSH passwords disabled, 2 GB of swap so builds don't get OOM-killed,
+repo cloned, database password generated, stack built and running, nightly
+backup cron installed with 14-day retention.
+
+Do not put your Anthropic API key in the cloud config. It stays readable from
 inside the server at `169.254.169.254` for the life of the machine. The stack
 runs fine without the key — coaching endpoints return 503 — and the login
 banner tells you the one command to add it afterwards.
