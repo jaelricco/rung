@@ -1,8 +1,22 @@
+# Deploys to the server after CI passes on the default branch.
+#
+# Two guards, both learned the hard way:
+#   - it waits for CI, so a build that doesn't compile is never deployed
+#   - it skips quietly when DEPLOY_HOST isn't set, so it doesn't email you a
+#     red run on every push before the server is configured
+#
+# Required secrets, once the server is up:
+#   DEPLOY_HOST     the server's IP
+#   DEPLOY_USER     deploy
+#   DEPLOY_SSH_KEY  private key whose public half is in
+#                   /home/deploy/.ssh/authorized_keys
+
 name: deploy
 
 on:
-  push:
-    branches: [main]
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
   workflow_dispatch:
 
 concurrency:
@@ -11,9 +25,27 @@ concurrency:
 
 jobs:
   deploy:
+    # Only on a green CI run of the default branch, or when triggered by hand.
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_branch == github.event.repository.default_branch)
     runs-on: ubuntu-latest
     steps:
+      - name: Check whether deployment is configured
+        id: check
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+        run: |
+          if [ -z "$DEPLOY_HOST" ]; then
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::DEPLOY_HOST is not set, so there is nothing to deploy to yet. Skipping."
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Deploy over SSH
+        if: steps.check.outputs.configured == 'true'
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.DEPLOY_HOST }}
@@ -24,11 +56,10 @@ jobs:
             set -euo pipefail
             cd /srv/calisthenics
             git fetch --all
-            git reset --hard origin/main
+            git reset --hard "origin/$(git symbolic-ref --short HEAD)"
             docker compose up -d --build --remove-orphans
             docker image prune -f
-            # Fail the job if anything did not come up healthy.
             sleep 15
             docker compose ps
-            docker compose exec -T api wget -qO- http://127.0.0.1:8080/healthz >/dev/null || \
-              (docker compose logs --tail=50 api && exit 1)
+            docker compose exec -T api wget -qO- http://127.0.0.1:8080/healthz >/dev/null \
+              || (docker compose logs --tail=50 api && exit 1)
