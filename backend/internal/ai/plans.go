@@ -79,6 +79,25 @@ type planResponse struct {
 	Saved  bool   `json:"saved"`
 }
 
+// How long a coaching call may run. Both are far past the usual case; they
+// exist so a stuck request eventually ends rather than to pace anything.
+const (
+	planBudget  = 8 * time.Minute
+	proseBudget = 4 * time.Minute
+)
+
+// planTokens sizes the ceiling to the plan being asked for. It has to cover
+// the model's reasoning as well as the plan itself: they come out of the same
+// budget, and a ceiling that only fits the answer gets spent on the thinking
+// and returns nothing at all.
+func planTokens(sessions int) int {
+	tokens := 6000 + sessions*400
+	if tokens > 48000 {
+		tokens = 48000
+	}
+	return tokens
+}
+
 func (h *Handler) SkillPlan(w http.ResponseWriter, r *http.Request) {
 	var in skillPlanRequest
 	if !httpx.Decode(w, r, &in) {
@@ -110,9 +129,17 @@ func (h *Handler) SkillPlan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	promptContext, err := h.buildContext(r.Context(), me)
+	// Everything past here can take minutes, so the response either streams
+	// progress or waits; both need longer than the server's write timeout.
+	out := begin(w, r, planBudget)
+	defer out.close()
+	ctx, cancel := context.WithTimeout(r.Context(), planBudget)
+	defer cancel()
+
+	out.report(Progress{Stage: "reading", Label: "Reading your training history", Percent: 2})
+	promptContext, err := h.buildContext(ctx, me)
 	if err != nil {
-		httpx.Fail(w, http.StatusInternalServerError, "Couldn't read your training history.")
+		out.fail(http.StatusInternalServerError, "Couldn't read your training history.")
 		return
 	}
 
@@ -147,13 +174,19 @@ Return JSON in exactly this shape:
 day_of_week is 1 for Monday through 7 for Sunday. Include every session for all %d weeks.`,
 		promptContext, in.Weeks, in.Skill, in.DaysPerWeek, orNone(in.Notes), in.Weeks, in.Weeks)
 
+	expected := in.Weeks * in.DaysPerWeek
+	tracker := newPlanTracker(expected)
+	out.report(Progress{Stage: "sending", Label: "Briefing the coach", Percent: 5, Total: expected})
+
 	var plan Plan
-	if err := h.client.CompleteJSON(r.Context(), me.ID, "skill_plan", coachSystem, prompt, 8000, &plan); err != nil {
-		httpx.Fail(w, http.StatusBadGateway, "Couldn't build that plan: "+err.Error())
+	err = h.client.CompleteJSONStream(ctx, me.ID, "skill_plan", coachSystem, prompt,
+		planTokens(expected), func(d Delta) { out.report(tracker.update(d)) }, &plan)
+	if err != nil {
+		out.fail(http.StatusBadGateway, "Couldn't build that plan: "+err.Error())
 		return
 	}
 	if len(plan.Sessions) == 0 {
-		httpx.Fail(w, http.StatusBadGateway, "The plan came back empty. Try again.")
+		out.fail(http.StatusBadGateway, "The plan came back empty. Try again.")
 		return
 	}
 	if plan.Title == "" {
@@ -161,17 +194,21 @@ day_of_week is 1 for Monday through 7 for Sunday. Include every session for all 
 	}
 	plan.Weeks = in.Weeks
 
-	out := planResponse{Plan: plan}
+	result := planResponse{Plan: plan}
 	if in.Save {
-		id, err := h.savePlan(r.Context(), me.ID, plan, in.Skill, startsOn)
+		out.report(Progress{Stage: "saving", Label: "Adding the sessions to your calendar",
+			Percent: 95, Done: len(plan.Sessions), Total: expected})
+		id, err := h.savePlan(ctx, me.ID, plan, in.Skill, startsOn)
 		if err != nil {
-			httpx.Fail(w, http.StatusInternalServerError, "The plan was built but couldn't be saved.")
+			out.fail(http.StatusInternalServerError, "The plan was built but couldn't be saved.")
 			return
 		}
-		out.PlanID = id
-		out.Saved = true
+		result.PlanID = id
+		result.Saved = true
 	}
-	httpx.JSON(w, http.StatusOK, out)
+	out.report(Progress{Stage: "done", Label: "Plan ready", Percent: 100,
+		Done: len(plan.Sessions), Total: expected})
+	out.done(result)
 }
 
 // savePlan writes the plan and expands it into dated calendar entries.
@@ -234,15 +271,26 @@ type textResponse struct {
 	Text string `json:"text"`
 }
 
+// The prose answers are short, but the ceiling also has to cover the model's
+// reasoning, which is spent from the same budget.
+const proseTokens = 8000
+
 func (h *Handler) Review(w http.ResponseWriter, r *http.Request) {
 	me := auth.MustUser(r.Context())
 	if !h.client.Configured() {
 		httpx.Fail(w, http.StatusServiceUnavailable, "Coaching is switched off: no API key is set on the server.")
 		return
 	}
-	ctxText, err := h.buildContext(r.Context(), me)
+
+	out := begin(w, r, proseBudget)
+	defer out.close()
+	ctx, cancel := context.WithTimeout(r.Context(), proseBudget)
+	defer cancel()
+
+	out.report(Progress{Stage: "reading", Label: "Reading your last four weeks", Percent: 3})
+	ctxText, err := h.buildContext(ctx, me)
 	if err != nil {
-		httpx.Fail(w, http.StatusInternalServerError, "Couldn't read your training history.")
+		out.fail(http.StatusInternalServerError, "Couldn't read your training history.")
 		return
 	}
 
@@ -256,12 +304,15 @@ Review the last four weeks of training. In plain prose, under 300 words:
 If there is too little data to judge, say so and name what to log first.
 Answer as prose, not JSON.`
 
-	out, err := h.client.Complete(r.Context(), me.ID, "review", coachSystem, prompt, 1500)
+	tracker := newProseTracker(1800, "Reading your records")
+	text, err := h.client.CompleteStream(ctx, me.ID, "review", coachSystem, prompt, proseTokens,
+		func(d Delta) { out.report(tracker.update(d)) })
 	if err != nil {
-		httpx.Fail(w, http.StatusBadGateway, "Couldn't produce a review: "+err.Error())
+		out.fail(http.StatusBadGateway, "Couldn't produce a review: "+err.Error())
 		return
 	}
-	httpx.JSON(w, http.StatusOK, textResponse{Text: out})
+	out.report(Progress{Stage: "done", Label: "Review ready", Percent: 100})
+	out.done(textResponse{Text: text})
 }
 
 func (h *Handler) Recovery(w http.ResponseWriter, r *http.Request) {
@@ -270,9 +321,16 @@ func (h *Handler) Recovery(w http.ResponseWriter, r *http.Request) {
 		httpx.Fail(w, http.StatusServiceUnavailable, "Recovery guidance is switched off: no API key is set on the server.")
 		return
 	}
-	ctxText, err := h.buildContext(r.Context(), me)
+
+	out := begin(w, r, proseBudget)
+	defer out.close()
+	ctx, cancel := context.WithTimeout(r.Context(), proseBudget)
+	defer cancel()
+
+	out.report(Progress{Stage: "reading", Label: "Reading your recent load", Percent: 3})
+	ctxText, err := h.buildContext(ctx, me)
 	if err != nil {
-		httpx.Fail(w, http.StatusInternalServerError, "Couldn't read your training history.")
+		out.fail(http.StatusInternalServerError, "Couldn't read your training history.")
 		return
 	}
 
@@ -289,12 +347,15 @@ Give recovery guidance for the coming week, under 350 words, covering:
 End with one line on when to stop self-managing and see a clinician.
 Answer as prose, not JSON.`
 
-	out, err := h.client.Complete(r.Context(), me.ID, "recovery", coachSystem, prompt, 1500)
+	tracker := newProseTracker(2100, "Weighing your recent load")
+	text, err := h.client.CompleteStream(ctx, me.ID, "recovery", coachSystem, prompt, proseTokens,
+		func(d Delta) { out.report(tracker.update(d)) })
 	if err != nil {
-		httpx.Fail(w, http.StatusBadGateway, "Couldn't produce recovery guidance: "+err.Error())
+		out.fail(http.StatusBadGateway, "Couldn't produce recovery guidance: "+err.Error())
 		return
 	}
-	httpx.JSON(w, http.StatusOK, textResponse{Text: out})
+	out.report(Progress{Stage: "done", Label: "Guidance ready", Percent: 100})
+	out.done(textResponse{Text: text})
 }
 
 // ---------- prompt context ----------

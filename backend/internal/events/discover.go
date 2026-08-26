@@ -113,8 +113,10 @@ Return JSON:
 		Events []Candidate `json:"events"`
 	}
 
+	// Roomy on purpose: the ceiling covers the model's reasoning and the
+	// pages it reads as well as the answer it writes.
 	searchResult, err := s.ai.SearchJSON(ctx, userID, "event_discovery", discoverySystem, prompt,
-		8000, ai.SearchOptions{MaxSearches: 8}, &payload)
+		16000, ai.SearchOptions{MaxSearches: 8}, &payload)
 
 	report.SearchCount = searchResult.SearchCount
 	if err != nil {

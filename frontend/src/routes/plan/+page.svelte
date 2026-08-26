@@ -1,5 +1,6 @@
 <script>
 	import { api } from '$lib/api.js';
+	import AiProgress from '$lib/AiProgress.svelte';
 
 	let skill = $state('');
 	let weeks = $state(8);
@@ -11,6 +12,7 @@
 	let saved = $state(false);
 	let error = $state('');
 	let busy = $state(false);
+	let progress = $state(null);
 
 	const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -18,20 +20,26 @@
 		error = '';
 		plan = null;
 		busy = true;
+		progress = { label: 'Starting', percent: 0 };
 		try {
-			const result = await api.post('/ai/skill-plan', {
-				skill,
-				weeks: Number(weeks),
-				days_per_week: Number(daysPerWeek),
-				notes,
-				save
-			});
+			const result = await api.stream(
+				'/ai/skill-plan',
+				{
+					skill,
+					weeks: Number(weeks),
+					days_per_week: Number(daysPerWeek),
+					notes,
+					save
+				},
+				(update) => (progress = update)
+			);
 			plan = result.plan;
 			saved = result.saved;
 		} catch (e) {
 			error = e.message;
 		} finally {
 			busy = false;
+			progress = null;
 		}
 	}
 
@@ -83,6 +91,18 @@
 <button style="margin-top:1rem" onclick={generate} disabled={busy || !skill.trim()}>
 	{busy ? 'Writing your plan' : 'Generate plan'}
 </button>
+
+{#if busy && progress}
+	<div style="margin-top:1rem">
+		<AiProgress
+			label={progress.label}
+			percent={progress.percent}
+			detail={progress.detail}
+			done={progress.done}
+			total={progress.total}
+		/>
+	</div>
+{/if}
 
 {#if plan}
 	<div class="bar"></div>

@@ -47,7 +47,7 @@ func main() {
 	authSvc := auth.New(pool, cfg.SecureCookies)
 	trainingSvc := training.New(pool)
 	parksSvc := parks.New(pool)
-	aiClient := ai.NewClient(pool, cfg.AnthropicKey, cfg.AnthropicModel, cfg.SearchToolVersion)
+	aiClient := ai.NewClient(pool, cfg.AnthropicKey, cfg.AnthropicModel, cfg.SearchToolVersion, cfg.AnthropicThinking)
 	aiHandler := ai.NewHandler(aiClient, pool, trainingSvc)
 	eventsSvc := events.New(pool, aiClient)
 

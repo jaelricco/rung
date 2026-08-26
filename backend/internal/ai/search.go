@@ -86,11 +86,12 @@ type anyMessage struct {
 }
 
 type searchRequest struct {
-	Model     string       `json:"model"`
-	MaxTokens int          `json:"max_tokens"`
-	System    string       `json:"system,omitempty"`
-	Messages  []anyMessage `json:"messages"`
-	Tools     []searchTool `json:"tools"`
+	Model     string          `json:"model"`
+	MaxTokens int             `json:"max_tokens"`
+	System    string          `json:"system,omitempty"`
+	Messages  []anyMessage    `json:"messages"`
+	Tools     []searchTool    `json:"tools"`
+	Thinking  *thinkingConfig `json:"thinking,omitempty"`
 }
 
 type searchResponse struct {
@@ -148,6 +149,7 @@ func (c *Client) Search(ctx context.Context, userID, purpose, system, prompt str
 			System:    system,
 			Messages:  messages,
 			Tools:     []searchTool{tool},
+			Thinking:  c.thinkingConfig(),
 		})
 		if err != nil {
 			return result, err
@@ -172,8 +174,14 @@ func (c *Client) Search(ctx context.Context, userID, purpose, system, prompt str
 
 		if parsed.StopReason != "pause_turn" {
 			result.Text = text.String()
+			answered := strings.TrimSpace(result.Text) != ""
 			c.record(ctx, userID, purpose, prompt, result.Text,
-				parsed.Usage.InputTokens, parsed.Usage.OutputTokens, time.Since(started), true)
+				parsed.Usage.InputTokens, parsed.Usage.OutputTokens, time.Since(started), answered)
+			// Same failure as a plan that never got written: reasoning and
+			// search results are spent from the same ceiling as the answer.
+			if parsed.StopReason == "max_tokens" {
+				return result, ceilingError(answered, maxTokens)
+			}
 			return result, nil
 		}
 
@@ -201,7 +209,7 @@ func (c *Client) searchToolVersion() string {
 func (c *Client) postMessages(ctx context.Context, body []byte) (searchResponse, error) {
 	var parsed searchResponse
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, anthropicURL, bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL, bytes.NewReader(body))
 	if err != nil {
 		return parsed, err
 	}

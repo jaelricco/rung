@@ -1,6 +1,7 @@
 <script>
 	import { api } from '$lib/api.js';
 	import { session } from '$lib/session.svelte.js';
+	import AiProgress from '$lib/AiProgress.svelte';
 
 	const TIERS = ['untested', 'beginner', 'novice', 'intermediate', 'advanced', 'elite'];
 
@@ -9,6 +10,7 @@
 	let error = $state('');
 	let review = $state('');
 	let reviewBusy = $state(false);
+	let reviewProgress = $state(null);
 
 	$effect(() => {
 		if (!session.user) return;
@@ -23,13 +25,15 @@
 	async function runReview() {
 		reviewBusy = true;
 		error = '';
+		reviewProgress = { label: 'Starting', percent: 0 };
 		try {
-			const result = await api.post('/ai/review');
+			const result = await api.stream('/ai/review', {}, (update) => (reviewProgress = update));
 			review = result.text;
 		} catch (e) {
 			error = e.message;
 		} finally {
 			reviewBusy = false;
+			reviewProgress = null;
 		}
 	}
 
@@ -144,6 +148,16 @@
 	<button onclick={runReview} disabled={reviewBusy}>
 		{reviewBusy ? 'Reading your log' : 'Review my training'}
 	</button>
+{/if}
+
+{#if reviewBusy && reviewProgress}
+	<div style="margin-top:0.8rem">
+		<AiProgress
+			label={reviewProgress.label}
+			percent={reviewProgress.percent}
+			detail={reviewProgress.detail}
+		/>
+	</div>
 {/if}
 
 <div class="bar"></div>

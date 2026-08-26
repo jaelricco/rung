@@ -3,7 +3,21 @@
 }
 
 {$APP_DOMAIN} {
-	encode zstd gzip
+	# Compress the ordinary responses only. Progress streams from the AI
+	# endpoints are text/event-stream, and a compressor sitting on those
+	# holds each event back until its buffer fills, which is exactly the
+	# stall the progress bar exists to avoid.
+	encode zstd gzip {
+		match {
+			header Content-Type text/html*
+			header Content-Type text/plain*
+			header Content-Type text/css*
+			header Content-Type text/javascript*
+			header Content-Type application/javascript*
+			header Content-Type application/json*
+			header Content-Type image/svg+xml*
+		}
+	}
 
 	header {
 		Strict-Transport-Security "max-age=31536000; includeSubDomains"
