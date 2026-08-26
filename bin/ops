@@ -37,6 +37,10 @@ esac
 require_token
 detect_repo
 
+# Both markers are taken before the dispatch: the run has to be newer than any
+# existing one, and so does the comment carrying its output.
+COMMENT_BEFORE="$(latest_ops_comment_id)"
+
 # Remember where the run list stood, so the run this dispatch creates can be
 # told apart from one someone else started a moment ago.
 before="$(gh_api GET "/repos/$REPO/actions/workflows/ops.yml/runs?per_page=1" |
@@ -74,8 +78,8 @@ echo
 
 # The workflow posts the server's output to the ops-log issue; give the comment
 # a moment to land, then read it.
-for _ in $(seq 1 10); do
-	body="$(latest_ops_comment || true)"
+for _ in $(seq 1 15); do
+	body="$(latest_ops_comment "$COMMENT_BEFORE" || true)"
 	[[ -n "$body" ]] && break
 	sleep 3
 done

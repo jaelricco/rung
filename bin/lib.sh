@@ -106,19 +106,40 @@ d=json.load(sys.stdin); print(d["status"], d.get("conclusion") or "-")')
 
 # The ops workflow and the deploy job both post their transcript to an issue,
 # because Actions log downloads come from a storage host that a locked-down
-# network usually cannot reach. This reads the newest one.
-latest_ops_comment() {
-	local issue
-	issue="$(gh_api GET "/repos/$REPO/issues?state=all&labels=&per_page=100" |
+# network usually cannot reach.
+ops_issue_number() {
+	[[ -n "${OPS_ISSUE:-}" ]] && { printf '%s' "$OPS_ISSUE"; return 0; }
+	OPS_ISSUE="$(gh_api GET "/repos/$REPO/issues?state=all&per_page=100" |
 		python3 -c '
 import json,sys
 for i in json.load(sys.stdin):
     if i["title"].strip().lower()=="ops log" and "pull_request" not in i:
         print(i["number"]); break')"
-	[[ -n "$issue" ]] || return 1
-	gh_api GET "/repos/$REPO/issues/$issue/comments?per_page=1&page=1&sort=created&direction=desc" |
+	[[ -n "$OPS_ISSUE" ]] || return 1
+	printf '%s' "$OPS_ISSUE"
+}
+
+# Prints the newest comment. With an argument, prints nothing unless a comment
+# newer than that id exists — otherwise a run that has not posted yet reads as
+# the previous run's output, which is worse than no output at all.
+latest_ops_comment() {
+	local after="${1:-0}" issue
+	issue="$(ops_issue_number)" || return 1
+	gh_api GET "/repos/$REPO/issues/$issue/comments?per_page=1&sort=created&direction=desc" |
+		python3 -c '
+import json,sys
+after=int(sys.argv[1])
+c=json.load(sys.stdin)
+if c and c[0]["id"]>after:
+    print(c[0]["body"])' "$after"
+}
+
+latest_ops_comment_id() {
+	local issue
+	issue="$(ops_issue_number)" || { printf '0'; return 0; }
+	gh_api GET "/repos/$REPO/issues/$issue/comments?per_page=1&sort=created&direction=desc" |
 		python3 -c '
 import json,sys
 c=json.load(sys.stdin)
-print(c[0]["body"] if c else "")'
+print(c[0]["id"] if c else 0)'
 }

@@ -48,6 +48,8 @@ elif [[ "$DRY_RUN" == true ]]; then
 	exit 0
 fi
 
+COMMENT_BEFORE="$(latest_ops_comment_id)"
+
 say "pushing to $REPO ($current_branch)"
 # The token goes on the command line for this one call rather than into
 # .git/config, so it is never written to disk.
@@ -81,7 +83,12 @@ fi
 
 # The deploy job posts its server-side transcript to the ops-log issue, which
 # is readable over the plain API even where Actions log downloads are not.
-if body="$(latest_ops_comment)" && [[ -n "$body" ]]; then
+for _ in $(seq 1 10); do
+	body="$(latest_ops_comment "$COMMENT_BEFORE" || true)"
+	[[ -n "$body" ]] && break
+	sleep 3
+done
+if [[ -n "${body:-}" ]]; then
 	echo
 	say "server transcript"
 	printf '%s\n' "$body" | sed 's/^/    /'
