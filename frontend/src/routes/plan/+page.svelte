@@ -2,7 +2,7 @@
 	import { api } from '$lib/api.js';
 	import AiProgress from '$lib/AiProgress.svelte';
 	import SessionDetail from '$lib/SessionDetail.svelte';
-	import { weekSlots, sessionShape, isoDate, mondayOf } from '$lib/week.js';
+	import { DAY_SHORT, weekSlots, sessionShape, isoDate, mondayOf, addDays, formatDate } from '$lib/week.js';
 
 	let skill = $state('');
 	let weeks = $state(8);
@@ -20,6 +20,7 @@
 	let savedPlanId = $state('');
 	let saving = $state(false);
 	let saveError = $state('');
+	let openKey = $state('');
 
 	async function generate() {
 		error = '';
@@ -72,11 +73,20 @@
 	let byWeek = $derived.by(() => {
 		const sessions = plan?.sessions ?? [];
 		const weeksInPlan = [...new Set(sessions.map((s) => s.week))].sort((a, b) => a - b);
+		// The plan is written in week and day numbers; the calendar it is
+		// heading for runs on dates, so map one onto the other from the start
+		// date the athlete picked.
+		const first = mondayOf(new Date(`${startsOn}T00:00:00`));
 		return weeksInPlan.map((week) => {
 			const inWeek = sessions.filter((s) => s.week === week);
+			const monday = addDays(first, (week - 1) * 7);
 			return {
 				week,
-				slots: weekSlots(inWeek, (s) => s.day_of_week),
+				monday,
+				slots: weekSlots(inWeek, (s) => s.day_of_week).map((slot, day) => ({
+					...slot,
+					date: addDays(monday, day)
+				})),
 				sessions: inWeek.length,
 				sets: inWeek.reduce(
 					(total, s) => total + (s.blocks ?? []).reduce((n, b) => n + (Number(b.sets) || 0), 0),
@@ -87,6 +97,23 @@
 			};
 		});
 	});
+
+	let openSession = $derived.by(() => {
+		for (const week of byWeek) {
+			for (const slot of week.slots) {
+				for (const [i, session] of slot.items.entries()) {
+					if (keyOf(week.week, slot.day, i) === openKey) return { session, week: week.week, slot };
+				}
+			}
+		}
+		return null;
+	});
+
+	const keyOf = (week, day, i) => `${week}-${day}-${i}`;
+
+	function dayLabel(date) {
+		return date.getDate() === 1 ? formatDate(isoDate(date)) : String(date.getDate());
+	}
 
 	// Phases name their span as "1-3" or "4", which is the only place the
 	// week-to-phase mapping exists.
@@ -102,13 +129,13 @@
 
 <p class="eyebrow" style="margin-top:2rem">Programming</p>
 <h1>Build a plan</h1>
-<p class="muted" style="margin-top:0.6rem;max-width:56ch">
+<p class="muted column" style="margin-top:0.6rem">
 	The coach researches how the skill is actually trained, then writes against your logged records
 	and any open injury, using only exercises in the library.
 </p>
 <div class="bar"></div>
 
-<div class="row">
+<div class="row form-width">
 	<div style="flex:2 1 240px">
 		<label for="skill">Goal</label>
 		<input id="skill" bind:value={skill} placeholder="Full front lever, 20 kg weighted pull-up…" />
@@ -127,12 +154,12 @@
 	</div>
 </div>
 
-<div class="field" style="margin-top:0.6rem">
+<div class="field form-width" style="margin-top:0.6rem">
 	<label for="notes">Anything else the plan should account for</label>
 	<textarea id="notes" rows="2" bind:value={notes} placeholder="Equipment, schedule, past problems"></textarea>
 </div>
 
-<label style="display:flex;align-items:center;gap:0.5rem;text-transform:none;letter-spacing:0">
+<label class="form-width" style="display:flex;align-items:center;gap:0.5rem;text-transform:none;letter-spacing:0">
 	<input type="checkbox" bind:checked={research} style="width:auto" />
 	Research the skill first. Slower, and the plan knows what the ladder to it looks like.
 </label>
@@ -164,7 +191,7 @@
 	<h2>{plan.title}</h2>
 	<p class="prose" style="margin-top:0.6rem">{plan.summary}</p>
 
-	<div class="row" style="margin-top:1rem;align-items:center">
+	<div class="row form-width" style="margin-top:1rem;align-items:center">
 		{#if savedPlanId}
 			<p class="muted" style="margin:0;flex:1 1 auto">
 				On your calendar from {startsOn}. <a href="/calendar">Open the calendar</a>.
@@ -184,7 +211,7 @@
 	{/if}
 
 	{#if plan.restrictions?.length}
-		<div class="notice" style="margin-top:0.9rem">
+		<div class="notice form-width" style="margin-top:0.9rem">
 			<strong>Adjusted for:</strong>
 			<ul style="margin:0.4rem 0 0;padding-left:1.1rem">
 				{#each plan.restrictions as restriction}
@@ -195,7 +222,7 @@
 	{/if}
 
 	{#if warnings.length}
-		<div class="notice error" style="margin-top:0.7rem">
+		<div class="notice error form-width" style="margin-top:0.7rem">
 			<strong>Trimmed before you saw it:</strong>
 			<ul style="margin:0.4rem 0 0;padding-left:1.1rem">
 				{#each warnings as warning}
@@ -231,67 +258,76 @@
 		{/if}
 	{/if}
 
-	{#each byWeek as week (week.week)}
-		<div class="bar"></div>
-		<p class="eyebrow">
-			Week {week.week}{#if week.phase}{' · '}{week.phase.name}{/if}
-		</p>
+	<div class="bar"></div>
+	<p class="eyebrow">The plan, week by week</p>
+	<p class="muted" style="font-size:0.85rem;margin:0.3rem 0 0">
+		Dates come from the start date above. Open a session to see the work in it.
+	</p>
 
-		<!-- Four rows of two: Monday and Tuesday, then a break, and so on. -->
-		<div class="week-grid">
+	<div class="cal">
+		<div class="cal-dow"></div>
+		{#each DAY_SHORT as name (name)}
+			<div class="cal-dow">{name}</div>
+		{/each}
+
+		{#each byWeek as week (week.week)}
+			<div class="cal-wk">
+				W{week.week}
+				<span class="count">{week.sessions}×</span>
+			</div>
+
 			{#each week.slots as slot (slot.day)}
-				<!-- One square per day, whatever it holds: two sessions on a Tuesday
-				     stack inside the square rather than pushing the grid out of shape. -->
-				<div class="panel day" class:rest={!slot.items.length}>
-					<div class="day-head">
-						<p class="eyebrow" style="margin:0">{slot.name}</p>
-						{#if slot.items[0]?.load}
-							<span
-								class="chip"
-								class:hard={slot.items[0].load === 'hard'}
-								class:deload={slot.items[0].load === 'deload'}>{slot.items[0].load}</span
-							>
-						{/if}
-					</div>
+				<div class="cal-cell" class:rest={!slot.items.length}>
+					<span class="cal-date">
+						<span class="dow-inline">{slot.short}</span>
+						{dayLabel(slot.date)}
+					</span>
 
-					{#if slot.items.length}
-						{#each slot.items as session, i (i)}
-							<div style="margin-top:0.15rem">
-								<p style="font-weight:600;margin:0 0 0.1rem">{session.title}</p>
-								<p class="muted" style="font-size:0.85rem;margin:0">{session.focus}</p>
-								<p class="mono muted" style="font-size:0.74rem;margin:0.35rem 0 0">
-									{sessionShape(session)}{#if session.duration_minutes}{` · ${session.duration_minutes} min`}{/if}
-								</p>
-								<details style="margin-top:0.5rem">
-									<summary class="eyebrow" style="cursor:pointer">The session</summary>
-									<div style="margin-top:0.5rem">
-										<SessionDetail {session} />
-									</div>
-								</details>
-							</div>
-						{/each}
-					{:else}
-						<p class="muted" style="margin:0.1rem 0 0;font-size:0.85rem">Rest</p>
-					{/if}
+					{#each slot.items as session, i (i)}
+						<button
+							class="cal-item"
+							class:hard={session.load === 'hard'}
+							class:moderate={session.load === 'moderate'}
+							class:light={session.load === 'easy' || session.load === 'deload'}
+							class:on={openKey === keyOf(week.week, slot.day, i)}
+							onclick={() => {
+								const key = keyOf(week.week, slot.day, i);
+								openKey = openKey === key ? '' : key;
+							}}
+						>
+							<span class="title">{session.title}</span>
+							<!-- How hard the session is, is the colour of the bar. -->
+							<span class="meta">{sessionShape(session)}</span>
+						</button>
+					{/each}
 				</div>
 			{/each}
 
-			<!-- The eighth square: what the week adds up to. -->
-			<div class="panel day summary">
-				<p class="eyebrow" style="margin:0">Week {week.week}</p>
-				<p class="stat" style="margin:0.1rem 0 0;font-size:1.15rem">
-					{week.sessions} sessions · {week.sets} sets
-				</p>
-				{#if week.deload}
-					<p class="muted" style="font-size:0.82rem;margin:0.35rem 0 0">
-						Lighter week. Volume drops, intensity holds.
-					</p>
-				{:else if week.phase}
-					<p class="muted" style="font-size:0.82rem;margin:0.35rem 0 0">{week.phase.aim}</p>
-				{/if}
-			</div>
-		</div>
-	{/each}
+			{#if openSession && openSession.week === week.week}
+					<div class="cal-detail">
+						<div class="cal-detail-head">
+							<p class="eyebrow" style="margin:0">
+								Week {week.week}{` · ${formatDate(isoDate(openSession.slot.date))}`}
+							</p>
+							<strong style="flex:1 1 auto">{openSession.session.title}</strong>
+							{#if openSession.session.load}
+								<span
+									class="chip"
+									class:hard={openSession.session.load === 'hard'}
+									class:deload={openSession.session.load === 'deload'}
+								>{openSession.session.load}</span
+								>
+							{/if}
+							<button class="link" onclick={() => (openKey = '')}>Close</button>
+						</div>
+						<p class="muted" style="margin:0 0 0.6rem;font-size:0.88rem">
+							{openSession.session.focus}{#if openSession.session.duration_minutes}{` · ${openSession.session.duration_minutes} min`}{/if}
+						</p>
+						<SessionDetail session={openSession.session} />
+				</div>
+			{/if}
+		{/each}
+	</div>
 
 	{#if plan.research}
 		<div class="bar"></div>

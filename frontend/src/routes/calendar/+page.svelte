@@ -2,17 +2,18 @@
 	import { api } from '$lib/api.js';
 	import { session } from '$lib/session.svelte.js';
 	import SessionDetail from '$lib/SessionDetail.svelte';
-	import { weekSlots, sessionShape, isoDate, mondayOf, addDays, isoDay, formatDate } from '$lib/week.js';
+	import { DAY_SHORT, sessionShape, isoDate, mondayOf, addDays, formatDate } from '$lib/week.js';
 
-	// How much of the calendar is on screen at once. Four weeks is the unit a
-	// training block is read in, and it fits the four-row grid four times over.
-	const WEEKS_SHOWN = 4;
+	// Five weeks is a month view: the block a training cycle is read in, and
+	// what fits on a screen without scrolling the header away.
+	const WEEKS_SHOWN = 5;
 
 	let anchor = $state(mondayOf(new Date()));
 	let calendar = $state(null);
 	let plans = $state([]);
 	let error = $state('');
 	let busyId = $state('');
+	let openId = $state('');
 
 	const today = isoDate(new Date());
 
@@ -30,38 +31,48 @@
 			.catch((e) => (error = e.message));
 	});
 
-	// The API answers with a flat list of dated sessions. The calendar shows
-	// weeks, so they are dealt back out into the squares they belong in.
+	// The API answers with a flat list of dated sessions; the grid wants them
+	// dealt out into the day each one falls on.
 	let weeks = $derived.by(() => {
 		const sessions = calendar?.sessions ?? [];
 		const events = calendar?.events ?? [];
-		return Array.from({ length: WEEKS_SHOWN }, (_, i) => {
-			const monday = addDays(from, i * 7);
-			const sunday = addDays(monday, 6);
-			const inWeek = sessions.filter((s) => s.scheduled_on >= isoDate(monday) && s.scheduled_on <= isoDate(sunday));
-			const eventsInWeek = events.filter((e) => e.starts_on >= isoDate(monday) && e.starts_on <= isoDate(sunday));
-			const slots = weekSlots(inWeek, (s) => isoDay(new Date(`${s.scheduled_on}T00:00:00`)));
-			for (const event of eventsInWeek) {
-				const day = isoDay(new Date(`${event.starts_on}T00:00:00`));
-				slots[day - 1].event = event;
-			}
+		return Array.from({ length: WEEKS_SHOWN }, (_, w) => {
+			const monday = addDays(from, w * 7);
+			const days = Array.from({ length: 7 }, (_, d) => {
+				const date = addDays(monday, d);
+				const iso = isoDate(date);
+				return {
+					iso,
+					date,
+					short: DAY_SHORT[d],
+					entries: sessions.filter((s) => s.scheduled_on === iso),
+					events: events.filter((e) => e.starts_on === iso)
+				};
+			});
+			const entries = days.flatMap((day) => day.entries);
 			return {
 				monday,
-				slots: slots.map((slot, day) => ({ ...slot, date: addDays(monday, day) })),
-				sessions: inWeek.length,
-				completed: inWeek.filter((s) => s.completed_at).length,
-				sets: inWeek.reduce(
-					(total, s) => total + (s.body?.blocks ?? []).reduce((n, b) => n + (Number(b.sets) || 0), 0),
-					0
-				)
+				days,
+				sessions: entries.length,
+				completed: entries.filter((e) => e.completed_at).length
 			};
 		});
 	});
 
 	let scheduled = $derived((calendar?.sessions ?? []).length);
+	let open = $derived(
+		(calendar?.sessions ?? []).find((s) => s.id === openId) ?? null
+	);
+
+	// The month a cell belongs to is only worth saying on the first of it.
+	function dayLabel(date) {
+		const day = date.getDate();
+		return day === 1 ? formatDate(isoDate(date)) : String(day);
+	}
 
 	function shift(weeks) {
 		anchor = addDays(anchor, weeks * 7);
+		openId = '';
 	}
 
 	async function toggle(entry) {
@@ -93,6 +104,7 @@
 				...calendar,
 				sessions: (calendar?.sessions ?? []).filter((s) => s.plan_id !== plan.id)
 			};
+			openId = '';
 		} catch (e) {
 			error = e.message;
 		} finally {
@@ -103,9 +115,9 @@
 
 <p class="eyebrow" style="margin-top:2rem">Schedule</p>
 <h1>Your calendar</h1>
-<p class="muted" style="margin-top:0.6rem;max-width:56ch">
-	Every session a plan put on the calendar, in the week it falls in. Tick one off when it is done,
-	and the plan shows how far through it you are.
+<p class="muted column" style="margin-top:0.6rem">
+	Every session a plan put on the calendar, on the day it falls. Open one to see the work; tick it
+	off when it is done.
 </p>
 
 {#if error}
@@ -117,101 +129,88 @@
 <div class="row" style="align-items:center">
 	<button class="ghost" style="flex:0 0 auto" onclick={() => shift(-WEEKS_SHOWN)}>← Earlier</button>
 	<button class="ghost" style="flex:0 0 auto" onclick={() => (anchor = mondayOf(new Date()))}>
-		This week
+		Today
 	</button>
 	<button class="ghost" style="flex:0 0 auto" onclick={() => shift(WEEKS_SHOWN)}>Later →</button>
 	<p class="mono muted" style="margin:0;flex:1 1 auto;text-align:right;font-size:0.85rem">
-		{formatDate(isoDate(from))} – {formatDate(isoDate(to))} · {scheduled} sessions
+		{formatDate(isoDate(from))} – {formatDate(isoDate(to))}{` · ${scheduled} sessions`}
 	</p>
+</div>
+
+<div class="cal">
+	<div class="cal-dow"></div>
+	{#each DAY_SHORT as name (name)}
+		<div class="cal-dow">{name}</div>
+	{/each}
+
+	{#each weeks as week (isoDate(week.monday))}
+		<div class="cal-wk">
+			{formatDate(isoDate(week.monday))}
+			{#if week.sessions}
+				<span class="count">{week.completed}/{week.sessions}</span>
+			{/if}
+		</div>
+
+		{#each week.days as day (day.iso)}
+			<div
+				class="cal-cell"
+				class:rest={!day.entries.length && !day.events.length}
+				class:today={day.iso === today}
+			>
+				<span class="cal-date">
+					<span class="dow-inline">{day.short}</span>
+					{dayLabel(day.date)}
+				</span>
+
+				{#each day.events as event (event.id)}
+					<span class="cal-item event" style="cursor:default">
+						<span class="title">{event.name}</span>
+						<span class="meta">{event.city || event.country || 'Competition'}</span>
+					</span>
+				{/each}
+
+				{#each day.entries as entry (entry.id)}
+					<button
+						class="cal-item"
+						class:on={openId === entry.id}
+						class:done={entry.completed_at}
+						onclick={() => (openId = openId === entry.id ? '' : entry.id)}
+					>
+						<span class="title">{entry.title}</span>
+						<span class="meta">{sessionShape(entry.body)}</span>
+					</button>
+				{/each}
+			</div>
+		{/each}
+
+		{#if open && week.days.some((day) => day.iso === open.scheduled_on)}
+				<div class="cal-detail">
+					<div class="cal-detail-head">
+					<p class="eyebrow" style="margin:0">{formatDate(open.scheduled_on)}</p>
+					<strong style="flex:1 1 auto">{open.title}</strong>
+					<button
+						class="ghost"
+						style="padding:0.35rem 0.7rem;font-size:0.8rem"
+						onclick={() => toggle(open)}
+						disabled={busyId === open.id}
+					>
+						{open.completed_at ? 'Done — undo' : 'Mark done'}
+					</button>
+					<button class="link" onclick={() => (openId = '')}>Close</button>
+				</div>
+				<p class="muted" style="margin:0 0 0.6rem;font-size:0.88rem">{open.focus}</p>
+				<SessionDetail session={open.body} />
+			</div>
+		{/if}
+	{/each}
 </div>
 
 {#if calendar && scheduled === 0}
 	<div class="empty" style="margin-top:1rem">
-		Nothing scheduled in these four weeks. <a href="/plan">Build a plan</a> and add it to your
+		Nothing scheduled in these five weeks. <a href="/plan">Build a plan</a> and add it to your
 		calendar.
 	</div>
 {/if}
-
-{#each weeks as week (isoDate(week.monday))}
-	<div class="bar"></div>
-	<p class="eyebrow">
-		Week of {formatDate(isoDate(week.monday))}
-	</p>
-
-	<!-- Monday and Tuesday, then a break, and so on: four rows of two. -->
-	<div class="week-grid">
-		{#each week.slots as slot (slot.day)}
-			<div
-				class="panel day"
-				class:rest={!slot.items.length && !slot.event}
-				class:today={isoDate(slot.date) === today}
-				class:done={slot.items.length > 0 && slot.items.every((s) => s.completed_at)}
-			>
-				<div class="day-head">
-					<p class="eyebrow" style="margin:0">{slot.short} {formatDate(isoDate(slot.date))}</p>
-					{#if slot.items.length}
-						<span class="chip">{slot.items.filter((s) => s.completed_at).length}/{slot.items.length}</span
-						>
-					{/if}
-				</div>
-
-				{#if slot.event}
-					<p class="chip hard" style="align-self:flex-start;margin:0.3rem 0 0.1rem">Competition</p>
-					<p style="font-weight:600;margin:0 0 0.1rem">{slot.event.name}</p>
-					<p class="muted" style="font-size:0.82rem;margin:0">
-						{slot.event.city}{#if slot.event.country}{`, ${slot.event.country}`}{/if}
-					</p>
-				{/if}
-
-				{#each slot.items as entry (entry.id)}
-					<div style="margin-top:0.2rem">
-						<p style="font-weight:600;margin:0 0 0.1rem">{entry.title}</p>
-						<p class="muted" style="font-size:0.85rem;margin:0">{entry.focus}</p>
-						<p class="mono muted" style="font-size:0.74rem;margin:0.3rem 0 0">
-							{sessionShape(entry.body)}
-						</p>
-
-						<details style="margin-top:0.45rem">
-							<summary class="eyebrow" style="cursor:pointer">The session</summary>
-							<div style="margin-top:0.5rem">
-								<SessionDetail session={entry.body} />
-							</div>
-						</details>
-
-						<button
-							class="ghost"
-							style="margin-top:0.55rem;padding:0.35rem 0.7rem;font-size:0.8rem"
-							onclick={() => toggle(entry)}
-							disabled={busyId === entry.id}
-						>
-							{entry.completed_at ? 'Done — undo' : 'Mark done'}
-						</button>
-					</div>
-				{/each}
-
-				{#if !slot.items.length && !slot.event}
-					<p class="muted" style="margin:0.1rem 0 0;font-size:0.85rem">Rest</p>
-				{/if}
-			</div>
-		{/each}
-
-		<!-- The eighth square: what the week asks of you, and how much of it is done. -->
-		<div class="panel day summary">
-			<p class="eyebrow" style="margin:0">The week</p>
-			<p class="stat" style="margin:0.1rem 0 0;font-size:1.15rem">
-				{week.completed}/{week.sessions} done
-			</p>
-			<div class="rig">
-				{#each Array(Math.max(week.sessions, 1)) as _, i}
-					<span class:on={i < week.completed}></span>
-				{/each}
-			</div>
-			<p class="muted" style="font-size:0.8rem;margin:0.5rem 0 0">
-				{week.sets} sets scheduled
-			</p>
-		</div>
-	</div>
-{/each}
 
 <div class="bar"></div>
 <h2>Plans on your calendar</h2>
@@ -238,11 +237,9 @@
 					</td>
 					<td class="mono">{plan.completed}/{plan.sessions}</td>
 					<td style="text-align:right">
-						<button
-							class="link"
-							onclick={() => removePlan(plan)}
-							disabled={busyId === plan.id}>Remove</button
-						>
+						<button class="link" onclick={() => removePlan(plan)} disabled={busyId === plan.id}>
+							Remove
+						</button>
 					</td>
 				</tr>
 			{/each}

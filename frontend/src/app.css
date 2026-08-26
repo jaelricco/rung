@@ -50,9 +50,25 @@ a:hover {
 }
 
 .shell {
-	max-width: 1080px;
+	max-width: 1400px;
 	margin: 0 auto;
 	padding: 0 1.25rem 5rem;
+}
+
+/* Reading text does not want 1400px of line length, and neither does a form
+   with three fields in it. Prose keeps a column, forms keep a working width,
+   and the calendar takes everything that is left. */
+.column {
+	max-width: 62ch;
+}
+.form-width {
+	max-width: 900px;
+}
+
+/* The pages built around a calendar get more of the window. Everything on
+   them — heading, controls, grid — still shares one left edge. */
+.shell.wide {
+	max-width: 1760px;
 }
 
 /* --- the bar: a rule with end caps, the way a pull-up bar sits in its posts.
@@ -170,72 +186,199 @@ h2 {
 	grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
 }
 
-/* --- the training week: four rows of two, Monday first, the way a week is
-   read off a wall. The eighth square carries the week's own summary, so the
-   block is a complete rectangle rather than a row with a gap in it. --- */
-.week-grid {
+/* --- the calendar: a month grid, the way every calendar is drawn. Weekday
+   names across the top, one row per week, days ruled off from each other. The
+   rules are the grid's own 1px gaps with the line colour behind them, so there
+   is no border-collapse to fight. --- */
+.cal {
 	display: grid;
-	grid-template-columns: repeat(2, minmax(0, 1fr));
-	gap: 0.7rem;
-	margin-top: 0.6rem;
+	grid-template-columns: 3.6rem repeat(7, minmax(0, 1fr));
+	gap: 1px;
+	background: var(--line);
+	border: 1px solid var(--line);
+	border-radius: var(--radius);
+	overflow: hidden;
+	margin-top: 0.8rem;
 }
-@media (max-width: 620px) {
-	.week-grid {
-		grid-template-columns: minmax(0, 1fr);
-	}
+.cal > * {
+	background: var(--ink);
+	min-width: 0;
 }
 
-.day {
+.cal-dow {
+	font-family: var(--mono);
+	font-size: 0.68rem;
+	text-transform: uppercase;
+	letter-spacing: 0.14em;
+	color: var(--muted);
+	background: var(--panel);
+	padding: 0.5rem 0.6rem;
+}
+
+/* The left gutter: which week the row is, and how much is in it. */
+.cal-wk {
+	background: var(--panel);
+	padding: 0.5rem 0.3rem;
+	text-align: center;
+	font-family: var(--mono);
+	font-size: 0.72rem;
+	color: var(--muted);
+	line-height: 1.3;
+}
+.cal-wk .count {
+	display: block;
+	font-size: 0.66rem;
+	opacity: 0.75;
+}
+
+.cal-cell {
 	display: flex;
 	flex-direction: column;
-	gap: 0.15rem;
-	min-height: 7.5rem;
+	gap: 0.28rem;
+	padding: 0.45rem 0.5rem 0.6rem;
+	min-height: 6.4rem;
 }
-/* A rest day is drawn, not omitted: the gaps between hard days are part of
-   the programme. */
-.day.rest {
-	background: none;
-	border-style: dashed;
-	color: var(--muted);
-	justify-content: center;
-	min-height: 4.5rem;
+/* A day with nothing scheduled is still a day: drawn, dimmer, never skipped. */
+.cal-cell.rest {
+	background: #0c1417;
 }
-.day.done {
-	border-left: 2px solid var(--good);
+.cal-cell.today {
+	box-shadow: inset 0 2px 0 var(--signal);
 }
-.day.today {
+.cal-cell.outside .cal-date {
+	opacity: 0.45;
+}
+
+.cal-date {
+	font-family: var(--mono);
+	font-size: 0.78rem;
+	color: var(--chalk);
+	opacity: 0.75;
+	font-variant-numeric: tabular-nums;
+}
+.cal-cell.today .cal-date {
+	color: var(--signal);
+	opacity: 1;
+	font-weight: 600;
+}
+/* The column headers carry the weekday on a wide screen. When the grid
+   collapses to one column they are gone, so each cell says it instead. */
+.dow-inline {
+	display: none;
+}
+
+/* One entry inside a day, drawn as a bar. */
+.cal-item {
+	display: block;
+	width: 100%;
+	text-align: left;
+	font: inherit;
+	font-size: 0.79rem;
+	line-height: 1.35;
+	color: var(--chalk);
+	background: var(--panel);
+	border: 1px solid var(--line);
+	border-left: 3px solid var(--signal);
+	border-radius: 2px;
+	padding: 0.3rem 0.4rem;
+	cursor: pointer;
+	transition: none;
+}
+.cal-item:hover:not(:disabled) {
+	border-color: var(--signal);
+	filter: none;
+}
+.cal-item.on {
+	background: var(--panel-lift);
 	border-color: var(--signal);
 }
-/* The summary square closes the rectangle. */
-.day.summary {
-	background: var(--panel-lift);
+/* The colour of the bar is how hard the session is, so the label does not
+   have to spend its few characters saying so. */
+.cal-item.hard {
+	border-left-color: var(--signal);
 }
-
-.day-head {
-	display: flex;
-	align-items: baseline;
-	justify-content: space-between;
-	gap: 0.5rem;
+.cal-item.moderate {
+	border-left-color: var(--muted);
 }
-
-.chip {
-	font-family: var(--mono);
-	font-size: 0.66rem;
-	text-transform: uppercase;
-	letter-spacing: 0.1em;
+.cal-item.light {
+	border-left-color: var(--good);
+}
+.cal-item.done {
+	border-left-color: var(--good);
+}
+.cal-item.done .title {
 	color: var(--muted);
-	border: 1px solid var(--line);
-	border-radius: 999px;
-	padding: 0.05rem 0.45rem;
+	text-decoration: line-through;
+	text-decoration-color: var(--line);
+}
+.cal-item.event {
+	border-left-color: var(--bad);
+}
+.cal-item .title {
+	display: block;
+	font-weight: 600;
+	overflow: hidden;
+	text-overflow: ellipsis;
 	white-space: nowrap;
 }
-.chip.hard {
-	color: var(--signal);
-	border-color: var(--signal);
+.cal-item .meta {
+	display: block;
+	font-family: var(--mono);
+	font-size: 0.68rem;
+	color: var(--muted);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
-.chip.deload {
-	color: var(--good);
-	border-color: var(--good);
+
+/* The opened session, spanning the whole width under its own week — the row
+   below is pushed down rather than the day cell being squeezed. */
+.cal-detail {
+	grid-column: 1 / -1;
+	background: var(--panel);
+	border-left: 3px solid var(--signal);
+	padding: 0.9rem 1.1rem 1rem;
+}
+/* The opened session is a prescription, not a spreadsheet: it keeps a
+   readable column width even though its row spans the whole grid. */
+.cal-detail table {
+	max-width: 900px;
+}
+
+.cal-detail-head {
+	display: flex;
+	align-items: baseline;
+	gap: 0.7rem;
+	flex-wrap: wrap;
+	margin-bottom: 0.6rem;
+}
+
+/* Seven columns need a screen. Below that the month becomes a list of the
+   days that have something in them. */
+@media (max-width: 900px) {
+	.cal {
+		grid-template-columns: minmax(0, 1fr);
+	}
+	.cal-dow {
+		display: none;
+	}
+	.cal-wk {
+		text-align: left;
+		padding: 0.4rem 0.7rem;
+	}
+	.cal-wk .count {
+		display: inline;
+		margin-left: 0.5rem;
+	}
+	.cal-cell {
+		min-height: 0;
+	}
+	.cal-cell.rest {
+		display: none;
+	}
+	.dow-inline {
+		display: inline;
+	}
 }
 
 /* --- the rig: five plates loaded onto a bar, one per tier --- */

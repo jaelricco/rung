@@ -3,7 +3,6 @@
 // with rest days left visibly empty so the shape of the week — which days are
 // hard, where the gaps fall — is the first thing you see.
 
-export const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 export const DAY_SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 // 1 for Monday through 7 for Sunday, which is what the API uses.
@@ -35,12 +34,7 @@ export function isoDate(date) {
 // `dayOf` says which day (1-7) an item belongs to; days with nothing in them
 // come back as empty slots rather than being skipped.
 export function weekSlots(items, dayOf) {
-	const slots = DAY_NAMES.map((name, i) => ({
-		day: i + 1,
-		name,
-		short: DAY_SHORT[i],
-		items: []
-	}));
+	const slots = DAY_SHORT.map((short, i) => ({ day: i + 1, short, items: [] }));
 	for (const item of items) {
 		const day = dayOf(item);
 		if (day >= 1 && day <= 7) slots[day - 1].items.push(item);

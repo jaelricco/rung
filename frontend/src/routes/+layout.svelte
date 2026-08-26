@@ -5,6 +5,10 @@
 	import { session, loadUser, signOut } from '$lib/session.svelte.js';
 
 	let { children } = $props();
+
+	// The pages whose main content is a seven-column calendar; they get the
+	// wider shell so the grid has room for a day in every column.
+	const WIDE_PAGES = new Set(['/calendar', '/plan']);
 	let ready = $state(false);
 
 	$effect(() => {
@@ -23,7 +27,7 @@
 	}
 </script>
 
-<div class="shell">
+<div class="shell" class:wide={WIDE_PAGES.has(page.url.pathname)}>
 	{#if session.user}
 		<header class="topbar">
 			<span class="mark">RIG</span>

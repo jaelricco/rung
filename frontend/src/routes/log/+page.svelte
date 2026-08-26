@@ -89,7 +89,7 @@
 	<div class="notice error" style="margin-bottom:1rem">{error}</div>
 {/if}
 
-<div style="display:grid;gap:0.7rem">
+<div class="form-width" style="display:grid;gap:0.7rem">
 	{#each sets as set, index (index)}
 		{@const measure = measureFor(set.exercise_slug)}
 		<div class="panel">
@@ -152,7 +152,7 @@
 
 <div class="bar"></div>
 
-<div class="row">
+<div class="row form-width">
 	<div style="flex:3 1 260px">
 		<label for="notes">Notes</label>
 		<textarea id="notes" rows="3" bind:value={notes} placeholder="How it felt, anything that hurt"></textarea>
