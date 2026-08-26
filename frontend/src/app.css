@@ -1,0 +1,322 @@
+/* Steel and chalk. The interface is a training instrument, so numbers are set
+   in mono and given room, and the only saturated colour is the amber used on
+   equipment markings. */
+
+:root {
+	--ink: #0a1012;
+	--panel: #111a1d;
+	--panel-lift: #162126;
+	--line: #26343a;
+	--chalk: #e9efec;
+	--muted: #7c9296;
+	--signal: #ffb300;
+	--good: #7bd389;
+	--bad: #ff6b57;
+
+	--display: 'Archivo', system-ui, sans-serif;
+	--mono: 'IBM Plex Mono', ui-monospace, monospace;
+
+	--gap: 1.5rem;
+	--radius: 3px;
+}
+
+* {
+	box-sizing: border-box;
+}
+
+html,
+body {
+	margin: 0;
+	background: var(--ink);
+	color: var(--chalk);
+	font-family: var(--display);
+	font-size: 16px;
+	line-height: 1.55;
+	-webkit-font-smoothing: antialiased;
+}
+
+a {
+	color: var(--chalk);
+	text-decoration-color: var(--line);
+	text-underline-offset: 3px;
+}
+a:hover {
+	text-decoration-color: var(--signal);
+}
+
+:focus-visible {
+	outline: 2px solid var(--signal);
+	outline-offset: 2px;
+}
+
+.shell {
+	max-width: 1080px;
+	margin: 0 auto;
+	padding: 0 1.25rem 5rem;
+}
+
+/* --- the bar: a rule with end caps, the way a pull-up bar sits in its posts.
+   Every section hangs from one. --- */
+.bar {
+	position: relative;
+	height: 2px;
+	background: var(--line);
+	margin: 2.5rem 0 1rem;
+}
+.bar::before,
+.bar::after {
+	content: '';
+	position: absolute;
+	top: -5px;
+	width: 2px;
+	height: 12px;
+	background: var(--line);
+}
+.bar::before {
+	left: 0;
+}
+.bar::after {
+	right: 0;
+}
+
+h1,
+h2,
+h3 {
+	font-weight: 800;
+	letter-spacing: -0.02em;
+	margin: 0;
+}
+h1 {
+	font-size: clamp(1.9rem, 5vw, 2.6rem);
+	line-height: 1.1;
+}
+h2 {
+	font-size: 1.05rem;
+	text-transform: uppercase;
+	letter-spacing: 0.08em;
+	font-weight: 600;
+}
+
+.eyebrow {
+	font-family: var(--mono);
+	font-size: 0.72rem;
+	text-transform: uppercase;
+	letter-spacing: 0.16em;
+	color: var(--muted);
+}
+
+.stat {
+	font-family: var(--mono);
+	font-variant-numeric: tabular-nums;
+	font-size: 1.6rem;
+	font-weight: 600;
+	letter-spacing: -0.02em;
+}
+
+.mono {
+	font-family: var(--mono);
+	font-variant-numeric: tabular-nums;
+}
+
+.muted {
+	color: var(--muted);
+}
+
+/* --- topbar --- */
+.topbar {
+	display: flex;
+	align-items: baseline;
+	gap: 1.25rem;
+	padding: 1.25rem 0;
+	border-bottom: 1px solid var(--line);
+	flex-wrap: wrap;
+}
+.topbar .mark {
+	font-weight: 800;
+	letter-spacing: -0.03em;
+	font-size: 1.1rem;
+}
+.topbar nav {
+	display: flex;
+	gap: 1rem;
+	font-size: 0.9rem;
+	flex-wrap: wrap;
+}
+.topbar nav a {
+	text-decoration: none;
+	color: var(--muted);
+	padding-bottom: 2px;
+	border-bottom: 2px solid transparent;
+}
+.topbar nav a[aria-current='page'] {
+	color: var(--chalk);
+	border-bottom-color: var(--signal);
+}
+.topbar .spacer {
+	margin-left: auto;
+}
+
+/* --- panels --- */
+.panel {
+	background: var(--panel);
+	border: 1px solid var(--line);
+	border-radius: var(--radius);
+	padding: 1.1rem 1.2rem;
+}
+
+.grid {
+	display: grid;
+	gap: 0.9rem;
+	grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+}
+
+/* --- the rig: five plates loaded onto a bar, one per tier --- */
+.rig {
+	display: flex;
+	gap: 3px;
+	margin-top: 0.55rem;
+}
+.rig span {
+	height: 8px;
+	flex: 1;
+	background: var(--line);
+	border-radius: 1px;
+}
+.rig span.on {
+	background: var(--signal);
+}
+
+/* --- forms --- */
+label {
+	display: block;
+	font-family: var(--mono);
+	font-size: 0.72rem;
+	text-transform: uppercase;
+	letter-spacing: 0.12em;
+	color: var(--muted);
+	margin-bottom: 0.35rem;
+}
+
+input,
+select,
+textarea {
+	width: 100%;
+	background: var(--ink);
+	border: 1px solid var(--line);
+	color: var(--chalk);
+	border-radius: var(--radius);
+	padding: 0.6rem 0.7rem;
+	font-family: var(--mono);
+	font-size: 0.95rem;
+}
+input:focus,
+select:focus,
+textarea:focus {
+	border-color: var(--signal);
+	outline: none;
+}
+
+.field {
+	margin-bottom: 0.9rem;
+}
+.row {
+	display: flex;
+	gap: 0.6rem;
+	flex-wrap: wrap;
+}
+.row > * {
+	flex: 1 1 130px;
+}
+
+button {
+	font-family: var(--display);
+	font-weight: 600;
+	font-size: 0.9rem;
+	letter-spacing: 0.02em;
+	background: var(--signal);
+	color: #17140a;
+	border: 1px solid var(--signal);
+	border-radius: var(--radius);
+	padding: 0.6rem 1.1rem;
+	cursor: pointer;
+	transition: filter 0.15s ease;
+}
+button:hover:not(:disabled) {
+	filter: brightness(1.1);
+}
+button:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+button.ghost {
+	background: transparent;
+	color: var(--chalk);
+	border-color: var(--line);
+}
+button.ghost:hover:not(:disabled) {
+	border-color: var(--signal);
+	filter: none;
+}
+button.link {
+	background: none;
+	border: none;
+	color: var(--muted);
+	padding: 0;
+	text-decoration: underline;
+	text-underline-offset: 3px;
+}
+
+/* --- messages --- */
+.notice {
+	border-left: 2px solid var(--signal);
+	background: var(--panel);
+	padding: 0.7rem 0.9rem;
+	font-size: 0.9rem;
+	border-radius: 0 var(--radius) var(--radius) 0;
+}
+.notice.error {
+	border-left-color: var(--bad);
+}
+
+.empty {
+	border: 1px dashed var(--line);
+	border-radius: var(--radius);
+	padding: 1.6rem 1.2rem;
+	color: var(--muted);
+	font-size: 0.92rem;
+}
+
+.prose {
+	white-space: pre-wrap;
+	font-size: 0.95rem;
+	line-height: 1.65;
+}
+
+table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 0.9rem;
+}
+th {
+	text-align: left;
+	font-family: var(--mono);
+	font-size: 0.68rem;
+	text-transform: uppercase;
+	letter-spacing: 0.12em;
+	color: var(--muted);
+	font-weight: 500;
+	padding: 0.4rem 0.6rem 0.4rem 0;
+	border-bottom: 1px solid var(--line);
+}
+td {
+	padding: 0.5rem 0.6rem 0.5rem 0;
+	border-bottom: 1px solid var(--panel-lift);
+	vertical-align: top;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	* {
+		transition: none !important;
+		animation: none !important;
+	}
+}
