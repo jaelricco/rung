@@ -301,6 +301,9 @@ nothing until it returns — so it sets `indeterminate` and the bar sweeps while
 the elapsed time ticks, rather than inventing a number.
 
 **Opus writes the training.** `ANTHROPIC_MODEL` defaults to `claude-opus-5`.
+Note that the server's own `.env` sets the model explicitly and a deploy never
+rewrites it, so a box provisioned before this change keeps running whatever its
+`.env` says until someone edits that line.
 Plan writing is the hardest call the app makes — a ladder of progressions
 weighed against one athlete's records, with an injury as a hard constraint —
 and it is where the difference between model tiers shows up in the output.
