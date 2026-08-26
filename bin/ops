@@ -1,0 +1,90 @@
+#!/usr/bin/env bash
+# Operate the server without an SSH session.
+#
+#   bin/ops status              containers, health, disk, live tag
+#   bin/ops health              ask the API and the public URL
+#   bin/ops logs [service] [n]  recent logs
+#   bin/ops restart [service]   restart containers, same image
+#   bin/ops redeploy            re-pull and recreate the live tag
+#   bin/ops rollback            return to the previous tag
+#   bin/ops deploy-tag <tag>    deploy one specific tag
+#   bin/ops backup              dump the database now
+#   bin/ops migrate-status      which migrations have run
+#   bin/ops prune               reclaim disk from old images
+#
+# Each of these dispatches the `ops` workflow, waits for it, and prints what
+# the server said. The runner holds the SSH key; this machine never needs one.
+
+source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
+
+ACTION="${1:-status}"
+ARG="${2:-}"
+LINES="${3:-120}"
+
+case "$ACTION" in
+-h | --help | help) sed -n '2,18p' "$0"; exit 0 ;;
+status | health | logs | restart | redeploy | rollback | deploy-tag | backup | migrate-status | prune) ;;
+*) die "unknown action: $ACTION (try: bin/ops --help)" ;;
+esac
+
+SERVICE=""
+TAG=""
+case "$ACTION" in
+logs | restart) SERVICE="$ARG" ;;
+deploy-tag) TAG="$ARG"; [[ -n "$TAG" ]] || die "usage: bin/ops deploy-tag <commit-sha>" ;;
+esac
+
+require_token
+detect_repo
+
+# Remember where the run list stood, so the run this dispatch creates can be
+# told apart from one someone else started a moment ago.
+before="$(gh_api GET "/repos/$REPO/actions/workflows/ops.yml/runs?per_page=1" |
+	python3 -c '
+import json,sys
+r=json.load(sys.stdin).get("workflow_runs",[])
+print(r[0]["id"] if r else 0)')"
+
+payload="$(python3 -c '
+import json,sys
+print(json.dumps({"ref":"main","inputs":{
+    "action":sys.argv[1],"service":sys.argv[2],"tag":sys.argv[3],"lines":sys.argv[4]}}))' \
+	"$ACTION" "$SERVICE" "$TAG" "$LINES")"
+
+say "$ACTION${SERVICE:+ $SERVICE}${TAG:+ $TAG}"
+response="$(gh_api POST "/repos/$REPO/actions/workflows/ops.yml/dispatches" "$payload")"
+[[ -z "$response" ]] || die "dispatch refused: $response"
+
+RUN_ID=""
+for _ in $(seq 1 30); do
+	RUN_ID="$(gh_api GET "/repos/$REPO/actions/workflows/ops.yml/runs?per_page=5" |
+		python3 -c '
+import json,sys
+before=int(sys.argv[1])
+ids=[r["id"] for r in json.load(sys.stdin).get("workflow_runs",[]) if r["id"]>before]
+print(max(ids) if ids else "")' "$before")"
+	[[ -n "$RUN_ID" ]] && break
+	sleep 3
+done
+[[ -n "$RUN_ID" ]] || die "the ops run never appeared. Check https://github.com/$REPO/actions"
+info "$(run_url "$RUN_ID")"
+
+watch_run "$RUN_ID"
+echo
+
+# The workflow posts the server's output to the ops-log issue; give the comment
+# a moment to land, then read it.
+for _ in $(seq 1 10); do
+	body="$(latest_ops_comment || true)"
+	[[ -n "$body" ]] && break
+	sleep 3
+done
+
+if [[ -n "${body:-}" ]]; then
+	printf '%s\n' "$body" |
+		sed -n '/^```$/,/^```$/p' | sed '1d;$d'
+else
+	warn "no transcript came back; see $(run_url "$RUN_ID")"
+fi
+
+[[ "$RUN_CONCLUSION" == "success" ]] || exit 1

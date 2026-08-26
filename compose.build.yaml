@@ -1,0 +1,16 @@
+# Overlay that rebuilds the images from source instead of pulling them.
+#
+#   docker compose -f compose.yaml -f compose.build.yaml up -d --build
+#
+# Two uses: local development, and an emergency deploy when GHCR or CI is
+# unreachable. The build tags the same image names the production file
+# expects, so afterwards `docker compose up -d` keeps working unchanged.
+services:
+  api:
+    build:
+      context: ./backend
+    image: ${API_IMAGE:-ghcr.io/jaelricco/rung/api}:${IMAGE_TAG:-latest}
+  web:
+    build:
+      context: ./frontend
+    image: ${WEB_IMAGE:-ghcr.io/jaelricco/rung/web}:${IMAGE_TAG:-latest}

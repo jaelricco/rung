@@ -18,11 +18,10 @@ anything runs.
 | Image | Ubuntu 24.04 |
 | Backups | on |
 
-8 GB rather than 4 is the one sizing decision that matters, and it isn't about
-traffic. Images are built on the server, so a SvelteKit build and a Go compile
-run while Postgres and the app hold their memory. On a 4 GB box that gets
-OOM-killed mid-deploy. If you'd rather run a 4 GB server, move image builds into
-CI and have the server pull prebuilt images instead.
+Images are built in CI and pulled by tag, so the server never compiles
+anything and 4 GB would now be enough. The 8 GB box is kept for headroom:
+Postgres, the working set, and the local-build fallback in `infra/setup.sh` for
+the case where the registry is unreachable.
 
 x86 over ARM for two reasons: Hetzner's June 2026 price adjustment removed the
 ARM price advantage, and `postgis/postgis` ARM64 availability is inconsistent.
@@ -113,14 +112,98 @@ there is no separate migrate step.
 
 ---
 
-## Deploying after that
+## Deploying
 
-Set three repository secrets — `DEPLOY_HOST`, `DEPLOY_USER` (`deploy`), and
-`DEPLOY_SSH_KEY` (a private key whose public half is in
-`/home/deploy/.ssh/authorized_keys`; generate a separate one for CI rather than
-reusing your own) — and every push to the default branch deploys itself.
+Push to `main`. That is the whole procedure.
 
-Or, on the server, `make deploy`.
+```
+push ──▶ CI: go build/vet/test, svelte build, compose + shellcheck
+          │
+          ▼
+     build images ──▶ ghcr.io/jaelricco/rung/{api,web}:<commit-sha>
+          │
+          ▼
+     deploy ──▶ ssh ──▶ infra/deploy.sh <sha>
+                          pull, up -d, wait for health
+                          healthy ─▶ record the tag, done
+                          not     ─▶ restore the previous tag, fail the run
+          │
+          ▼
+     verify https://rung.fit/healthz from outside
+```
+
+Two properties worth stating plainly, because the previous pipeline had
+neither:
+
+**What CI proved green is exactly what ships.** The deploy job `needs:` the
+build job and deploys that job's image digest. It is not a second workflow that
+re-checks out the branch and hopes it is still the same commit.
+
+**A failed deploy leaves the last good release running.** `infra/deploy.sh`
+records the tag it replaced, and if the new one does not come up healthy it
+puts the old one back before failing the run. The server is never left on a
+broken build, and `make rollback` (or `bin/ops rollback`) undoes a bad release
+that only misbehaves later.
+
+### Driving it from anywhere
+
+`bin/deploy` and `bin/ops` need a GitHub token and nothing else — no Docker, no
+SSH key, no route to the server. They dispatch workflows and read the results
+back, which means they work from a laptop, a phone tunnel, or an agent sandbox
+whose only reachable host is `api.github.com`.
+
+```bash
+bin/deploy -m "add the parks map"   # commit, push, follow CI and the deploy
+bin/ops status                      # containers, health, disk, live tag
+bin/ops logs api 200
+bin/ops restart web
+bin/ops rollback
+bin/ops deploy-tag 1a2b3c4d5e6f
+bin/ops backup
+```
+
+The token is read from `../.secrets/deploy.env` — outside the working tree, so
+no `git add -A` can ever pick it up:
+
+```
+GITHUB_TOKEN=github_pat_...
+```
+
+Server output comes back through an issue titled **ops log**, not through the
+Actions log download. Actions logs are served from a storage host that
+restricted networks routinely block, while the issue is plain API. It doubles
+as an audit trail of every deploy and every restart.
+
+### Repository secrets
+
+| Secret | Value |
+| --- | --- |
+| `DEPLOY_HOST` | the server's IP |
+| `DEPLOY_USER` | `deploy` |
+| `DEPLOY_SSH_KEY` | private key whose public half is in `/home/deploy/.ssh/authorized_keys` |
+| `APP_DOMAIN` | `rung.fit` — enables the external check after each deploy |
+
+With `DEPLOY_HOST` unset the pipeline still builds and publishes images and
+skips the deploy with a notice, so a fresh fork is never a wall of red runs.
+
+Registry credentials are deliberately absent from that table. Every deploy logs
+in with the run's own `GITHUB_TOKEN` and logs out afterwards, so no long-lived
+registry credential sits on the server.
+
+### On the server
+
+Run from `/srv/calisthenics`, for when CI is unavailable or you are already
+logged in:
+
+| Command | What it does |
+| --- | --- |
+| `make version` | Which tag and commit are live |
+| `make history` | Recent deploys, with rollbacks marked |
+| `make deploy` | Pull and restart, health-checked |
+| `make rollback` | Return to the previous tag |
+| `make build-deploy` | Emergency: build the images here instead of pulling |
+| `make logs` / `make ps` / `make health` | Follow logs, status, health |
+| `make psql` / `make migrate-status` / `make backup` | Database |
 
 `.github/dependabot.yml` watches Go modules, npm, the Dockerfiles and the
 workflow actions. Since there's no local environment where you'd notice an
@@ -129,27 +212,15 @@ advisory, those PRs are how you find out.
 ### Why GitHub rather than GitLab
 
 Two reasons, both about this project specifically. GitHub's free tier gives
-2,000 private-repo CI minutes a month against GitLab's 400 — which doesn't
-matter for the one-minute SSH deploy, but does the moment image builds move off
-the server into CI, at four to six minutes a run. And Dependabot covers private
-repos free, where GitLab's dependency scanning is an Ultimate feature; with no
-local environment, automated dependency PRs are the only thing that will ever
-tell you about a CVE.
+2,000 private-repo CI minutes a month against GitLab's 400 — which matters now
+that image builds run in CI at four to six minutes a run. And Dependabot covers
+private repos free, where GitLab's dependency scanning is an Ultimate feature;
+with no local environment, automated dependency PRs are the only thing that
+will ever tell you about a CVE.
 
 GitLab is the better answer if you later want to self-host the forge — CE is
 free and its runners are unlimited — or if the source itself has to stay in the
 EU.
-
-Other commands, all run from `/srv/calisthenics`:
-
-| Command | What it does |
-| --- | --- |
-| `make logs` | Follow logs from every container |
-| `make ps` | Container status and health |
-| `make psql` | Open a database shell |
-| `make migrate-status` | Show which migrations have run |
-| `make backup` | Dump the database into `./backups` |
-| `make rebuild` | Force a full rebuild and recreate |
 
 ---
 
@@ -358,8 +429,12 @@ Not built yet:
 
 ## Notes
 
-- `go.sum` is generated inside the Docker build on first run. Once you have a
-  build you are happy with, commit the generated file to pin dependencies.
+- `go.sum` is committed and CI runs `go mod verify`, so a build resolves
+  nothing at image-build time. Adding an import means running `go mod tidy`
+  and committing the result, or CI fails.
+- `frontend/` has no `package-lock.json` yet, so npm resolves the dependency
+  tree on every build. Committing a lockfile would make the frontend image
+  reproducible the way the backend already is.
 - The API returns human-readable error strings; the frontend shows them
   verbatim, so write them as messages a user should see.
 - Cookies are `Secure` by default. Only set `INSECURE_COOKIES=true` if you are

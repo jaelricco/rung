@@ -30,9 +30,9 @@ apt-get update -qq
 apt-get install -y -qq ca-certificates curl git ufw fail2ban make unattended-upgrades jq
 
 echo "--- swap"
-# Images are built on this machine: a SvelteKit build and a Go compile run while
-# Postgres and the app hold their memory. Swap is cheap insurance against the
-# build being OOM-killed halfway through a deploy.
+# Deploys pull prebuilt images now, so nothing large compiles here. The swap
+# stays as insurance for the fallback path in this script, which does build
+# locally when the registry is unreachable.
 if [[ ! -f /swapfile ]]; then
 	fallocate -l 2G /swapfile
 	chmod 600 /swapfile
@@ -95,6 +95,7 @@ POSTGRES_DB=cali
 ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
 ANTHROPIC_MODEL=claude-sonnet-5
 WEB_SEARCH_TOOL_VERSION=web_search_20250305
+IMAGE_TAG=latest
 ENVFILE
 	chown "$DEPLOY_USER:$DEPLOY_USER" "$APP_DIR/.env"
 	chmod 600 "$APP_DIR/.env"
@@ -111,9 +112,18 @@ cat >/etc/cron.d/calisthenics-backup <<'CRON'
 CRON
 chmod 644 /etc/cron.d/calisthenics-backup
 
-echo "--- build and start"
+echo "--- start"
 cd "$APP_DIR"
-sudo -u "$DEPLOY_USER" docker compose up -d --build --remove-orphans
+# Images are built in CI and pulled from GHCR. Building here is only the
+# fallback for a first boot before any CI run has published them, or for a
+# private package this server has no credential for.
+if sudo -u "$DEPLOY_USER" docker compose pull --quiet api web 2>/dev/null; then
+	sudo -u "$DEPLOY_USER" docker compose up -d --remove-orphans
+else
+	echo "    could not pull the published images; building them here instead"
+	sudo -u "$DEPLOY_USER" docker compose -f compose.yaml -f compose.build.yaml \
+		up -d --build --remove-orphans
+fi
 
 IPV4="$(curl -fsS --max-time 5 https://ipv4.icanhazip.com 2>/dev/null || hostname -I | awk '{print $1}')"
 cat >/etc/motd <<MOTD
@@ -123,7 +133,9 @@ cat >/etc/motd <<MOTD
   Directory   $APP_DIR
   Status      make ps
   Logs        make logs
-  Deploy      make deploy
+  Live tag    make version
+  Deploy      pushes to main deploy themselves; make deploy to force one
+  Rollback    make rollback
   Setup log   /var/log/calisthenics-setup.log
 
   Point $APP_DOMAIN at $IPV4 if you haven't.

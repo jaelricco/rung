@@ -1,6 +1,11 @@
-# Builds both halves on every push. The Go backend has never been compiled
-# outside a deploy, so this is the fastest way to find out whether it does —
-# and from now on, whether a change broke it.
+# One workflow, four stages: check, build images, deploy, verify.
+#
+# It is deliberately a single workflow rather than CI + a separate deploy
+# triggered by workflow_run. A workflow_run deploy starts a *new* run with its
+# own checkout of the default branch, which means the thing you deployed and
+# the thing CI proved green were only related by timing. Here the deploy job
+# `needs:` the jobs that proved the commit, and ships the exact image digest
+# those jobs produced.
 
 name: CI
 
@@ -8,9 +13,16 @@ on:
   push:
     branches: ["**"]
   pull_request:
-  # Adds a "Run workflow" button in the Actions tab, so you can start a run
-  # without pushing anything.
   workflow_dispatch:
+
+concurrency:
+  # Superseded runs on the same branch are pointless — except on main, where
+  # cancelling mid-deploy would leave the server half-updated.
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+env:
+  REGISTRY: ghcr.io
 
 jobs:
   backend:
@@ -18,54 +30,37 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-go@v5
         with:
           go-version: "1.24"
           cache-dependency-path: backend/go.sum
-
-      - name: Resolve dependencies
+      - name: Verify dependencies are pinned
         working-directory: backend
-        # go.sum isn't committed yet; tidy generates it. Once CI is green,
-        # commit the file it produces to pin versions.
-        run: go mod tidy
-
+        # go.sum is committed now, so a build must not need to resolve
+        # anything. If this fails, someone added an import without running
+        # `go mod tidy`.
+        run: go mod download && go mod verify
       - name: Build
         working-directory: backend
         run: go build -v ./...
-
       - name: Vet
         working-directory: backend
         run: go vet ./...
-
       - name: Test
         working-directory: backend
-        run: go test ./... 2>&1 | grep -v "no test files" || true
-
-      - name: Upload the generated go.sum
-        # go.sum isn't committed yet. Download this, drop it in backend/, and
-        # commit it to pin dependency versions instead of re-resolving on every
-        # build. After that this step just confirms nothing shifted.
-        uses: actions/upload-artifact@v4
-        with:
-          name: go-sum
-          path: backend/go.sum
-          if-no-files-found: warn
+        run: go test ./...
 
   frontend:
     name: SvelteKit build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-
       - name: Install
         working-directory: frontend
         run: npm install --no-audit --no-fund
-
       - name: Build
         working-directory: frontend
         run: npm run build
@@ -76,9 +71,178 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Validate compose.yaml
-        # Catches typos and bad interpolation without starting anything.
         env:
           POSTGRES_PASSWORD: ci-placeholder
           APP_DOMAIN: ci.example.com
           ACME_EMAIL: ci@example.com
-        run: docker compose config --quiet
+        run: |
+          docker compose config --quiet
+          docker compose -f compose.yaml -f compose.build.yaml config --quiet
+      - name: Shellcheck the deploy scripts
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
+          shellcheck -S warning infra/*.sh bin/deploy bin/ops bin/lib.sh
+
+  images:
+    name: Build and push images
+    needs: [backend, frontend, compose]
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      tag: ${{ steps.meta.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: meta
+        # The commit SHA is the release identifier everywhere downstream: the
+        # image tag, the value written into the server's .env, and what a
+        # rollback names. `latest` is also pushed, but only ever as a
+        # convenience for a fresh server — deploys never resolve it.
+        run: echo "tag=${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: api
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository }}/api:${{ steps.meta.outputs.tag }}
+            ${{ env.REGISTRY }}/${{ github.repository }}/api:latest
+          # Layer cache lives in the registry, so a runner that has never seen
+          # this repo still skips unchanged layers. Without it every deploy
+          # recompiles the whole Go module graph.
+          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ github.repository }}/api:buildcache
+          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ github.repository }}/api:buildcache,mode=max
+
+      - name: web
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository }}/web:${{ steps.meta.outputs.tag }}
+            ${{ env.REGISTRY }}/${{ github.repository }}/web:latest
+          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ github.repository }}/web:buildcache
+          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ github.repository }}/web:buildcache,mode=max
+
+  deploy:
+    name: Deploy
+    needs: images
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+      issues: write
+    concurrency:
+      # One deploy at a time, and never cancel one halfway through.
+      group: production
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check whether a server is configured
+        id: check
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          APP_DOMAIN: ${{ secrets.APP_DOMAIN }}
+        run: |
+          # The `secrets` context is not available in an `if:` expression, so
+          # the presence of each one becomes a step output instead.
+          if [ -z "$DEPLOY_HOST" ]; then
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::DEPLOY_HOST is not set, so there is nothing to deploy to yet. The images were pushed and are ready."
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+          if [ -z "$APP_DOMAIN" ]; then
+            echo "domain=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "domain=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Deploy ${{ needs.images.outputs.tag }}
+        id: remote
+        if: steps.check.outputs.configured == 'true'
+        uses: ./.github/actions/remote
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          user: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          env: |
+            TAG='${{ needs.images.outputs.tag }}'
+            BRANCH='${{ github.ref_name }}'
+            GHCR_USER='${{ github.actor }}'
+            GHCR_TOKEN='${{ secrets.GITHUB_TOKEN }}'
+          script: |
+            cd /srv/calisthenics
+            # The server still tracks the repo, but only for the things that
+            # are read at runtime rather than built: compose.yaml, Caddyfile,
+            # the Makefile and these scripts.
+            git fetch --all --prune -q
+            git reset --hard -q "origin/${BRANCH:-main}"
+            # A run-scoped token, so no registry credential is left behind.
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin >/dev/null
+            bash infra/deploy.sh "$TAG"
+            docker logout ghcr.io >/dev/null 2>&1 || true
+
+      - name: Check the site from outside
+        if: steps.check.outputs.configured == 'true' && steps.check.outputs.domain == 'true'
+        env:
+          APP_DOMAIN: ${{ secrets.APP_DOMAIN }}
+        run: |
+          # The health check inside the deploy proves the containers are up.
+          # This proves Caddy, TLS and DNS still agree with them.
+          for i in $(seq 1 10); do
+            code=$(curl -sS -o /dev/null -w '%{http_code}' "https://$APP_DOMAIN/healthz" || echo 000)
+            if [ "$code" = "200" ]; then
+              echo "https://$APP_DOMAIN/healthz -> 200"
+              exit 0
+            fi
+            echo "attempt $i: $code"
+            sleep 6
+          done
+          echo "::error::the site did not answer 200 on /healthz after the deploy"
+          exit 1
+
+      - name: Report
+        if: always() && steps.check.outputs.configured == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.images.outputs.tag }}
+          RESULT: ${{ steps.remote.outcome }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          # Same reasoning as the ops workflow: the deploy transcript has to be
+          # readable over the plain API, not only from the log storage host.
+          out=/tmp/remote-output.txt
+          [ -f "$out" ] || echo "(the deploy step produced no output)" > "$out"
+          tail -c 60000 "$out" > /tmp/trimmed.txt
+          number=$(gh issue list --state all --search 'ops log in:title' --limit 1 \
+                     --json number --jq '.[0].number // empty')
+          if [ -z "$number" ]; then
+            url=$(gh issue create --title "ops log" \
+              --body "Output from every deploy and \`ops\` run is posted here.")
+            number=${url##*/}
+          fi
+          {
+            echo "### deploy \`$TAG\` — $RESULT"
+            echo
+            echo "run: $RUN_URL"
+            echo
+            echo '```'
+            cat /tmp/trimmed.txt
+            echo '```'
+          } > /tmp/comment.md
+          gh issue comment "$number" --body-file /tmp/comment.md
+          cat /tmp/comment.md >> "$GITHUB_STEP_SUMMARY"

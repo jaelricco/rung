@@ -1,10 +1,17 @@
 FROM golang:1.24-alpine AS build
 WORKDIR /src
 RUN apk add --no-cache git ca-certificates
+# Dependencies first, as their own layer: go.mod and go.sum change rarely, so
+# the module download is reused across builds where only source changed. This
+# is most of the CI build time.
+COPY go.mod go.sum ./
+RUN go mod download
+
 COPY . .
-# go mod tidy resolves and pins dependencies on first build, so a freshly
-# cloned repo without go.sum still builds.
-RUN go mod tidy && CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/api ./cmd/api
+# No `go mod tidy` here. go.sum is committed and CI verifies it, so the build
+# resolves nothing at image-build time and two builds of one commit produce the
+# same binary.
+RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/api ./cmd/api
 
 FROM alpine:3.20
 RUN apk add --no-cache ca-certificates tzdata wget && adduser -D -u 10001 app

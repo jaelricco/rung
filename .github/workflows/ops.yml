@@ -1,0 +1,181 @@
+# Server operations without an SSH session: pick an action, the runner does it
+# on the server, and the output comes back as a comment on the ops issue so it
+# can be read through the API from anywhere. `bin/ops` drives this end to end.
+#
+# The action list is a fixed allowlist on purpose. A free-form "run this
+# command" input would turn every account with write access into a root shell.
+
+name: ops
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: What to do on the server
+        required: true
+        default: status
+        type: choice
+        options:
+          - status          # containers, health, disk, live tag
+          - health          # ask the API directly and over the public URL
+          - logs            # recent container logs
+          - restart         # restart containers, same image
+          - redeploy        # re-pull and recreate the live tag
+          - rollback        # return to the previous tag
+          - deploy-tag      # deploy one specific tag
+          - backup          # dump the database now
+          - migrate-status  # which migrations have run
+          - prune           # reclaim disk from old images
+      service:
+        description: "logs/restart: api, web, db, caddy (blank = all)"
+        required: false
+        default: ""
+      tag:
+        description: "deploy-tag: the image tag to deploy"
+        required: false
+        default: ""
+      lines:
+        description: "logs: how many lines"
+        required: false
+        default: "120"
+
+concurrency:
+  group: production
+  cancel-in-progress: false
+
+run-name: "ops: ${{ inputs.action }} ${{ inputs.service }}${{ inputs.tag }}"
+
+jobs:
+  ops:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate inputs
+        env:
+          ACTION: ${{ inputs.action }}
+          SERVICE: ${{ inputs.service }}
+          TAG: ${{ inputs.tag }}
+          LINES: ${{ inputs.lines }}
+        run: |
+          # Every one of these ends up in a remote shell, so nothing gets
+          # through that isn't a known service name, a hex tag or a number.
+          case "$SERVICE" in
+            ""|api|web|db|caddy) ;;
+            *) echo "::error::service must be one of api, web, db, caddy"; exit 1 ;;
+          esac
+          case "$LINES" in
+            ''|*[!0-9]*) echo "::error::lines must be a number"; exit 1 ;;
+          esac
+          if [ "$ACTION" = "deploy-tag" ]; then
+            printf '%s' "$TAG" | grep -Eq '^[0-9a-f]{7,40}$' \
+              || { echo "::error::deploy-tag needs a commit-sha tag"; exit 1; }
+          fi
+
+      - name: Check the server is configured
+        id: check
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+        run: |
+          if [ -z "$DEPLOY_HOST" ]; then
+            echo "::error::DEPLOY_HOST is not set. Nothing to operate on."
+            exit 1
+          fi
+
+      - name: Run
+        id: remote
+        uses: ./.github/actions/remote
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          user: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          env: |
+            ACTION='${{ inputs.action }}'
+            SERVICE='${{ inputs.service }}'
+            TAG='${{ inputs.tag }}'
+            LINES='${{ inputs.lines }}'
+            APP_DOMAIN='${{ secrets.APP_DOMAIN }}'
+            GHCR_USER='${{ github.actor }}'
+            GHCR_TOKEN='${{ secrets.GITHUB_TOKEN }}'
+          script: |
+            cd /srv/calisthenics
+            live() { sed -n 's/^IMAGE_TAG=//p' .env | tail -n1; }
+            registry() { echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin >/dev/null; }
+            sync_repo() { git fetch --all --prune -q && git reset --hard -q origin/main; }
+            case "$ACTION" in
+              status)
+                echo "live tag: $(live)"
+                echo "commit:   $(git rev-parse --short HEAD)"
+                echo
+                docker compose ps
+                echo; echo "--- disk"; df -h / | tail -1
+                echo; echo "--- memory"; free -h | sed -n '2p'
+                echo; echo "--- recent deploys"; tail -n 5 .deploy-history 2>/dev/null || echo "none recorded"
+                ;;
+              health)
+                echo -n "api /healthz: "
+                docker compose exec -T api wget -qO- http://127.0.0.1:8080/healthz || echo FAILED
+                echo
+                if [ -n "${APP_DOMAIN:-}" ]; then
+                  curl -sS -o /dev/null -w "public https://$APP_DOMAIN/healthz -> %{http_code}\n" "https://$APP_DOMAIN/healthz" || true
+                fi
+                ;;
+              logs)    docker compose logs --tail="$LINES" --no-color ${SERVICE:-} ;;
+              restart) docker compose restart ${SERVICE:-api web}; sleep 8; docker compose ps ;;
+              redeploy)   registry; sync_repo; bash infra/deploy.sh "$(live)" ;;
+              rollback)   registry; bash infra/deploy.sh --rollback ;;
+              deploy-tag) registry; sync_repo; bash infra/deploy.sh "$TAG" ;;
+              backup)     make backup && ls -lh backups | tail -3 ;;
+              migrate-status) make migrate-status ;;
+              prune)
+                df -h / | tail -1
+                docker image prune -af >/dev/null
+                docker builder prune -af >/dev/null 2>&1 || true
+                df -h / | tail -1
+                ;;
+              *) echo "unknown action: $ACTION"; exit 1 ;;
+            esac
+            docker logout ghcr.io >/dev/null 2>&1 || true
+
+      - name: Report
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ACTION: ${{ inputs.action }}
+          RESULT: ${{ steps.remote.outcome }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          # Actions log downloads are served from a storage host that a
+          # restricted network often can't reach. An issue comment comes back
+          # over the plain API, so `bin/ops` can read the result from anywhere
+          # the GitHub API is reachable — and it doubles as an audit trail.
+          out=/tmp/remote-output.txt
+          [ -f "$out" ] || echo "(the remote step produced no output)" > "$out"
+          # Comments cap at 65536 characters; keep the tail, which is where
+          # errors are.
+          tail -c 60000 "$out" > /tmp/trimmed.txt
+
+          number=$(gh issue list --state all --search 'ops log in:title' --limit 1 \
+                     --json number --jq '.[0].number // empty')
+          if [ -z "$number" ]; then
+            url=$(gh issue create --title "ops log" \
+              --body "Output from every \`ops\` workflow run is posted here. Closing the issue is fine; the workflow reuses it either way.")
+            number=${url##*/}
+          fi
+
+          {
+            echo "### \`$ACTION\` — $RESULT"
+            echo
+            echo "run: $RUN_URL"
+            echo
+            echo '```'
+            cat /tmp/trimmed.txt
+            echo '```'
+          } > /tmp/comment.md
+
+          gh issue comment "$number" --body-file /tmp/comment.md
+          cat /tmp/comment.md >> "$GITHUB_STEP_SUMMARY"

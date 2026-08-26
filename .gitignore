@@ -1,5 +1,15 @@
 .env
+.deploy-prev
+.deploy-history
 node_modules/
 frontend/.svelte-kit/
 frontend/build/
+backups/
 *.log
+
+# Credentials used by bin/deploy and bin/ops. They normally live one level
+# above the repo, but ignore them here too so a stray copy can never be
+# committed.
+.secrets/
+*.pem
+id_ed25519*

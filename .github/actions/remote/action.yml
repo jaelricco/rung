@@ -1,0 +1,72 @@
+name: Remote shell
+description: Runs a script on the deploy server over SSH and captures its output.
+
+inputs:
+  host:
+    required: true
+  user:
+    required: true
+  key:
+    required: true
+  env:
+    description: Lines of KEY=value to export on the remote side. Values must already be validated.
+    required: false
+    default: ""
+  script:
+    required: true
+  timeout:
+    required: false
+    default: "1200"
+
+outputs:
+  output:
+    description: Path to the captured combined output.
+    value: ${{ steps.run.outputs.file }}
+
+runs:
+  using: composite
+  steps:
+    - id: run
+      shell: bash
+      env:
+        SSH_HOST: ${{ inputs.host }}
+        SSH_USER: ${{ inputs.user }}
+        SSH_KEY: ${{ inputs.key }}
+        REMOTE_ENV: ${{ inputs.env }}
+        REMOTE_SCRIPT: ${{ inputs.script }}
+        TIMEOUT: ${{ inputs.timeout }}
+      run: |
+        set -euo pipefail
+        mkdir -p ~/.ssh && chmod 700 ~/.ssh
+        printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
+        chmod 600 ~/.ssh/deploy_key
+        # The host key is learned on first contact rather than pinned. Worth
+        # knowing: this trusts the network for that one connection. Pin it by
+        # putting the output of `ssh-keyscan HOST` into a DEPLOY_HOST_KEY
+        # secret and echoing that here instead.
+        if [ -n "${DEPLOY_HOST_KEY:-}" ]; then
+          printf '%s\n' "$DEPLOY_HOST_KEY" > ~/.ssh/known_hosts
+        else
+          ssh-keyscan -T 10 "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+        fi
+        chmod 600 ~/.ssh/known_hosts
+
+        # The remote side runs `set -euo pipefail` too, so a failing command
+        # inside the script fails the job instead of being swallowed.
+        {
+          printf 'set -euo pipefail\n'
+          printf '%s\n' "$REMOTE_ENV"
+          printf '%s\n' "$REMOTE_SCRIPT"
+        } > /tmp/remote.sh
+
+        echo "file=/tmp/remote-output.txt" >> "$GITHUB_OUTPUT"
+        set +e
+        timeout "$TIMEOUT" ssh -i ~/.ssh/deploy_key \
+          -o StrictHostKeyChecking=yes \
+          -o ConnectTimeout=15 \
+          -o ServerAliveInterval=20 \
+          "$SSH_USER@$SSH_HOST" 'bash -s' < /tmp/remote.sh 2>&1 | tee /tmp/remote-output.txt
+        status=${PIPESTATUS[0]}
+        set -e
+        rm -f ~/.ssh/deploy_key
+        exit "$status"

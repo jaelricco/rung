@@ -1,3 +1,11 @@
+# Production stack. Images are built in CI and pulled by tag — nothing is
+# compiled on this machine. IMAGE_TAG is written into .env by infra/deploy.sh,
+# so every ordinary compose command (logs, restart, ps) keeps using exactly the
+# release that is currently live.
+#
+# To build locally instead of pulling:
+#   docker compose -f compose.yaml -f compose.build.yaml up -d --build
+
 name: calisthenics
 
 services:
@@ -17,27 +25,39 @@ services:
       retries: 24
 
   api:
-    build: ./backend
+    image: ${API_IMAGE:-ghcr.io/jaelricco/rung/api}:${IMAGE_TAG:-latest}
     restart: unless-stopped
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER:-cali}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-cali}?sslmode=disable
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-sonnet-5}
-      ANTHROPIC_THINKING: ${ANTHROPIC_THINKING:-adaptive}
       WEB_SEARCH_TOOL_VERSION: ${WEB_SEARCH_TOOL_VERSION:-web_search_20250305}
       API_ADDR: ":8080"
       APP_ORIGIN: https://${APP_DOMAIN}
+      APP_VERSION: ${IMAGE_TAG:-latest}
     depends_on:
       db:
         condition: service_healthy
 
   web:
-    build: ./frontend
+    image: ${WEB_IMAGE:-ghcr.io/jaelricco/rung/web}:${IMAGE_TAG:-latest}
     restart: unless-stopped
     environment:
       NODE_ENV: production
       PORT: "3000"
       HOST: "0.0.0.0"
+    healthcheck:
+      # Any response under 500 counts: the app may redirect an anonymous
+      # request to /login, and that still proves the server is serving.
+      test:
+        - CMD
+        - node
+        - -e
+        - "require('http').get('http://127.0.0.1:3000/',r=>process.exit(r.statusCode<500?0:1)).on('error',()=>process.exit(1))"
+      interval: 15s
+      timeout: 5s
+      start_period: 20s
+      retries: 5
     depends_on:
       - api
 
