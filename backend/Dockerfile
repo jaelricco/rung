@@ -13,7 +13,7 @@ COPY . .
 # same binary.
 RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/api ./cmd/api
 
-FROM alpine:3.20
+FROM alpine:3.24
 RUN apk add --no-cache ca-certificates tzdata wget && adduser -D -u 10001 app
 COPY --from=build /out/api /usr/local/bin/api
 USER app
