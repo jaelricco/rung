@@ -54,3 +54,40 @@ export function formatDate(iso) {
 	const date = new Date(`${iso}T00:00:00`);
 	return date.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
 }
+
+// A session as the editor starts it: named, empty, waiting for its blocks.
+export function blankSession(title = '') {
+	return { title, focus: '', duration_minutes: 0, blocks: [] };
+}
+
+// What the API is sent. Number inputs can be left holding an empty string, and
+// the API takes numbers, so everything is coerced here rather than in four
+// places in the pages. Only fields the API knows are included: it rejects a
+// body with anything else in it.
+export function cleanBody(body) {
+	return {
+		title: (body.title ?? '').trim(),
+		focus: (body.focus ?? '').trim(),
+		duration_minutes: Number(body.duration_minutes) || 0,
+		blocks: (body.blocks ?? []).map((block) => ({
+			exercise_slug: block.exercise_slug,
+			intent: block.intent ?? '',
+			sets: Number(block.sets) || 0,
+			prescription: (block.prescription ?? '').trim(),
+			intensity: (block.intensity ?? '').trim(),
+			rest_seconds: Number(block.rest_seconds) || 0,
+			notes: (block.notes ?? '').trim()
+		}))
+	};
+}
+
+// The editor works on a copy: a cancelled edit must leave what is on screen
+// behind it untouched.
+export function editableBody(body) {
+	return {
+		title: body?.title ?? '',
+		focus: body?.focus ?? '',
+		duration_minutes: body?.duration_minutes ?? 0,
+		blocks: (body?.blocks ?? []).map((block) => ({ ...block }))
+	};
+}

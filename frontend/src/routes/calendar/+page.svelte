@@ -2,7 +2,18 @@
 	import { api } from '$lib/api.js';
 	import { session } from '$lib/session.svelte.js';
 	import SessionDetail from '$lib/SessionDetail.svelte';
-	import { DAY_SHORT, sessionShape, isoDate, mondayOf, addDays, formatDate } from '$lib/week.js';
+	import SessionEditor from '$lib/SessionEditor.svelte';
+	import {
+		DAY_SHORT,
+		sessionShape,
+		blankSession,
+		cleanBody,
+		editableBody,
+		isoDate,
+		mondayOf,
+		addDays,
+		formatDate
+	} from '$lib/week.js';
 
 	// Five weeks is a month view: the block a training cycle is read in, and
 	// what fits on a screen without scrolling the header away.
@@ -11,14 +22,25 @@
 	let anchor = $state(mondayOf(new Date()));
 	let calendar = $state(null);
 	let plans = $state([]);
+	let exercises = $state([]);
 	let error = $state('');
 	let busyId = $state('');
 	let openId = $state('');
+	// The session being written, if any: a new one on a day, or an existing
+	// one opened for correction.
+	let editor = $state(null);
 
 	const today = isoDate(new Date());
 
 	let from = $derived(anchor);
 	let to = $derived(addDays(anchor, WEEKS_SHOWN * 7 - 1));
+
+	$effect(() => {
+		if (!session.user || exercises.length) return;
+		api.get('/exercises')
+			.then((library) => (exercises = library))
+			.catch((e) => (error = e.message));
+	});
 
 	$effect(() => {
 		if (!session.user) return;
@@ -75,6 +97,63 @@
 		openId = '';
 	}
 
+	// ---------- writing sessions straight onto a day ----------
+
+	function startNew(iso) {
+		editor = { id: '', scheduled_on: iso, body: blankSession('') };
+		openId = '';
+	}
+
+	function startEdit(entry) {
+		editor = { id: entry.id, scheduled_on: entry.scheduled_on, body: editableBody(entry.body) };
+	}
+
+	async function saveSession() {
+		error = '';
+		busyId = 'editor';
+		try {
+			const payload = { scheduled_on: editor.scheduled_on, body: cleanBody(editor.body) };
+			const sessions = calendar?.sessions ?? [];
+			if (editor.id) {
+				const updated = await api.patch(`/sessions/${editor.id}`, payload);
+				calendar = { ...calendar, sessions: sessions.map((s) => (s.id === updated.id ? updated : s)) };
+			} else {
+				const created = await api.post('/sessions', payload);
+				calendar = { ...calendar, sessions: [...sessions, created] };
+			}
+			editor = null;
+		} catch (e) {
+			error = e.message;
+		} finally {
+			busyId = '';
+		}
+	}
+
+	async function removeSession(entry) {
+		if (!confirm(`Remove "${entry.title}" from ${formatDate(entry.scheduled_on)}?`)) return;
+		error = '';
+		busyId = entry.id;
+		try {
+			await api.del(`/sessions/${entry.id}`);
+			calendar = {
+				...calendar,
+				sessions: (calendar?.sessions ?? []).filter((s) => s.id !== entry.id)
+			};
+			if (openId === entry.id) openId = '';
+			if (editor?.id === entry.id) editor = null;
+		} catch (e) {
+			error = e.message;
+		} finally {
+			busyId = '';
+		}
+	}
+
+	const SOURCES = {
+		routine: 'From your routine — a change here is for this week only',
+		plan: 'From a plan',
+		manual: 'Written by you'
+	};
+
 	async function toggle(entry) {
 		busyId = entry.id;
 		error = '';
@@ -116,8 +195,8 @@
 <p class="eyebrow" style="margin-top:2rem">Schedule</p>
 <h1>Your calendar</h1>
 <p class="muted column" style="margin-top:0.6rem">
-	Every session a plan put on the calendar, on the day it falls. Open one to see the work; tick it
-	off when it is done.
+	Every session on the day it falls, wherever it came from: a plan, your repeating routine, or typed
+	straight onto a day here. Open one to see the work; tick it off when it is done.
 </p>
 
 {#if error}
@@ -136,6 +215,41 @@
 		{formatDate(isoDate(from))} – {formatDate(isoDate(to))}{` · ${scheduled} sessions`}
 	</p>
 </div>
+
+{#if editor}
+	<div class="panel" style="margin-top:0.9rem">
+		<div class="row" style="align-items:flex-end">
+			<div style="flex:1 1 auto">
+				<p class="eyebrow" style="margin:0 0 0.2rem">
+					{editor.id ? 'Edit session' : 'New session'}
+				</p>
+				<strong>{formatDate(editor.scheduled_on)}</strong>
+			</div>
+			<div style="flex:0 1 170px">
+				<label for="editor-date">Day</label>
+				<input id="editor-date" type="date" bind:value={editor.scheduled_on} />
+			</div>
+		</div>
+
+		<div style="margin-top:0.8rem">
+			<SessionEditor body={editor.body} {exercises} />
+		</div>
+
+		<div class="row" style="margin-top:1.1rem">
+			<button
+				style="flex:0 0 auto"
+				onclick={saveSession}
+				disabled={busyId === 'editor' || !editor.body.title.trim()}
+			>
+				{busyId === 'editor' ? 'Saving…' : editor.id ? 'Save changes' : 'Add to calendar'}
+			</button>
+			<button class="ghost" style="flex:0 0 auto" onclick={() => (editor = null)}>Cancel</button>
+			<p class="muted" style="flex:1 1 auto;margin:0;text-align:right;font-size:0.82rem">
+				Training the same week every week? <a href="/routine">Save it as a routine</a> instead.
+			</p>
+		</div>
+	</div>
+{/if}
 
 <div class="cal">
 	<div class="cal-dow"></div>
@@ -180,6 +294,15 @@
 						<span class="meta">{sessionShape(entry.body)}</span>
 					</button>
 				{/each}
+
+				<button
+					class="cal-add"
+					title={`Add a session on ${formatDate(day.iso)}`}
+					aria-label={`Add a session on ${formatDate(day.iso)}`}
+					onclick={() => startNew(day.iso)}
+				>
+					+
+				</button>
 			</div>
 		{/each}
 
@@ -196,9 +319,24 @@
 					>
 						{open.completed_at ? 'Done — undo' : 'Mark done'}
 					</button>
+					<button
+						class="ghost"
+						style="padding:0.35rem 0.7rem;font-size:0.8rem"
+						onclick={() => startEdit(open)}
+					>
+						Edit
+					</button>
+					<button class="link" onclick={() => removeSession(open)} disabled={busyId === open.id}>
+						Remove
+					</button>
 					<button class="link" onclick={() => (openId = '')}>Close</button>
 				</div>
-				<p class="muted" style="margin:0 0 0.6rem;font-size:0.88rem">{open.focus}</p>
+				<p class="muted" style="margin:0 0 0.6rem;font-size:0.88rem">
+					{open.focus}
+					<span class="mono" style="font-size:0.76rem;opacity:0.75">
+						{open.focus ? ' · ' : ''}{SOURCES[open.source] ?? ''}
+					</span>
+				</p>
 				<SessionDetail session={open.body} />
 			</div>
 		{/if}
@@ -207,8 +345,8 @@
 
 {#if calendar && scheduled === 0}
 	<div class="empty" style="margin-top:1rem">
-		Nothing scheduled in these five weeks. <a href="/plan">Build a plan</a> and add it to your
-		calendar.
+		Nothing scheduled in these five weeks. <a href="/routine">Save the week you already train</a>,
+		<a href="/plan">build a plan</a>, or press + on a day to write one session.
 	</div>
 {/if}
 
@@ -253,3 +391,37 @@
 	Every scheduled session as an .ics file, for the calendar app you already use.
 </p>
 <a class="mono" href="/api/v1/calendar.ics" download="training.ics">Download training.ics</a>
+
+<style>
+	/* One press on a day is the whole path to writing a session there, so the
+	   button sits in the cell rather than behind a menu — quiet until the day
+	   is hovered or it is focused for the keyboard. */
+	.cal-add {
+		background: none;
+		border: 1px dashed var(--line);
+		color: var(--muted);
+		font-family: var(--mono);
+		font-size: 0.9rem;
+		line-height: 1;
+		padding: 0.15rem 0;
+		margin-top: auto;
+		border-radius: var(--radius);
+		opacity: 0;
+		transition: opacity 0.12s ease;
+	}
+	:global(.cal-cell):hover .cal-add,
+	.cal-add:focus-visible {
+		opacity: 1;
+	}
+	.cal-add:hover {
+		border-color: var(--signal);
+		color: var(--signal);
+		filter: none;
+	}
+	@media (hover: none) {
+		/* Nothing hovers on a phone, so the button is simply always there. */
+		.cal-add {
+			opacity: 0.6;
+		}
+	}
+</style>
