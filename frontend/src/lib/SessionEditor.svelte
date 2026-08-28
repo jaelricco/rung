@@ -84,6 +84,9 @@
 	</div>
 </div>
 
+<!-- Bound through body.blocks[index] rather than the each alias: the alias
+     form compiles to a write against the item source, which is not always
+     the array's own object, and what is typed can be dropped silently. -->
 {#each body.blocks ?? [] as block, index (index)}
 	<div class="block">
 		<div class="row">
@@ -91,14 +94,14 @@
 				<label for={`block-ex-${index}`}>Exercise</label>
 				<ExercisePicker
 					id={`block-ex-${index}`}
-					bind:value={block.exercise_slug}
+					bind:value={body.blocks[index].exercise_slug}
 					{exercises}
 					onselect={() => onExerciseChange(block)}
 				/>
 			</div>
 			<div style="flex:1 1 130px">
 				<label for={`block-intent-${index}`}>Intent</label>
-				<select id={`block-intent-${index}`} bind:value={block.intent}>
+				<select id={`block-intent-${index}`} bind:value={body.blocks[index].intent}>
 					{#each INTENTS as [value, name] (value)}
 						<option {value}>{name}</option>
 					{/each}
@@ -106,13 +109,13 @@
 			</div>
 			<div style="flex:0 1 80px">
 				<label for={`block-sets-${index}`}>Sets</label>
-				<input id={`block-sets-${index}`} type="number" min="1" max="20" bind:value={block.sets} />
+				<input id={`block-sets-${index}`} type="number" min="1" max="20" bind:value={body.blocks[index].sets} />
 			</div>
 			<div style="flex:1 1 140px">
 				<label for={`block-pres-${index}`}>Each set</label>
 				<input
 					id={`block-pres-${index}`}
-					bind:value={block.prescription}
+					bind:value={body.blocks[index].prescription}
 					placeholder="12s hold"
 					maxlength="500"
 				/>
@@ -125,7 +128,7 @@
 					min="0"
 					max="3600"
 					step="15"
-					bind:value={block.rest_seconds}
+					bind:value={body.blocks[index].rest_seconds}
 				/>
 			</div>
 		</div>
@@ -134,7 +137,7 @@
 				<label for={`block-notes-${index}`}>Note</label>
 				<input
 					id={`block-notes-${index}`}
-					bind:value={block.notes}
+					bind:value={body.blocks[index].notes}
 					placeholder="stop the set when the line breaks"
 					maxlength="500"
 				/>

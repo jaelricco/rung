@@ -1,6 +1,7 @@
 <script>
 	import { goto } from '$app/navigation';
 	import { api } from '$lib/api.js';
+	import ExercisePicker from '$lib/ExercisePicker.svelte';
 
 	let exercises = $state([]);
 	let sets = $state([]);
@@ -72,13 +73,6 @@
 			busy = false;
 		}
 	}
-
-	let byCategory = $derived(
-		exercises.reduce((acc, e) => {
-			(acc[e.category] ??= []).push(e);
-			return acc;
-		}, {})
-	);
 </script>
 
 <p class="eyebrow" style="margin-top:2rem">New entry</p>
@@ -90,48 +84,44 @@
 {/if}
 
 <div class="form-width" style="display:grid;gap:0.7rem">
+	<!-- Every field writes through sets[index] rather than the each alias:
+	     binding to the alias here compiled to a write against an item source
+	     that was undefined at the time, so what the athlete typed never
+	     reached the state and the set was logged as a zero. -->
 	{#each sets as set, index (index)}
 		{@const measure = measureFor(set.exercise_slug)}
 		<div class="panel">
 			<div class="row">
 				<div style="flex:2 1 220px">
 					<label for={`ex-${index}`}>Exercise</label>
-					<select id={`ex-${index}`} bind:value={set.exercise_slug}>
-						{#each Object.entries(byCategory) as [category, list] (category)}
-							<optgroup label={category}>
-								{#each list as exercise (exercise.slug)}
-									<option value={exercise.slug}>{exercise.name}</option>
-								{/each}
-							</optgroup>
-						{/each}
-					</select>
+					<ExercisePicker id={`ex-${index}`} bind:value={sets[index].exercise_slug} {exercises} />
 				</div>
 
 				{#if measure === 'reps' || measure === 'weighted_reps'}
 					<div>
 						<label for={`reps-${index}`}>Reps</label>
-						<input id={`reps-${index}`} type="number" min="0" bind:value={set.reps} />
+						<input id={`reps-${index}`} type="number" min="0" bind:value={sets[index].reps} />
 					</div>
 				{/if}
 
 				{#if measure === 'weighted_reps'}
 					<div>
 						<label for={`kg-${index}`}>Added kg</label>
-						<input id={`kg-${index}`} type="number" step="0.5" bind:value={set.weight_kg} />
+						<input id={`kg-${index}`} type="number" step="0.5" bind:value={sets[index].weight_kg} />
 					</div>
 				{/if}
 
 				{#if measure === 'static_hold'}
 					<div>
 						<label for={`hold-${index}`}>Hold (s)</label>
-						<input id={`hold-${index}`} type="number" step="0.5" min="0" bind:value={set.hold_seconds} />
+						<input id={`hold-${index}`} type="number" step="0.5" min="0" bind:value={sets[index].hold_seconds} />
 					</div>
 				{/if}
 
 				{#if measure === 'skill_attempt'}
 					<div>
 						<label for={`made-${index}`}>Result</label>
-						<select id={`made-${index}`} bind:value={set.success}>
+						<select id={`made-${index}`} bind:value={sets[index].success}>
 							<option value={true}>Made</option>
 							<option value={false}>Missed</option>
 						</select>

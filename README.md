@@ -345,17 +345,25 @@ for all of them — an exercise slug that is not in the library is refused rathe
 than dropped, because a session quietly missing the movement it was built
 around is worse than an error message.
 
-**The library is deep enough to prescribe from, and searchable enough to use.**
-139 movements, which is past the point where a dropdown is a usable way to
-find one. `ExercisePicker` keeps what a select does — click the field, see the
-whole library grouped by category, with the current choice highlighted — and
-adds typing: the list narrows as you type, ranked so a name beginning with
-what you typed comes before a slug or a description that merely contains it,
-and only ever resolves to a real slug. The planche block is the reason it grew:
-holds alone could not express how the skill is trained, so the presses
-(L-sit press to tuck planche, planche negative, planche press to handstand),
-the assisted holds and the rings work the elbows need first are all in there
-now.
+**Every skill has a path, not just an end position.** 173 movements. The rule
+the library is grown by: if a skill is in here, the rungs to reach it have to
+be here too — the assisted version, the negative, the tuck or one-leg step in
+the middle — because a plan that can only prescribe the finished skill has
+nothing to give an athlete who cannot do it yet. That is why the planche now
+carries its presses (L-sit press to tuck planche, planche negative, planche
+press to handstand) rather than four holds, why the front lever has a banded
+hold and a negative between the tuck and the full lay, and why the elbow lever,
+hefesto, victorian and the one-arm handstand exist at all. Difficulties are set
+against the holds already in the table, so a one-leg flag sits between the tuck
+and the straddle because that is where it sits in training.
+
+**A library that size needs searching, not scrolling.** `ExercisePicker` keeps
+what a select does — click the field, see the whole library grouped by
+category, scrolled to the current choice — and adds typing: the list narrows as
+you type, ranked so a name beginning with what you typed comes before a slug or
+a description that merely contains it. Arrow keys and Enter work, and it only
+ever resolves to a real slug. It is the exercise field everywhere one exists:
+logging a session, writing a routine, writing a session onto a day.
 
 **Generating a plan and committing to it are separate.** `/ai/skill-plan`
 answers with a plan; `POST /plans` is what puts it on the calendar, and the
@@ -556,5 +564,10 @@ Not built yet:
   reproducible the way the backend already is.
 - The API returns human-readable error strings; the frontend shows them
   verbatim, so write them as messages a user should see.
+- Bind through the array, not the `{#each}` alias: `bind:value={sets[index].reps}`,
+  never `bind:value={set.reps}`. The alias form compiles to a write against the
+  each item source, which in at least one shape of block is not the array's own
+  object — the write throws in the console and what was typed never reaches the
+  state. That silently logged every set as a zero until it was caught.
 - Cookies are `Secure` by default. Only set `INSECURE_COOKIES=true` if you are
   testing over plain HTTP on an IP address.
