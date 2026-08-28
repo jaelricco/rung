@@ -2,6 +2,8 @@
 	// One session, being written rather than read. The same shape SessionDetail
 	// renders, so anything built here — a routine day, a session typed straight
 	// onto the calendar — looks like a session everywhere else in the app.
+	import ExercisePicker from '$lib/ExercisePicker.svelte';
+
 	let { body, exercises = [] } = $props();
 
 	const INTENTS = [
@@ -11,13 +13,6 @@
 		['accessory', 'Accessory'],
 		['conditioning', 'Conditioning']
 	];
-
-	let byCategory = $derived(
-		exercises.reduce((acc, e) => {
-			(acc[e.category] ??= []).push(e);
-			return acc;
-		}, {})
-	);
 
 	function measureFor(slug) {
 		return exercises.find((e) => e.slug === slug)?.measure ?? 'reps';
@@ -94,19 +89,12 @@
 		<div class="row">
 			<div style="flex:2 1 200px">
 				<label for={`block-ex-${index}`}>Exercise</label>
-				<select
+				<ExercisePicker
 					id={`block-ex-${index}`}
 					bind:value={block.exercise_slug}
-					onchange={() => onExerciseChange(block)}
-				>
-					{#each Object.entries(byCategory) as [category, list] (category)}
-						<optgroup label={category}>
-							{#each list as exercise (exercise.slug)}
-								<option value={exercise.slug}>{exercise.name}</option>
-							{/each}
-						</optgroup>
-					{/each}
-				</select>
+					{exercises}
+					onselect={() => onExerciseChange(block)}
+				/>
 			</div>
 			<div style="flex:1 1 130px">
 				<label for={`block-intent-${index}`}>Intent</label>

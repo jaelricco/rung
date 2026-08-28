@@ -345,6 +345,18 @@ for all of them — an exercise slug that is not in the library is refused rathe
 than dropped, because a session quietly missing the movement it was built
 around is worse than an error message.
 
+**The library is deep enough to prescribe from, and searchable enough to use.**
+139 movements, which is past the point where a dropdown is a usable way to
+find one. `ExercisePicker` keeps what a select does — click the field, see the
+whole library grouped by category, with the current choice highlighted — and
+adds typing: the list narrows as you type, ranked so a name beginning with
+what you typed comes before a slug or a description that merely contains it,
+and only ever resolves to a real slug. The planche block is the reason it grew:
+holds alone could not express how the skill is trained, so the presses
+(L-sit press to tuck planche, planche negative, planche press to handstand),
+the assisted holds and the rings work the elbows need first are all in there
+now.
+
 **Generating a plan and committing to it are separate.** `/ai/skill-plan`
 answers with a plan; `POST /plans` is what puts it on the calendar, and the
 plan is re-checked against the library on the way in rather than trusted for
