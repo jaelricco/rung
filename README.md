@@ -318,6 +318,33 @@ the week adds up to. `src/lib/week.js` deals the sessions into the squares;
 both pages use it, so a session looks the same whether it is being considered
 or being done.
 
+**A routine is written out, not expanded on the fly.** The week an athlete
+already trains lives in `routines` and `routine_days`, but nothing reads it at
+calendar time: `fillRoutines` in `internal/training/routines.go` writes the
+sessions into `planned_sessions` ahead of the window being looked at, and each
+routine remembers how far it has been written with `materialized_through`. Two
+things follow, and both are the point. A materialised session is a real row, so
+it can be ticked off, linked to the workout that was actually logged, exported
+to .ics and edited for one week — none of which a session computed at read time
+can do. And filling only past `materialized_through` means a day the athlete
+deleted stays deleted: the calendar is written once and then belongs to them,
+rather than being re-derived from the template on every load. Editing a routine
+rewrites what it has from today forward and leaves the past, and anything
+already done, alone.
+
+**Repeating and not repeating are the same object.** "Every week" is a routine
+with `active` set; "just this week" is the same routine applied to one week and
+left inactive. So the choice made at save time is not a fork in the data model,
+and a one-off week can be repeated later, or a standing routine dropped onto an
+extra week, without rewriting anything.
+
+**A session can also just be typed onto a day.** `POST /sessions` puts one
+session on one date with no plan and no routine behind it, and `source` on
+every calendar entry says which of the three it was. The same validation runs
+for all of them — an exercise slug that is not in the library is refused rather
+than dropped, because a session quietly missing the movement it was built
+around is worse than an error message.
+
 **Generating a plan and committing to it are separate.** `/ai/skill-plan`
 answers with a plan; `POST /plans` is what puts it on the calendar, and the
 plan is re-checked against the library on the way in rather than trusted for
@@ -417,8 +444,16 @@ POST   /api/v1/injuries          {region, severity, description}
 POST   /api/v1/injuries/{id}/resolve
 GET    /api/v1/calendar?from=&to=
 GET    /api/v1/calendar.ics
+POST   /api/v1/sessions          {scheduled_on, body}
+PATCH  /api/v1/sessions/{id}     {scheduled_on?, body?}
+DELETE /api/v1/sessions/{id}
 POST   /api/v1/sessions/{id}/complete
 DELETE /api/v1/sessions/{id}/complete
+GET    /api/v1/routines
+POST   /api/v1/routines          {title, notes, repeat: weekly|once, week_of, days[]}
+PATCH  /api/v1/routines/{id}     {title?, notes?, active?, days?}
+DELETE /api/v1/routines/{id}
+POST   /api/v1/routines/{id}/apply    {week_of}
 GET    /api/v1/plans
 POST   /api/v1/plans            {plan, goal, starts_on}
 DELETE /api/v1/plans/{id}
@@ -436,6 +471,27 @@ POST   /api/v1/events/{id}/recheck
 POST   /api/v1/events/{id}/register   {goal}
 DELETE /api/v1/events/{id}/register
 ```
+
+A session body — a routine day, or a session written straight onto the
+calendar — is the same shape a generated plan session has, so one component
+renders all three:
+
+```json
+{
+  "title": "Push",
+  "focus": "planche",
+  "duration_minutes": 75,
+  "blocks": [
+    { "exercise_slug": "planche_lean", "intent": "skill", "sets": 5,
+      "prescription": "15s hold", "rest_seconds": 120,
+      "notes": "stop when the line breaks" }
+  ]
+}
+```
+
+`intent` is one of `prep`, `skill`, `strength`, `accessory`, `conditioning`,
+and `exercise_slug` has to exist in the library. `days[]` on a routine is a
+list of `{day_of_week: 1-7, body}` — several sessions may share a day.
 
 A set carries one of four shapes, and the database enforces it:
 
@@ -457,10 +513,12 @@ Built and working:
 - Injury tracking and the curated protocol library
 - AI skill plans, training review, recovery and nutrition guidance
 - Calendar storage, planned sessions, ICS export, plan deletion
+- Repeating routines: the athlete's own week, filled ahead or dropped onto a
+  single week, and sessions written straight onto a day
 - Park search backed by OpenStreetMap
 - Event discovery via web search, with source verification and a review queue
-- Frontend: sign in, overview, log a session, generate a plan, the calendar,
-  browse events
+- Frontend: sign in, overview, log a session, generate a plan, write a routine,
+  the calendar, browse events
 
 Not built yet:
 

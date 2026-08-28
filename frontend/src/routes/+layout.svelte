@@ -35,6 +35,9 @@
 				<a href="/" aria-current={page.url.pathname === '/' ? 'page' : undefined}>Overview</a>
 				<a href="/log" aria-current={page.url.pathname === '/log' ? 'page' : undefined}>Log a session</a>
 				<a href="/plan" aria-current={page.url.pathname === '/plan' ? 'page' : undefined}>Plan</a>
+				<a href="/routine" aria-current={page.url.pathname === '/routine' ? 'page' : undefined}>
+					Routine
+				</a>
 				<a href="/calendar" aria-current={page.url.pathname === '/calendar' ? 'page' : undefined}>
 					Calendar
 				</a>
