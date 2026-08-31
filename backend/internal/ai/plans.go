@@ -17,13 +17,13 @@ import (
 )
 
 type Handler struct {
-	client   *Client
+	store    *Store
 	pool     *pgxpool.Pool
 	training *training.Service
 }
 
-func NewHandler(client *Client, pool *pgxpool.Pool, tr *training.Service) *Handler {
-	return &Handler{client: client, pool: pool, training: tr}
+func NewHandler(store *Store, pool *pgxpool.Pool, tr *training.Service) *Handler {
+	return &Handler{store: store, pool: pool, training: tr}
 }
 
 // coachSystem is the standing brief for every coaching call.
@@ -166,8 +166,11 @@ func (h *Handler) SkillPlan(w http.ResponseWriter, r *http.Request) {
 	}
 
 	me := auth.MustUser(r.Context())
-	if !h.client.Configured() {
-		httpx.Fail(w, http.StatusServiceUnavailable, "Plan generation is switched off: no API key is set on the server.")
+	// The plan is written on this athlete's own model account, so the account
+	// has to exist before anything expensive starts.
+	client, err := h.store.ClientFor(r.Context(), me.ID)
+	if err != nil {
+		FailNotConnected(w, err)
 		return
 	}
 
@@ -190,7 +193,7 @@ func (h *Handler) SkillPlan(w http.ResponseWriter, r *http.Request) {
 	// report a fraction of itself; the bar sweeps and the elapsed time ticks.
 	var found SkillResearch
 	if !in.NoResearch {
-		found = h.researchWhileTicking(ctx, me.ID, in.Skill, lib, out)
+		found = h.researchWhileTicking(ctx, client, me.ID, in.Skill, lib, out)
 	}
 
 	expected := in.Weeks * in.DaysPerWeek
@@ -200,7 +203,7 @@ func (h *Handler) SkillPlan(w http.ResponseWriter, r *http.Request) {
 	out.report(Progress{Stage: "sending", Label: "Briefing the coach", Percent: researchCeiling, Total: expected})
 
 	var plan Plan
-	err = h.client.CompleteJSONStream(ctx, me.ID, "skill_plan", coachSystem, prompt,
+	err = client.CompleteJSONStream(ctx, me.ID, "skill_plan", coachSystem, prompt,
 		planTokens(expected), func(d Delta) { out.report(tracker.update(d)) }, &plan)
 	if err != nil {
 		out.fail(http.StatusBadGateway, "Couldn't build that plan: "+err.Error())
@@ -241,14 +244,14 @@ func (h *Handler) SkillPlan(w http.ResponseWriter, r *http.Request) {
 // while it does. The search call is one long request that reports nothing
 // until it returns, so the only honest thing to show is how long it has been
 // running — the percentage stays put and the bar sweeps.
-func (h *Handler) researchWhileTicking(ctx context.Context, userID, skill string,
+func (h *Handler) researchWhileTicking(ctx context.Context, client *Client, userID, skill string,
 	lib library, out *responder) SkillResearch {
 
 	out.report(Progress{Stage: "researching", Percent: researchFloor, Indeterminate: true,
 		Label: "Researching how " + skill + " is trained", Detail: "searching coaching sources"})
 
 	done := make(chan SkillResearch, 1)
-	go func() { done <- h.research(ctx, userID, skill, lib) }()
+	go func() { done <- h.research(ctx, client, userID, skill, lib) }()
 
 	started := time.Now()
 	ticker := time.NewTicker(3 * time.Second)
@@ -559,8 +562,9 @@ const proseTokens = 8000
 
 func (h *Handler) Review(w http.ResponseWriter, r *http.Request) {
 	me := auth.MustUser(r.Context())
-	if !h.client.Configured() {
-		httpx.Fail(w, http.StatusServiceUnavailable, "Coaching is switched off: no API key is set on the server.")
+	client, err := h.store.ClientFor(r.Context(), me.ID)
+	if err != nil {
+		FailNotConnected(w, err)
 		return
 	}
 
@@ -587,7 +591,7 @@ If there is too little data to judge, say so and name what to log first.
 Answer as prose, not JSON.`
 
 	tracker := newProseTracker(1800, "Reading your records")
-	text, err := h.client.CompleteStream(ctx, me.ID, "review", coachSystem, prompt, proseTokens,
+	text, err := client.CompleteStream(ctx, me.ID, "review", coachSystem, prompt, proseTokens,
 		func(d Delta) { out.report(tracker.update(d)) })
 	if err != nil {
 		out.fail(http.StatusBadGateway, "Couldn't produce a review: "+err.Error())
@@ -599,8 +603,9 @@ Answer as prose, not JSON.`
 
 func (h *Handler) Recovery(w http.ResponseWriter, r *http.Request) {
 	me := auth.MustUser(r.Context())
-	if !h.client.Configured() {
-		httpx.Fail(w, http.StatusServiceUnavailable, "Recovery guidance is switched off: no API key is set on the server.")
+	client, err := h.store.ClientFor(r.Context(), me.ID)
+	if err != nil {
+		FailNotConnected(w, err)
 		return
 	}
 
@@ -630,7 +635,7 @@ End with one line on when to stop self-managing and see a clinician.
 Answer as prose, not JSON.`
 
 	tracker := newProseTracker(2100, "Weighing your recent load")
-	text, err := h.client.CompleteStream(ctx, me.ID, "recovery", coachSystem, prompt, proseTokens,
+	text, err := client.CompleteStream(ctx, me.ID, "recovery", coachSystem, prompt, proseTokens,
 		func(d Delta) { out.report(tracker.update(d)) })
 	if err != nil {
 		out.fail(http.StatusBadGateway, "Couldn't produce recovery guidance: "+err.Error())

@@ -7,14 +7,19 @@ import (
 
 // Config is read once at boot. Everything comes from the environment so the
 // same image runs unchanged in every context.
+//
+// Note what is not here any more: a model API key. Coaching runs on each
+// athlete's own provider account, so the only model secret the server holds is
+// the one it seals those accounts with.
 type Config struct {
-	DatabaseURL    string
-	Addr           string
-	AnthropicKey   string
-	AnthropicModel string
-	// AnthropicThinking is "adaptive" (every current model) or "off" for a
-	// model old enough to reject the adaptive thinking parameter.
-	AnthropicThinking string
+	DatabaseURL string
+	Addr        string
+	// CredentialsKey seals the athletes' provider keys at rest. 32 bytes,
+	// base64 or hex. Without it the coaching features are off for everyone.
+	CredentialsKey string
+	// AIThinking is "adaptive" (every current model) or "off" for a model old
+	// enough to reject the parameter.
+	AIThinking        string
 	SearchToolVersion string
 	SecureCookies     bool
 	AppOrigin         string
@@ -24,12 +29,8 @@ func Load() Config {
 	return Config{
 		DatabaseURL:       os.Getenv("DATABASE_URL"),
 		Addr:              envOr("API_ADDR", ":8080"),
-		AnthropicKey:      os.Getenv("ANTHROPIC_API_KEY"),
-		// Opus by default: plan writing is the app's hardest call — a ladder
-		// of progressions weighed against one athlete's records — and it is
-		// where the difference between model tiers actually shows up.
-		AnthropicModel:    envOr("ANTHROPIC_MODEL", "claude-opus-5"),
-		AnthropicThinking: envOr("ANTHROPIC_THINKING", "adaptive"),
+		CredentialsKey:    os.Getenv("AI_CREDENTIALS_KEY"),
+		AIThinking:        envOr("AI_THINKING", envOr("ANTHROPIC_THINKING", "adaptive")),
 		SearchToolVersion: envOr("WEB_SEARCH_TOOL_VERSION", "web_search_20250305"),
 		AppOrigin:         os.Getenv("APP_ORIGIN"),
 		// Cookies are Secure unless explicitly disabled for a plain-HTTP test box.

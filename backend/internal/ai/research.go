@@ -89,7 +89,7 @@ const (
 // research returns findings for the skill, from cache when they are fresh.
 // Research is a convenience, not a dependency: every failure path returns an
 // empty result and lets the plan be written without it.
-func (h *Handler) research(ctx context.Context, userID, skill string, lib library) SkillResearch {
+func (h *Handler) research(ctx context.Context, client *Client, userID, skill string, lib library) SkillResearch {
 	key := researchKey(skill)
 	if key == "" {
 		return SkillResearch{}
@@ -129,7 +129,7 @@ Return JSON:
 }`, skill, lib.text)
 
 	var found SkillResearch
-	searchResult, err := h.client.SearchJSON(ctx, userID, "skill_research", researchSystem, prompt,
+	searchResult, err := client.SearchJSON(ctx, userID, "skill_research", researchSystem, prompt,
 		researchTokens, SearchOptions{MaxSearches: researchSearches}, &found)
 	if err != nil {
 		// A plan without research is the old behaviour, which is still a plan.
