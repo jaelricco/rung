@@ -17,6 +17,7 @@ import (
 	"calisthenics/api/internal/events"
 	"calisthenics/api/internal/httpx"
 	"calisthenics/api/internal/parks"
+	"calisthenics/api/internal/plan"
 	"calisthenics/api/internal/secret"
 	"calisthenics/api/internal/training"
 )
@@ -65,6 +66,10 @@ func main() {
 		Thinking:          cfg.AIThinking,
 	})
 	aiHandler := ai.NewHandler(aiStore, pool, trainingSvc)
+	// The deterministic planner. It shares nothing with the AI handler except
+	// the plan schema, and it needs no model account of any kind — which is
+	// the point: it is what answers when everything else cannot.
+	planHandler := plan.NewHandler(pool, trainingSvc)
 	eventsSvc := events.New(pool, aiStore)
 
 	mux := http.NewServeMux()
@@ -96,6 +101,9 @@ func main() {
 		"POST /api/v1/workouts":                 trainingSvc.CreateWorkout,
 		"DELETE /api/v1/workouts/{id}":          trainingSvc.DeleteWorkout,
 		"GET /api/v1/level":                     trainingSvc.Level,
+		"GET /api/v1/baseline":                  trainingSvc.GetBaseline,
+		"PUT /api/v1/baseline":                  trainingSvc.PutBaseline,
+		"GET /api/v1/plan/benchmarks":           planHandler.Benchmarks,
 		"GET /api/v1/injuries":                  trainingSvc.ListInjuries,
 		"POST /api/v1/injuries":                 trainingSvc.CreateInjury,
 		"POST /api/v1/injuries/{id}/resolve":    trainingSvc.ResolveInjury,
@@ -112,7 +120,8 @@ func main() {
 		"DELETE /api/v1/routines/{id}":          trainingSvc.DeleteRoutine,
 		"POST /api/v1/routines/{id}/apply":      trainingSvc.ApplyRoutine,
 		"GET /api/v1/plans":                     trainingSvc.ListPlans,
-		"POST /api/v1/plans":                    aiHandler.SavePlan,
+		"POST /api/v1/plans":                    planHandler.SavePlan,
+		"POST /api/v1/plans/generate":           planHandler.Generate,
 		"DELETE /api/v1/plans/{id}":             trainingSvc.DeletePlan,
 		"POST /api/v1/ai/skill-plan":            aiHandler.SkillPlan,
 		"POST /api/v1/ai/review":                aiHandler.Review,
