@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"calisthenics/api/internal/ai"
 	"calisthenics/api/internal/auth"
 	"calisthenics/api/internal/httpx"
 )
@@ -104,8 +105,12 @@ func (s *Service) Discover(w http.ResponseWriter, r *http.Request) {
 	if !httpx.Decode(w, r, &in) {
 		return
 	}
-	if !s.ai.Configured() {
-		httpx.Fail(w, http.StatusServiceUnavailable, "Event search is switched off: no API key is set on the server.")
+	me := auth.MustUser(r.Context())
+	// Searching costs money at the provider, so it is spent on the searcher's
+	// own account. No account connected, no search.
+	client, err := s.ai.ClientFor(r.Context(), me.ID)
+	if err != nil {
+		ai.FailNotConnected(w, err)
 		return
 	}
 
@@ -161,8 +166,7 @@ func (s *Service) Discover(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	me := auth.MustUser(r.Context())
-	report, err := s.RunDiscovery(r.Context(), me.ID, request)
+	report, err := s.RunDiscovery(r.Context(), client, me.ID, request)
 	if err != nil {
 		httpx.Fail(w, http.StatusBadGateway, "The event search failed: "+err.Error())
 		return

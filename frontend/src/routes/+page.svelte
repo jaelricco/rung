@@ -2,12 +2,13 @@
 	import { api } from '$lib/api.js';
 	import { session } from '$lib/session.svelte.js';
 	import AiProgress from '$lib/AiProgress.svelte';
+	import Failure from '$lib/Failure.svelte';
 
 	const TIERS = ['untested', 'beginner', 'novice', 'intermediate', 'advanced', 'elite'];
 
 	let level = $state(null);
 	let workouts = $state([]);
-	let error = $state('');
+	let error = $state(null);
 	let review = $state('');
 	let reviewBusy = $state(false);
 	let reviewProgress = $state(null);
@@ -19,18 +20,18 @@
 				level = lvl;
 				workouts = logs;
 			})
-			.catch((e) => (error = e.message));
+			.catch((e) => (error = e));
 	});
 
 	async function runReview() {
 		reviewBusy = true;
-		error = '';
+		error = null;
 		reviewProgress = { label: 'Starting', percent: 0 };
 		try {
 			const result = await api.stream('/ai/review', {}, (update) => (reviewProgress = update));
 			review = result.text;
 		} catch (e) {
-			error = e.message;
+			error = e;
 		} finally {
 			reviewBusy = false;
 			reviewProgress = null;
@@ -61,9 +62,7 @@
 </p>
 <h1>Where you stand</h1>
 
-{#if error}
-	<div class="notice error" style="margin-top:1rem">{error}</div>
-{/if}
+<Failure {error} />
 
 {#if level}
 	<div class="bar"></div>

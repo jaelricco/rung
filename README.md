@@ -50,10 +50,11 @@ fail2ban on, SSH passwords disabled, 2 GB of swap so builds don't get OOM-killed
 repo cloned, database password generated, stack built and running, nightly
 backup cron installed with 14-day retention.
 
-Do not put your Anthropic API key in the cloud config. It stays readable from
-inside the server at `169.254.169.254` for the life of the machine. The stack
-runs fine without the key — coaching endpoints return 503 — and the login
-banner tells you the one command to add it afterwards.
+No model API key goes anywhere near the server config. There isn't one: each
+athlete connects their own Anthropic or OpenAI account in the app, and their
+provider bills them for what they used. The only AI secret the server holds is
+`AI_CREDENTIALS_KEY`, which seals those keys at rest and which setup generates
+for you.
 
 ### Creating it: scripted
 
@@ -98,7 +99,7 @@ starts, so DNS has to resolve before step 5.
 
 ```bash
 ssh deploy@YOUR-SERVER
-nano /srv/calisthenics/.env     # APP_DOMAIN, ACME_EMAIL, ANTHROPIC_API_KEY
+nano /srv/calisthenics/.env     # APP_DOMAIN, ACME_EMAIL
 ```
 
 **5. Bring it up:**
@@ -300,15 +301,42 @@ report a fraction of itself is the research search — a single request that say
 nothing until it returns — so it sets `indeterminate` and the bar sweeps while
 the elapsed time ticks, rather than inventing a number.
 
-**Opus writes the training.** `ANTHROPIC_MODEL` defaults to `claude-opus-5`.
-Note that the server's own `.env` sets the model explicitly and a deploy never
-rewrites it, so a box provisioned before this change keeps running whatever its
-`.env` says until someone edits that line.
-Plan writing is the hardest call the app makes — a ladder of progressions
-weighed against one athlete's records, with an injury as a hard constraint —
-and it is where the difference between model tiers shows up in the output.
-Set `claude-sonnet-5` in `.env` for a cheaper, faster server; nothing else
-changes.
+**Every athlete brings their own model account.** The server holds no API key
+of its own and pays for nothing. Under Settings an athlete connects a key from
+Anthropic or OpenAI; every plan, review, recovery answer and event search they
+ask for is then sent to that account and billed to them by their provider. A
+coaching request from someone who has not connected one is answered with `428`
+and a link to the settings page, not a 503 — nothing is switched off, the
+request is simply missing the one thing only they can supply.
+
+The key is verified before it is stored: `Store.Connect` asks the provider for
+the chosen model's own record, which costs no tokens and catches a typo on the
+settings page rather than ten minutes into a plan. What is stored is sealed
+with AES-GCM under `AI_CREDENTIALS_KEY` from the environment, so a database
+backup carries no usable keys. Only the last four characters are ever shown
+back. Changing `AI_CREDENTIALS_KEY` makes every stored key unreadable and every
+athlete reconnects.
+
+**Both providers are spoken natively.** `internal/ai/client.go` holds
+everything that is not provider-specific — ceilings, refusals, progress,
+recording — behind one `transport` interface; `anthropic.go` implements it
+against `/v1/messages`, `openai.go` against `/v1/responses`. Both stream, both
+report a thinking phase (Anthropic's summarised thinking, OpenAI's reasoning
+summary) and both offer server-side web search, which is what the research and
+event-discovery passes need. The two normalise onto the same `outcome`, so a
+plan written on GPT-5 fails and succeeds in exactly the same words as one
+written on Opus. The one real difference is recorded in the code: OpenAI's
+search annotations carry no quoted passage and its tool takes no cap on the
+number of searches.
+
+**Which model is the athlete's choice.** Each provider's list is offered on the
+settings page, strongest first — `claude-opus-5`, or `gpt-5` — and any other
+model name their account can reach is accepted too, since the verification call
+proves it before it is stored. Plan writing is the hardest call the app makes
+— a ladder of progressions weighed against one athlete's records, with an
+injury as a hard constraint — and it is where the difference between model
+tiers shows up in the output. A cheaper model writes plans faster and costs its
+owner less.
 
 **The week is the unit, so the week is what you see.** Both the plan preview
 and the calendar lay a week out as four rows of two — Monday and Tuesday, then
@@ -438,6 +466,9 @@ PATCH  /api/v1/me                {display_name?, bodyweight_kg?}
 GET    /api/v1/workouts?limit=30
 POST   /api/v1/workouts          {performed_at?, notes, rpe, sets[]}
 DELETE /api/v1/workouts/{id}
+GET    /api/v1/me/ai
+PUT    /api/v1/me/ai             {provider, api_key, model}  — key omitted switches model
+DELETE /api/v1/me/ai
 GET    /api/v1/level
 GET    /api/v1/injuries
 POST   /api/v1/injuries          {region, severity, description}
@@ -463,6 +494,8 @@ POST   /api/v1/ai/review
 POST   /api/v1/ai/recovery
        ^ these three also answer with a progress stream instead of one JSON
          body when the request carries Accept: text/event-stream
+       ^ these three and /events/discover answer 428 when the caller has not
+         connected a model account of their own
 POST   /api/v1/parks/refresh?lat=&lng=
 GET    /api/v1/events?discipline=&country=&from=&to=&include_unconfirmed=
 POST   /api/v1/events/discover        {discipline, country, from, to, force}
@@ -511,7 +544,8 @@ Built and working:
 - Accounts, sessions, argon2id passwords
 - Exercise library, session logging, records, computed level tiers
 - Injury tracking and the curated protocol library
-- AI skill plans, training review, recovery and nutrition guidance
+- AI skill plans, training review, recovery and nutrition guidance, each run on
+  the athlete's own Anthropic or OpenAI account
 - Calendar storage, planned sessions, ICS export, plan deletion
 - Repeating routines: the athlete's own week, filled ahead or dropped onto a
   single week, and sessions written straight onto a day
@@ -529,8 +563,9 @@ Not built yet:
 - **Scheduled discovery** — `RunDiscovery` is ready to be called from a cron
   loop for a fixed set of regions, rather than only on user demand.
 - **Password reset** — needs an email sender wired up.
-- **Rate limiting on the AI endpoints** — right now a user can generate plans in
-  a loop. Add a per-user cap before opening signups.
+- **Rate limiting on the AI endpoints** — a user can still generate plans in a
+  loop. It is their own provider bill now rather than the server's, so this is
+  about protecting them from themselves; a per-user cap is still worth having.
 
 ---
 

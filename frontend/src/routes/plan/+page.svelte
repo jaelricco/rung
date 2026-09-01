@@ -1,6 +1,7 @@
 <script>
 	import { api } from '$lib/api.js';
 	import AiProgress from '$lib/AiProgress.svelte';
+	import Failure from '$lib/Failure.svelte';
 	import SessionDetail from '$lib/SessionDetail.svelte';
 	import { DAY_SHORT, weekSlots, sessionShape, isoDate, mondayOf, addDays, formatDate } from '$lib/week.js';
 
@@ -13,7 +14,7 @@
 
 	let plan = $state(null);
 	let warnings = $state([]);
-	let error = $state('');
+	let error = $state(null);
 	let busy = $state(false);
 	let progress = $state(null);
 
@@ -23,7 +24,7 @@
 	let openKey = $state('');
 
 	async function generate() {
-		error = '';
+		error = null;
 		plan = null;
 		warnings = [];
 		savedPlanId = '';
@@ -46,7 +47,7 @@
 			plan = result.plan;
 			warnings = result.warnings ?? [];
 		} catch (e) {
-			error = e.message;
+			error = e;
 		} finally {
 			busy = false;
 			progress = null;
@@ -164,9 +165,7 @@
 	Research the skill first. Slower, and the plan knows what the ladder to it looks like.
 </label>
 
-{#if error}
-	<div class="notice error" style="margin-top:1rem">{error}</div>
-{/if}
+<Failure {error} />
 
 <button style="margin-top:1rem" onclick={generate} disabled={busy || !skill.trim()}>
 	{busy ? 'Writing your plan' : 'Generate plan'}

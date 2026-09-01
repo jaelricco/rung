@@ -17,6 +17,7 @@ import (
 	"calisthenics/api/internal/events"
 	"calisthenics/api/internal/httpx"
 	"calisthenics/api/internal/parks"
+	"calisthenics/api/internal/secret"
 	"calisthenics/api/internal/training"
 )
 
@@ -47,13 +48,24 @@ func main() {
 	authSvc := auth.New(pool, cfg.SecureCookies)
 	trainingSvc := training.New(pool)
 	parksSvc := parks.New(pool)
-	aiClient := ai.NewClient(pool, cfg.AnthropicKey, cfg.AnthropicModel, cfg.SearchToolVersion, cfg.AnthropicThinking)
-	aiHandler := ai.NewHandler(aiClient, pool, trainingSvc)
-	eventsSvc := events.New(pool, aiClient)
-
-	if !aiClient.Configured() {
-		log.Print("warning: ANTHROPIC_API_KEY is empty, coaching endpoints will return 503")
+	// Athletes bring their own model accounts. The server holds no key of its
+	// own; all it needs is the secret that seals theirs.
+	var keystore *secret.Box
+	if cfg.CredentialsKey == "" {
+		log.Print("warning: AI_CREDENTIALS_KEY is empty, so nobody can connect an AI account and coaching stays off")
+	} else {
+		keystore, err = secret.New(cfg.CredentialsKey)
+		if err != nil {
+			log.Fatalf("AI_CREDENTIALS_KEY: %v", err)
+		}
 	}
+
+	aiStore := ai.NewStore(pool, keystore, ai.Settings{
+		SearchToolVersion: cfg.SearchToolVersion,
+		Thinking:          cfg.AIThinking,
+	})
+	aiHandler := ai.NewHandler(aiStore, pool, trainingSvc)
+	eventsSvc := events.New(pool, aiStore)
 
 	mux := http.NewServeMux()
 
@@ -77,6 +89,9 @@ func main() {
 	protected := map[string]http.HandlerFunc{
 		"GET /api/v1/me":                        authSvc.Me,
 		"PATCH /api/v1/me":                      authSvc.UpdateProfile,
+		"GET /api/v1/me/ai":                     aiHandler.Connection,
+		"PUT /api/v1/me/ai":                     aiHandler.Connect,
+		"DELETE /api/v1/me/ai":                  aiHandler.Disconnect,
 		"GET /api/v1/workouts":                  trainingSvc.ListWorkouts,
 		"POST /api/v1/workouts":                 trainingSvc.CreateWorkout,
 		"DELETE /api/v1/workouts/{id}":          trainingSvc.DeleteWorkout,

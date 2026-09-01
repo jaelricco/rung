@@ -42,6 +42,9 @@
 					Calendar
 				</a>
 				<a href="/events" aria-current={page.url.pathname === '/events' ? 'page' : undefined}>Events</a>
+				<a href="/settings" aria-current={page.url.pathname === '/settings' ? 'page' : undefined}>
+					Settings
+				</a>
 			</nav>
 			<span class="spacer"></span>
 			<button class="link" onclick={handleSignOut}>Sign out</button>

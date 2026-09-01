@@ -1,6 +1,7 @@
 <script>
 	import { api } from '$lib/api.js';
 	import AiProgress from '$lib/AiProgress.svelte';
+	import Failure from '$lib/Failure.svelte';
 
 	const DISCIPLINES = [
 		'', 'weighted', 'statics', 'dynamics', 'streetlifting', 'freestyle', 'endurance', 'mixed'
@@ -12,13 +13,13 @@
 
 	let events = $state([]);
 	let report = $state(null);
-	let error = $state('');
+	let error = $state(null);
 	let loading = $state(false);
 	let searching = $state(false);
 
 	async function load() {
 		loading = true;
-		error = '';
+		error = null;
 		try {
 			const params = new URLSearchParams();
 			if (discipline) params.set('discipline', discipline);
@@ -26,7 +27,7 @@
 			if (includeUnconfirmed) params.set('include_unconfirmed', 'true');
 			events = await api.get(`/events?${params}`);
 		} catch (e) {
-			error = e.message;
+			error = e;
 		} finally {
 			loading = false;
 		}
@@ -38,13 +39,13 @@
 
 	async function search() {
 		searching = true;
-		error = '';
+		error = null;
 		report = null;
 		try {
 			report = await api.post('/events/discover', { discipline, country });
 			await load();
 		} catch (e) {
-			error = e.message;
+			error = e;
 		} finally {
 			searching = false;
 		}
@@ -59,7 +60,7 @@
 			}
 			await load();
 		} catch (e) {
-			error = e.message;
+			error = e;
 		}
 	}
 
@@ -68,7 +69,7 @@
 			await api.post(`/events/${event.id}/confirm`, { confirmed, note: '' });
 			await load();
 		} catch (e) {
-			error = e.message;
+			error = e;
 		}
 	}
 
@@ -131,9 +132,7 @@
 	</div>
 {/if}
 
-{#if error}
-	<div class="notice error" style="margin-top:1rem">{error}</div>
-{/if}
+<Failure {error} />
 
 {#if report}
 	<div class="notice" style="margin-top:1rem">

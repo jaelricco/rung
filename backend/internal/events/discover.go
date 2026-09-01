@@ -68,19 +68,21 @@ var validDisciplines = map[string]bool{
 }
 
 type Service struct {
-	pool     *pgxpool.Pool
-	ai       *ai.Client
+	pool *pgxpool.Pool
+	// ai hands out one client per athlete: a discovery run is searched and
+	// paid for on the account of whoever asked for it.
+	ai       *ai.Store
 	verifier *Verifier
 }
 
-func New(pool *pgxpool.Pool, client *ai.Client) *Service {
-	return &Service{pool: pool, ai: client, verifier: NewVerifier()}
+func New(pool *pgxpool.Pool, store *ai.Store) *Service {
+	return &Service{pool: pool, ai: store, verifier: NewVerifier()}
 }
 
 // RunDiscovery runs the full pipeline: search, discard anything whose source the
 // API did not actually retrieve, verify the survivors against their live page,
 // then store with the confidence that check earned.
-func (s *Service) RunDiscovery(ctx context.Context, userID string, in DiscoverRequest) (DiscoverReport, error) {
+func (s *Service) RunDiscovery(ctx context.Context, client *ai.Client, userID string, in DiscoverRequest) (DiscoverReport, error) {
 	report := DiscoverReport{Outcomes: []Outcome{}}
 
 	prompt := fmt.Sprintf(`Find calisthenics or street workout competitions taking place between %s and %s.
@@ -115,7 +117,7 @@ Return JSON:
 
 	// Roomy on purpose: the ceiling covers the model's reasoning and the
 	// pages it reads as well as the answer it writes.
-	searchResult, err := s.ai.SearchJSON(ctx, userID, "event_discovery", discoverySystem, prompt,
+	searchResult, err := client.SearchJSON(ctx, userID, "event_discovery", discoverySystem, prompt,
 		16000, ai.SearchOptions{MaxSearches: 8}, &payload)
 
 	report.SearchCount = searchResult.SearchCount

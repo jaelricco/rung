@@ -8,18 +8,28 @@ import (
 	"testing"
 )
 
-// testClient points a client at a server that replays the given SSE frames.
-func testClient(t *testing.T, frames string) *Client {
+// replay serves the given body to every request and hands back the client that
+// talks to it, so a test only has to write the frames it cares about.
+func replay(t *testing.T, provider, model, thinking, body string) *Client {
 	t.Helper()
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/event-stream")
-		_, _ = w.Write([]byte(frames))
+		_, _ = w.Write([]byte(body))
 	}))
 	t.Cleanup(server.Close)
+	return clientAt(server.URL, provider, model, thinking)
+}
 
-	c := NewClient(nil, "test-key", "claude-sonnet-5", "", "adaptive")
-	c.baseURL = server.URL
+func clientAt(url, provider, model, thinking string) *Client {
+	c := NewClient(nil, Credentials{Provider: provider, Key: "test-key", Model: model},
+		Settings{Thinking: thinking})
+	c.api.useBaseURL(url)
 	return c
+}
+
+func testClient(t *testing.T, frames string) *Client {
+	t.Helper()
+	return replay(t, ProviderAnthropic, "claude-sonnet-5", "adaptive", frames)
 }
 
 func TestCompleteStreamCollectsTextAndReportsPhases(t *testing.T) {
@@ -114,39 +124,43 @@ func TestCompleteStreamSurfacesAPIErrors(t *testing.T) {
 	}))
 	defer server.Close()
 
-	c := NewClient(nil, "bad-key", "claude-sonnet-5", "", "adaptive")
-	c.baseURL = server.URL
-
+	c := clientAt(server.URL, ProviderAnthropic, "claude-sonnet-5", "adaptive")
 	_, err := c.CompleteStream(context.Background(), "", "test", "sys", "prompt", 1000, nil)
 	if err == nil || !strings.Contains(err.Error(), "invalid x-api-key") {
 		t.Fatalf("error should carry the API's message, got: %v", err)
 	}
 }
 
-func TestRequestAsksForAdaptiveThinkingAndStreaming(t *testing.T) {
-	var body string
+// recorder captures what was actually sent, which is the only way to check a
+// request the provider never sees in a test.
+func recorder(t *testing.T, reply string) (*httptest.Server, *string) {
+	t.Helper()
+	body := new(string)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		buf := make([]byte, r.ContentLength)
 		_, _ = r.Body.Read(buf)
-		body = string(buf)
-		_, _ = w.Write([]byte("event: message_stop\ndata: {\"type\":\"message_stop\"}\n\n"))
+		*body = string(buf)
+		_, _ = w.Write([]byte(reply))
 	}))
-	defer server.Close()
+	t.Cleanup(server.Close)
+	return server, body
+}
 
-	c := NewClient(nil, "test-key", "claude-sonnet-5", "", "adaptive")
-	c.baseURL = server.URL
+func TestAnthropicRequestAsksForAdaptiveThinkingAndStreaming(t *testing.T) {
+	server, body := recorder(t, "event: message_stop\ndata: {\"type\":\"message_stop\"}\n\n")
+
+	c := clientAt(server.URL, ProviderAnthropic, "claude-sonnet-5", "adaptive")
 	_, _ = c.CompleteStream(context.Background(), "", "test", "sys", "prompt", 1000, nil)
 
 	for _, want := range []string{`"stream":true`, `"type":"adaptive"`, `"display":"summarized"`} {
-		if !strings.Contains(body, want) {
-			t.Errorf("request body missing %s: %s", want, body)
+		if !strings.Contains(*body, want) {
+			t.Errorf("request body missing %s: %s", want, *body)
 		}
 	}
 
-	off := NewClient(nil, "test-key", "claude-3-5-sonnet-latest", "", "off")
-	off.baseURL = server.URL
+	off := clientAt(server.URL, ProviderAnthropic, "claude-3-5-sonnet-latest", "off")
 	_, _ = off.CompleteStream(context.Background(), "", "test", "sys", "prompt", 1000, nil)
-	if strings.Contains(body, "thinking") {
-		t.Errorf("ANTHROPIC_THINKING=off should omit the parameter: %s", body)
+	if strings.Contains(*body, "thinking") {
+		t.Errorf("thinking off should omit the parameter: %s", *body)
 	}
 }
