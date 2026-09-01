@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"math"
 	"strings"
+
+	"calisthenics/api/internal/training"
 )
 
 // Everything the athlete reads before the first session: where they were
@@ -101,14 +103,23 @@ func (b *builder) evidence(step Step) string {
 
 	if best <= 0 {
 		if b.rung == 0 {
-			return fmt.Sprintf("You have not logged %s, so the plan starts at the bottom of the ladder — "+
-				"which is the right direction to be wrong in.", article(name))
+			return fmt.Sprintf("There is no %s on record, so the plan starts at the bottom of the ladder — "+
+				"which is the right direction to be wrong in. Put your current numbers in on the baseline page "+
+				"and it will start where you actually are.", strings.ToLower(name))
 		}
-		return fmt.Sprintf("You cleared the rung below it and there is no logged %s yet, so this is where the work is.",
+		return fmt.Sprintf("You cleared the rung below it and there is no %s on record yet, so this is where the work is.",
 			strings.ToLower(name))
 	}
-	return fmt.Sprintf("Your best logged %s is %s against the %s this rung is cleared at.",
-		strings.ToLower(name), measure(best, step.Metric), measure(step.Standard, step.Metric))
+
+	switch b.rec.source(slug) {
+	case training.SourceDeclared, training.SourceBoth:
+		return fmt.Sprintf("You put your %s at %s, against the %s this rung is cleared at. Log a set of it and "+
+			"the plan stops taking your word for it.",
+			strings.ToLower(name), measure(best, step.Metric), measure(step.Standard, step.Metric))
+	default:
+		return fmt.Sprintf("Your best logged %s is %s against the %s this rung is cleared at.",
+			strings.ToLower(name), measure(best, step.Metric), measure(step.Standard, step.Metric))
+	}
 }
 
 func (b *builder) weekSentence() string {
@@ -339,11 +350,21 @@ func countPhase(weeks []weekSpec, phase string) int {
 	return n
 }
 
-func estimatedNote(estimated bool) string {
-	if !estimated {
+// sourceNote is the parenthetical a prescription carries about the number it
+// was built on. A figure the athlete performed needs no caveat; one they
+// claimed, or one the planner had to invent, does.
+func sourceNote(source string, known bool) string {
+	if !known {
+		return " (estimated from the rung's own standard — nothing logged or declared for this yet)"
+	}
+	switch source {
+	case training.SourceDeclared:
+		return " (from your baseline rather than a logged set)"
+	case training.SourceBoth:
+		return " (your baseline figure, still above anything you have logged)"
+	default:
 		return ""
 	}
-	return " (estimated — log a set of this and the number becomes yours)"
 }
 
 // article puts the right indefinite article in front of a movement name, so

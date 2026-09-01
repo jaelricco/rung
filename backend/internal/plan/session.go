@@ -108,14 +108,14 @@ func (s *sessionBuilder) prescribe(w work) {
 		if w.HoldStandard > 0 {
 			standard = w.HoldStandard
 		}
-		seconds, best, estimated := s.holdWork(slug, standard)
+		seconds, best, basis := s.holdWork(slug, standard)
 		sets = s.setCount(w.Base + 1) // statics are short, so an extra set is cheap
 		if w.Light {
 			sets, seconds = max(2, sets-1), max(3, seconds*2/3)
 		}
 		block.Prescription = fmt.Sprintf("%d × %ds hold", sets, seconds)
 		block.Intensity = fmt.Sprintf("about %d%% of your best hold (%s)%s", int(s.week.Fraction*100),
-			secs(best), estimatedNote(estimated))
+			secs(best), basis)
 		block.Tempo = ""
 		if block.Progression == "" {
 			block.Progression = fmt.Sprintf("Next week: one more second on every set, at the same quality. "+
@@ -146,14 +146,14 @@ func (s *sessionBuilder) prescribe(w work) {
 		}
 
 	default:
-		reps, best, estimated := s.repWork(slug, w.Standard)
+		reps, best, basis := s.repWork(slug, w.Standard)
 		sets = s.setCount(w.Base)
 		if w.Light {
 			sets, reps = max(2, sets-1), max(2, reps*2/3)
 		}
 		block.Prescription = fmt.Sprintf("%d × %d reps", sets, reps)
-		block.Intensity = fmt.Sprintf("%s Your best logged set is %s%s.", s.week.Effort,
-			plural(int(best), "rep"), estimatedNote(estimated))
+		block.Intensity = fmt.Sprintf("%s Your best set is %s%s.", s.week.Effort,
+			plural(int(best), "rep"), basis)
 		if block.Progression == "" {
 			block.Progression = "Next week: one more rep per set. When every set reaches the top of its range, " +
 				"add a set or add load rather than more reps."
@@ -494,7 +494,7 @@ func (s *sessionBuilder) conditioning() {
 // carry.
 func (s *sessionBuilder) setCount(base int) int {
 	sets := int(math.Round(float64(base) * s.volume))
-	sets += s.week.SetBonus
+	sets += min(s.week.SetBonus, s.bonusCap)
 	switch s.week.Phase {
 	case phaseDeload:
 		sets = int(math.Round(float64(sets) * 0.5))
@@ -507,18 +507,19 @@ func (s *sessionBuilder) setCount(base int) int {
 // holdWork prescribes a static. Without a logged hold there is nothing to take
 // a percentage of, so the rung's own standard stands in and the block says so
 // — an honest estimate the athlete can correct by logging one set.
-func (s *sessionBuilder) holdWork(slug string, standard float64) (seconds int, best float64, estimated bool) {
+func (s *sessionBuilder) holdWork(slug string, standard float64) (seconds int, best float64, basis string) {
 	best = s.rec.hold(slug)
-	if best <= 0 {
-		best, estimated = math.Max(standard*0.4, 5), true
+	known := best > 0
+	if !known {
+		best = math.Max(standard*0.4, 5)
 	}
-	return clampInt(int(math.Round(best*s.week.Fraction)), 3, 60), best, estimated
+	return clampInt(int(math.Round(best*s.week.Fraction)), 3, 60), best, sourceNote(s.rec.source(slug), known)
 }
 
 // repWork prescribes reps against the athlete's best logged set. With no set
 // logged it works from the standard instead of from a fraction of a guess,
 // which is the difference between a first session of six reps and one of two.
-func (s *sessionBuilder) repWork(slug string, standard float64) (reps int, best float64, estimated bool) {
+func (s *sessionBuilder) repWork(slug string, standard float64) (reps int, best float64, basis string) {
 	fraction := 0.6
 	switch s.week.Phase {
 	case phaseIntensifation:
@@ -530,9 +531,9 @@ func (s *sessionBuilder) repWork(slug string, standard float64) (reps int, best 
 	best = s.rec.reps(slug)
 	if best <= 0 {
 		best = math.Max(standard, 5)
-		return clampInt(int(math.Round(best*0.7)), 4, 12), best, true
+		return clampInt(int(math.Round(best*0.7)), 4, 12), best, sourceNote("", false)
 	}
-	return clampInt(int(math.Round(best*fraction)), 3, 20), best, false
+	return clampInt(int(math.Round(best*fraction)), 3, 20), best, sourceNote(s.rec.source(slug), true)
 }
 
 // addedWork sizes the belt.

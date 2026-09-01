@@ -1,11 +1,13 @@
 <script>
 	import { api } from '$lib/api.js';
+	import { page } from '$app/state';
 	import AiProgress from '$lib/AiProgress.svelte';
 	import Failure from '$lib/Failure.svelte';
 	import SessionDetail from '$lib/SessionDetail.svelte';
 	import { DAY_SHORT, weekSlots, sessionShape, isoDate, mondayOf, addDays, formatDate } from '$lib/week.js';
 
-	let skill = $state('');
+	// The baseline page hands the goal back here once its numbers are in.
+	let skill = $state(page.url.searchParams.get('goal') ?? '');
 	let weeks = $state(8);
 	let daysPerWeek = $state(3);
 	let notes = $state('');
@@ -197,6 +199,13 @@
 		they say.
 	</label>
 {/if}
+
+<p class="muted form-width" style="font-size:0.85rem;margin-top:0.9rem">
+	The plan is only as sharp as what it knows about you. If you have not logged much here yet, put
+	your current numbers in on the <a href={`/baseline?goal=${encodeURIComponent(skill)}`}>baseline
+	page</a> first — bodyweight, a few maxes, what you train on — and this starts where you actually
+	are rather than at the bottom of the ladder.
+</p>
 
 <Failure {error} />
 

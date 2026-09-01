@@ -310,7 +310,72 @@ and prescribes no supplements.
 
 ---
 
-## 6. What this means for an algorithm
+## 6. What to ask an athlete before writing them a plan
+
+A planner that works from records has one failure mode that has nothing to do
+with training: a person who has trained for five years and joined yesterday has
+no records, so it starts them at the bottom of every ladder. The fix is to ask —
+but only for the figures that change a prescription. Every extra field costs
+answers on the ones that matter.
+
+These are the ones that do, and what each decides:
+
+### Body
+
+| Value | What it changes |
+| --- | --- |
+| **Bodyweight** | Every added-load percentage. A pull-up one-rep max that ignores bodyweight is wrong by the weight of the athlete (§1), so without this the plan can only say "add a little". |
+
+### Eight benchmarks
+
+The smallest set that resolves every branch the planner takes. Each is a test
+someone can do today and write one number against.
+
+| Test | Unit | What it decides |
+| --- | --- | --- |
+| **Pull-up**, max strict | reps | The whole pulling ladder, and whether a belt is on the table at all (≥10) |
+| **Dip**, max strict | reps | The same for pushing, and loaded dips (≥12) |
+| **Push-up**, max | reps | What the pushing work is built from when dips are not there yet |
+| **Dead hang** | seconds | Grip, the quiet limit on every hanging skill, and the first rung of the pull-up ladder |
+| **Hollow body hold** | seconds | The body line every lever is held with; a lever plan over a weak hollow stalls |
+| **Hanging leg raise** | reps | Which core progression is used |
+| **Bodyweight squat** | reps | Where the leg work starts |
+| **Chest-to-wall handstand** | seconds | Where handstand and overhead pressing work begins |
+
+### The rungs of the chosen ladder
+
+The app already knows the ladder to each skill, so it asks about that ladder and
+no other: a front lever plan asks for tuck, advanced tuck and straddle holds; a
+pistol plan does not. The first rung the athlete cannot fill in is roughly where
+they are, which is exactly what placement needs.
+
+### Training context
+
+| Value | What it changes |
+| --- | --- |
+| **Sessions a week** | The starting volume. With no log here, a declared four sessions a week is better evidence than nothing, and the plan starts a step below full instead of two. |
+| **Sleep, hours a night** | Under about 8 h roughly a third more injuries (§4), and volume is the only part of that a plan controls — so under 7 h it adds volume half as fast rather than starting lighter. A ten-percent trim on set counts of three to six rounds away to nothing; slowing the climb does not. |
+| **Equipment** | Which movements exist. A plan that prescribes weighted pull-ups to someone with no belt is not a hard plan, it is an impossible one, and the athlete cannot tell which. Bar, parallel bars, parallettes, rings, a way to add load, bands — or none of it, which is a real answer and still a plan. |
+
+### Deliberately not asked
+
+Age, sex, height, body-fat percentage, years training, VO2max. None of them
+changes a single number this planner produces, and collecting them would be
+pseudo-precision — a form that looks thorough and is not.
+
+Open injuries are asked for elsewhere, on the injuries page, because they are a
+running record rather than a one-off baseline.
+
+### The rule that keeps it honest
+
+A declared figure never overwrites a logged one. The record is whichever is
+higher, and every prescription built on a declaration says so in as many words
+("from your baseline rather than a logged set"). Log the movement once and the
+plan stops taking your word for it.
+
+---
+
+## 7. What this means for an algorithm
 
 Rules the generator implements directly, each traceable to a section above:
 
@@ -330,5 +395,9 @@ Rules the generator implements directly, each traceable to a section above:
 9. **Open injuries are a hard filter** on the movement list, and the plan says
    what it removed (§3).
 10. The plan **ends in a test** stated as pass or fail (§2).
-11. Anything it cannot do — diagnose, prescribe a diet, promise a full planche
+11. Prescribe only what the athlete has the equipment to perform, and say what
+    was left out for want of kit (§6).
+12. Take a stated figure when there is no logged one, mark every prescription
+    built on it as stated, and let a logged set outrank it (§6).
+13. Anything it cannot do — diagnose, prescribe a diet, promise a full planche
     in eight weeks — it declines to do, in writing (§1, §3, §5).

@@ -3,6 +3,7 @@ package plan
 import (
 	"fmt"
 	"math"
+	"sort"
 	"strings"
 
 	"calisthenics/api/internal/training"
@@ -23,6 +24,7 @@ import (
 // own words, and hands back a week the athlete can train tomorrow.
 func Generate(req Request, snap training.Snapshot, lib Library) (Plan, []string) {
 	b := newBuilder(req, snap, lib)
+	b.applyEquipment()
 	b.applyInjuries()
 	b.place()
 
@@ -103,8 +105,15 @@ type builder struct {
 	rung     int
 	banned   map[string]bool
 	injured  map[string]bool
+	owned    map[string]bool
+	answered bool
 	rehab    []string
 	volume   float64
+	// bonusCap limits how fast the weeks climb. Volume is a multiplier on set
+	// counts of three to six, where a ten percent correction rounds away to
+	// nothing — so a readiness problem that deserves less than a whole step
+	// down slows the climb instead of shrinking week one.
+	bonusCap int
 	readines string
 
 	restrictions []string
@@ -124,10 +133,12 @@ func newBuilder(req Request, snap training.Snapshot, lib Library) *builder {
 		rec: recordsOf(snap), goal: goal, matched: matched,
 		banned: map[string]bool{}, injured: map[string]bool{},
 		volume:       1,
+		bonusCap:     2,
 		restrictions: []string{},
 	}
 	// The catalogue is package state shared by every request, so the ladder
 	// this plan may trim is a copy of it.
+	b.owned, b.answered = ownedEquipment(snap.Equipment)
 	b.ladder = append([]Step(nil), goal.Ladder...)
 	b.aimAtNamedTarget()
 	b.gaugeReadiness()
@@ -166,25 +177,62 @@ func (b *builder) aimAtNamedTarget() {
 // for: someone with four sessions in the last month does not get a twenty-set
 // week because they typed 5 into the days field.
 func (b *builder) gaugeReadiness() {
+	declared := 0
+	if b.snap.TrainsPerWeek != nil {
+		declared = *b.snap.TrainsPerWeek
+	}
+
 	switch {
-	case b.snap.SessionsLast28 == 0:
-		b.volume = 0.7
-		b.readines = "Nothing logged in the last four weeks, so this starts deliberately light. " +
-			"Log your sessions and the numbers here get sharper."
-	case b.snap.SessionsLast28 < 8:
+	case b.snap.SessionsLast28 >= 8:
+		b.readines = fmt.Sprintf("%d sessions logged in the last four weeks — enough history to programme at full volume.",
+			b.snap.SessionsLast28)
+	case b.snap.SessionsLast28 > 0:
 		b.volume = 0.85
 		b.readines = fmt.Sprintf("%d sessions logged in the last four weeks, so the volume starts a step below full.",
 			b.snap.SessionsLast28)
+
+	// Nothing logged here yet. That is not the same as not training — most
+	// people arrive mid-way through a training life — so what they told us
+	// about their week stands in until a log exists to replace it.
+	case declared >= 3:
+		b.volume = 0.85
+		b.readines = fmt.Sprintf("Nothing logged here yet, so this is built on the %d sessions a week you told us "+
+			"you train. It starts one step below full volume until your log can confirm it.", declared)
+	case declared >= 1:
+		b.volume = 0.75
+		b.readines = fmt.Sprintf("Nothing logged here yet, and %s a week to build on, so this starts light.",
+			plural(declared, "session"))
 	default:
-		b.readines = fmt.Sprintf("%d sessions logged in the last four weeks — enough history to programme at full volume.",
-			b.snap.SessionsLast28)
+		b.volume = 0.7
+		b.readines = "Nothing logged and no training history given, so this starts deliberately light. " +
+			"Fill in your baseline, or log a couple of sessions, and the numbers here get sharper."
 	}
-	if want, got := b.req.DaysPerWeek, b.snap.SessionsLast28; got > 0 && want*4 > got*2 {
+
+	// Short sleep raises injury risk by roughly a third, and the only part of
+	// that this app controls is how much work it asks for. So the plan starts
+	// where it would have started and climbs one step more slowly, which is a
+	// correction the athlete can feel without it costing them week one.
+	if b.snap.SleepHours != nil && *b.snap.SleepHours < 7 {
+		b.bonusCap = 1
+		b.notes = append(b.notes, fmt.Sprintf(
+			"You put your sleep at %.1f hours a night. Athletes sleeping under about eight are injured a good "+
+				"deal more often than those who are not, so this plan adds volume half as fast as it otherwise "+
+				"would. Sleep is the cheapest thing on this page to fix, and the plan speeds up when it changes.",
+			*b.snap.SleepHours))
+	}
+
+	// Whether the asked-for frequency is supported by anything.
+	if got := b.snap.SessionsLast28; got > 0 && b.req.DaysPerWeek*4 > got*2 {
 		b.notes = append(b.notes, fmt.Sprintf(
 			"You asked for %d days a week but logged %d sessions in the last four weeks. The plan is built at "+
 				"the frequency you asked for and at a volume your history supports; if the first fortnight feels "+
 				"like too much, drop the last accessory block rather than a whole session.",
-			want, got))
+			b.req.DaysPerWeek, got))
+	} else if b.snap.SessionsLast28 == 0 && declared > 0 && b.req.DaysPerWeek > declared+1 {
+		b.notes = append(b.notes, fmt.Sprintf(
+			"You asked for %d days a week and train %d. Going up by more than one day at a time is where most "+
+				"plans come apart; if this one does, drop back to %d and keep everything else.",
+			b.req.DaysPerWeek, declared, declared+1))
 	}
 }
 
@@ -248,6 +296,44 @@ func (b *builder) protocolTitles() []string {
 		out = append(out, slug)
 	}
 	return out
+}
+
+// applyEquipment takes off the table what the athlete has nothing to perform
+// it on. Unlike an injury this is never a reason to stop training, so it
+// removes movements and says so, and the plan is built from what is left —
+// which, for someone with a floor and nothing else, is still a plan.
+func (b *builder) applyEquipment() {
+	if !b.answered {
+		return
+	}
+	blocked := map[string][]string{}
+	for slug := range b.lib.Exercises {
+		if performable(slug, b.owned) {
+			continue
+		}
+		b.banned[slug] = true
+		for _, item := range missingFor(slug, b.owned) {
+			blocked[item] = append(blocked[item], slug)
+		}
+	}
+	if len(blocked) == 0 {
+		return
+	}
+
+	// Ordered, so the same answer always produces the same sentence.
+	missing := make([]string, 0, len(blocked))
+	for item := range blocked {
+		missing = append(missing, item)
+	}
+	sort.Strings(missing)
+
+	parts := make([]string, 0, len(missing))
+	for _, item := range missing {
+		parts = append(parts, fmt.Sprintf("%s (%s)", item, plural(len(blocked[item]), "movement")))
+	}
+	b.restrictions = append(b.restrictions, fmt.Sprintf(
+		"Built for the equipment you have. Left out for what you do not: %s. Tick the kit off on your baseline "+
+			"page when you get it and the next plan reaches for it.", humanList(parts)))
 }
 
 // place puts the athlete on the ladder, from their log and nothing else.
@@ -344,6 +430,15 @@ func (r records) best(slug, metric string) float64 {
 		}
 	}
 	return 0
+}
+
+// source says where this movement's best figure came from, so a block that
+// quotes a number can say whether it was performed or claimed.
+func (r records) source(slug string) string {
+	if rec, ok := r[slug]; ok {
+		return rec.Source
+	}
+	return ""
 }
 
 func (r records) reps(slug string) float64  { return r.best(slug, metricReps) }

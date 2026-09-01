@@ -285,6 +285,24 @@ front of every straight-arm session. The two files are meant to be edited
 together; the tests parse the seed migrations, so a renamed exercise fails the
 build rather than quietly thinning out every plan that used it.
 
+**A new athlete can say where they are instead of proving it.** The planner
+reads records, so someone who has trained for years and joined yesterday would
+start at the bottom of every ladder. `/baseline` is the eight benchmarks that
+decide every branch the planner takes — max pull-ups and dips, a dead hang, a
+hollow hold, hanging leg raises, squats, a wall handstand — plus the rungs of
+whichever ladder they picked, which the app derives from the ladder rather than
+listing twice. Bodyweight makes added load a percentage instead of a guess;
+sessions a week sets the starting volume before a log exists; sleep under seven
+hours makes the plan add volume half as fast, because that is the only part of
+the injury risk a plan controls. Equipment is honoured the way an injury is: a
+movement the athlete has nothing to perform it on leaves the candidate chains,
+and answering "the floor and nothing else" still produces a plan.
+
+Age, height, body fat and years training are deliberately not asked. They change
+no number this planner produces. What is asked, the plan uses — and a declared
+figure never overwrites a logged one: the record is whichever is higher, and
+every prescription built on a declaration says so.
+
 `POST /plans/generate` is that path on its own. `POST /ai/skill-plan` runs it
 too, then hands the result to the model as the plan to improve — which anchors
 the answer to a real placement and turns "write forty sessions" into "make
@@ -500,6 +518,12 @@ GET    /api/v1/me/ai
 PUT    /api/v1/me/ai             {provider, api_key, model}  — key omitted switches model
 DELETE /api/v1/me/ai
 GET    /api/v1/level
+GET    /api/v1/baseline
+PUT    /api/v1/baseline         {bodyweight_kg?, trains_per_week?, sleep_hours?,
+                                 equipment?, records[]}
+       ^ omitted fields are left alone; a record with no value is a deletion
+GET    /api/v1/plan/benchmarks?goal=
+       ^ the questions worth asking, derived from the goal's own ladder
 GET    /api/v1/injuries
 POST   /api/v1/injuries          {region, severity, description}
 POST   /api/v1/injuries/{id}/resolve
@@ -580,6 +604,8 @@ Built and working:
 - Exercise library, session logging, records, computed level tiers
 - A deterministic plan generator: skill ladders, injury filtering, periodisation
   and dosage computed from the athlete's records, with no model in the loop
+- A baseline an athlete fills in before they have logged anything: benchmarks,
+  bodyweight, training frequency, sleep and equipment, all of which the plan uses
 - Injury tracking and the curated protocol library
 - AI refinement of that plan, plus training review, recovery and nutrition
   guidance, each run on the athlete's own Anthropic or OpenAI account
@@ -588,8 +614,8 @@ Built and working:
   single week, and sessions written straight onto a day
 - Park search backed by OpenStreetMap
 - Event discovery via web search, with source verification and a review queue
-- Frontend: sign in, overview, log a session, generate a plan, write a routine,
-  the calendar, browse events
+- Frontend: sign in, overview, log a session, fill in a baseline, generate a
+  plan, write a routine, the calendar, browse events
 
 Not built yet:
 

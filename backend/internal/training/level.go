@@ -70,7 +70,20 @@ type Record struct {
 	TotalSets   int      `json:"total_sets"`
 	Tier        string   `json:"tier,omitempty"`
 	LastTrained *string  `json:"last_trained"`
+	// Source is where the best figure came from: SourceLogged for a set
+	// performed and recorded here, SourceDeclared for one the athlete told us
+	// about when they signed up, SourceBoth when there is a logged set and the
+	// declared figure is still the higher of the two. Everything downstream
+	// that quotes a number says which kind it is quoting.
+	Source string `json:"source"`
 }
+
+// Where a record's best figure came from.
+const (
+	SourceLogged   = "logged"
+	SourceDeclared = "declared"
+	SourceBoth     = "logged+declared"
+)
 
 type CategoryLevel struct {
 	Category string `json:"category"`
@@ -87,6 +100,15 @@ type Snapshot struct {
 	SessionsLast28 int             `json:"sessions_last_28_days"`
 	SetsLast28     int             `json:"sets_last_28_days"`
 	OpenInjuries   []Injury        `json:"open_injuries"`
+
+	// The training context an athlete states rather than performs. All three
+	// are nil until they answer, and nil is not the same as zero: nobody is
+	// assumed to sleep no hours or own no bar.
+	TrainsPerWeek *int     `json:"trains_per_week"`
+	SleepHours    *float64 `json:"sleep_hours"`
+	// Equipment is nil when unanswered and non-nil — possibly empty — once
+	// answered. An empty answer is a real constraint and is treated as one.
+	Equipment []string `json:"equipment"`
 }
 
 // BuildSnapshot is the single source of truth for "what level is this athlete".
@@ -126,7 +148,22 @@ func (s *Service) BuildSnapshot(ctx context.Context, user auth.User) (Snapshot, 
 			&rec.BestReps, &rec.BestWeight, &rec.BestHold, &rec.TotalSets, &rec.LastTrained); err != nil {
 			return snap, err
 		}
+		rec.Source = SourceLogged
+		snap.Records = append(snap.Records, rec)
+	}
+	if err := rows.Err(); err != nil {
+		return snap, err
+	}
 
+	// What the athlete told us they can do, folded in before anything is
+	// graded. The rule is the same either way round: the record is the best
+	// figure we have, and it carries a note saying which kind it is.
+	if err := s.mergeBaseline(ctx, user.ID, &snap); err != nil {
+		return snap, err
+	}
+
+	for i := range snap.Records {
+		rec := &snap.Records[i]
 		if rb, ok := rubricBySlug[rec.Slug]; ok {
 			var value float64
 			switch rb.Metric {
@@ -155,10 +192,6 @@ func (s *Service) BuildSnapshot(ctx context.Context, user auth.User) (Snapshot, 
 				}
 			}
 		}
-		snap.Records = append(snap.Records, rec)
-	}
-	if err := rows.Err(); err != nil {
-		return snap, err
 	}
 
 	for _, category := range []string{"pull", "push", "static", "dynamic", "weighted", "core", "legs"} {

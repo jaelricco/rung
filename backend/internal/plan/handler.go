@@ -23,6 +23,33 @@ func NewHandler(pool *pgxpool.Pool, tr *training.Service) *Handler {
 	return &Handler{pool: pool, training: tr}
 }
 
+// Benchmarks answers with the questions worth asking this athlete before they
+// have logged anything, and the equipment list to tick off beside them.
+//
+// It lives here rather than next to the baseline storage because the questions
+// are derived from the ladders: asking which rungs a front lever is climbed by
+// is the same knowledge as writing the plan, and there should be one copy of
+// it. The form fetches this, and PUTs the answers to /baseline.
+func (h *Handler) Benchmarks(w http.ResponseWriter, r *http.Request) {
+	lib, err := LoadLibrary(r.Context(), h.pool)
+	if err != nil {
+		httpx.Fail(w, http.StatusInternalServerError, "Couldn't read the exercise library.")
+		return
+	}
+	goal := r.URL.Query().Get("goal")
+	if goal == "" {
+		goal = r.URL.Query().Get("skill")
+	}
+
+	matched, recognised := MatchGoal(goal)
+	httpx.JSON(w, http.StatusOK, map[string]any{
+		"questions":    Benchmarks(goal, lib),
+		"equipment":    Equipment,
+		"goal":         matched.Name,
+		"goal_matched": recognised,
+	})
+}
+
 type generateRequest struct {
 	// Goal and Skill are the same field under two names: the AI endpoint has
 	// always called it "skill", and there is no reason to make the browser
