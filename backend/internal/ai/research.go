@@ -8,6 +8,8 @@ import (
 	"regexp"
 	"strings"
 	"time"
+
+	"calisthenics/api/internal/plan"
 )
 
 // Before writing a plan, find out how the skill is actually trained.
@@ -89,7 +91,7 @@ const (
 // research returns findings for the skill, from cache when they are fresh.
 // Research is a convenience, not a dependency: every failure path returns an
 // empty result and lets the plan be written without it.
-func (h *Handler) research(ctx context.Context, client *Client, userID, skill string, lib library) SkillResearch {
+func (h *Handler) research(ctx context.Context, client *Client, userID, skill string, lib plan.Library) SkillResearch {
 	key := researchKey(skill)
 	if key == "" {
 		return SkillResearch{}
@@ -126,7 +128,7 @@ Return JSON:
   "volume_guidance": "sets per week, how close to failure, how it progresses",
   "common_mistakes": ["what people get wrong, stated as what to do instead"],
   "injury_risks": ["the tissue at risk and the preparation that protects it"]
-}`, skill, lib.text)
+}`, skill, lib.Text())
 
 	var found SkillResearch
 	searchResult, err := client.SearchJSON(ctx, userID, "skill_research", researchSystem, prompt,
@@ -154,18 +156,18 @@ Return JSON:
 // A stage or drill that loses its slug keeps its prose: "hold the advanced
 // tuck for 15 seconds" is still useful guidance even when the rung it names
 // has no row in the table.
-func (r *SkillResearch) pruneToLibrary(lib library) {
+func (r *SkillResearch) pruneToLibrary(lib plan.Library) {
 	for i := range r.Progression {
-		r.Progression[i].ExerciseSlugs = lib.keep(r.Progression[i].ExerciseSlugs)
+		r.Progression[i].ExerciseSlugs = lib.Keep(r.Progression[i].ExerciseSlugs)
 	}
 	r.KeyDrills = pruneDrills(r.KeyDrills, lib)
 	r.Accessories = pruneDrills(r.Accessories, lib)
 }
 
-func pruneDrills(drills []ResearchDrill, lib library) []ResearchDrill {
+func pruneDrills(drills []ResearchDrill, lib plan.Library) []ResearchDrill {
 	kept := drills[:0]
 	for _, d := range drills {
-		if lib.has(d.ExerciseSlug) {
+		if lib.Has(d.ExerciseSlug) {
 			kept = append(kept, d)
 		}
 	}

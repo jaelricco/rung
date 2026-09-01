@@ -9,11 +9,16 @@
 	let weeks = $state(8);
 	let daysPerWeek = $state(3);
 	let notes = $state('');
+	// The algorithm is the default, and the model is the upgrade. Ticking this
+	// box spends the athlete's own API budget, so it is never the thing that
+	// happens because they did not read the form.
+	let useAi = $state(false);
 	let research = $state(true);
 	let startsOn = $state(isoDate(mondayOf(new Date())));
 
 	let plan = $state(null);
 	let warnings = $state([]);
+	let source = $state('');
 	let error = $state(null);
 	let busy = $state(false);
 	let progress = $state(null);
@@ -27,25 +32,32 @@
 		error = null;
 		plan = null;
 		warnings = [];
+		source = '';
 		savedPlanId = '';
 		busy = true;
-		progress = { label: 'Starting', percent: 0 };
+		progress = useAi ? { label: 'Starting', percent: 0 } : null;
+
+		const body = {
+			skill,
+			goal: skill,
+			weeks: Number(weeks),
+			days_per_week: Number(daysPerWeek),
+			starts_on: startsOn,
+			notes,
+			no_research: !research,
+			save: false
+		};
 		try {
-			const result = await api.stream(
-				'/ai/skill-plan',
-				{
-					skill,
-					weeks: Number(weeks),
-					days_per_week: Number(daysPerWeek),
-					starts_on: startsOn,
-					notes,
-					no_research: !research,
-					save: false
-				},
-				(update) => (progress = update)
-			);
+			// Two routes, one answer shape. /plans/generate is the algorithm and
+			// comes back in milliseconds; /ai/skill-plan runs the algorithm too
+			// and then asks the model to improve on it, falling back to the
+			// algorithm's plan rather than to an error.
+			const result = useAi
+				? await api.stream('/ai/skill-plan', body, (update) => (progress = update))
+				: await api.post('/plans/generate', body);
 			plan = result.plan;
 			warnings = result.warnings ?? [];
+			source = result.source ?? '';
 		} catch (e) {
 			error = e;
 		} finally {
@@ -53,6 +65,13 @@
 			progress = null;
 		}
 	}
+
+	// What the athlete is actually reading, said plainly.
+	const SOURCE_LABEL = {
+		algorithm: "Written by the app's own planner, from your logged records.",
+		ai: 'Written by the planner and sharpened by your model.',
+		algorithm_fallback: "Written by the app's own planner, because the model could not be used."
+	};
 
 	// Generating and scheduling are separate on purpose: a plan is worth
 	// reading before it becomes eight weeks of appointments.
@@ -131,8 +150,10 @@
 <p class="eyebrow" style="margin-top:2rem">Programming</p>
 <h1>Build a plan</h1>
 <p class="muted column" style="margin-top:0.6rem">
-	The coach researches how the skill is actually trained, then writes against your logged records
-	and any open injury, using only exercises in the library.
+	The planner places you on the ladder to your goal from what you have logged, then writes the weeks
+	against your records and any open injury, using only exercises in the library. It runs here, in
+	milliseconds, and needs no AI account. Tick the box below and a model gets to sharpen it
+	afterwards — and if it cannot, you still get the plan.
 </p>
 <div class="bar"></div>
 
@@ -161,14 +182,26 @@
 </div>
 
 <label class="form-width" style="display:flex;align-items:center;gap:0.5rem;text-transform:none;letter-spacing:0">
-	<input type="checkbox" bind:checked={research} style="width:auto" />
-	Research the skill first. Slower, and the plan knows what the ladder to it looks like.
+	<input type="checkbox" bind:checked={useAi} style="width:auto" />
+	Sharpen it with AI. Slower, billed to your own model account, and it never replaces the plan with
+	nothing: if the model cannot answer, you get the planner's version and a note saying why.
 </label>
+
+{#if useAi}
+	<label
+		class="form-width"
+		style="display:flex;align-items:center;gap:0.5rem;text-transform:none;letter-spacing:0;padding-left:1.4rem"
+	>
+		<input type="checkbox" bind:checked={research} style="width:auto" />
+		Search coaching sources for the skill first. Slower again, and the plan is written against what
+		they say.
+	</label>
+{/if}
 
 <Failure {error} />
 
 <button style="margin-top:1rem" onclick={generate} disabled={busy || !skill.trim()}>
-	{busy ? 'Writing your plan' : 'Generate plan'}
+	{busy ? 'Writing your plan' : useAi ? 'Generate and sharpen' : 'Generate plan'}
 </button>
 
 {#if busy && progress}
@@ -188,7 +221,24 @@
 {#if plan}
 	<div class="bar"></div>
 	<h2>{plan.title}</h2>
+	{#if SOURCE_LABEL[source]}
+		<p class="muted" style="margin:0.3rem 0 0;font-size:0.85rem">{SOURCE_LABEL[source]}</p>
+	{/if}
 	<p class="prose" style="margin-top:0.6rem">{plan.summary}</p>
+
+	{#if plan.method?.fallback_reason}
+		<div class="notice form-width" style="margin-top:0.9rem">{plan.method.fallback_reason}</div>
+	{/if}
+
+	{#if plan.notes?.length}
+		<div class="notice form-width" style="margin-top:0.7rem">
+			<ul style="margin:0;padding-left:1.1rem">
+				{#each plan.notes as note}
+					<li>{note}</li>
+				{/each}
+			</ul>
+		</div>
+	{/if}
 
 	<div class="row form-width" style="margin-top:1rem;align-items:center">
 		{#if savedPlanId}
@@ -229,6 +279,33 @@
 				{/each}
 			</ul>
 		</div>
+	{/if}
+
+	{#if plan.method?.ladder?.length}
+		<p class="eyebrow" style="margin-top:1.2rem">Where you are on the ladder</p>
+		<p class="muted" style="font-size:0.85rem;margin:0.3rem 0 0.4rem">
+			Computed from your records, so you can check it rather than take it on faith. Log the rung
+			you are on and the next plan moves with you.
+		</p>
+		<table style="margin-top:0.4rem">
+			<thead>
+				<tr><th></th><th>Rung</th><th>Cleared at</th></tr>
+			</thead>
+			<tbody>
+				{#each plan.method.ladder as rung (rung.name)}
+					<tr>
+						<td class="muted" style="width:2.2rem">
+							{rung.current ? '▶' : rung.cleared ? '✓' : ''}
+						</td>
+						<td style={rung.current ? 'font-weight:600' : ''}>{rung.name}</td>
+						<td class="muted" style="font-size:0.85rem">{rung.standard}</td>
+					</tr>
+				{/each}
+			</tbody>
+		</table>
+		{#if plan.method.readiness}
+			<p class="muted" style="font-size:0.85rem;margin:0.6rem 0 0">{plan.method.readiness}</p>
+		{/if}
 	{/if}
 
 	{#if plan.phases?.length || plan.progression_rules?.length || plan.test}

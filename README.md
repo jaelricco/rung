@@ -265,6 +265,36 @@ app's vocabulary means adding rows, not loosening the prompt, which is why the
 library carries the progressions each skill is actually built from: negatives,
 band-assisted work, tuck and straddle steps, lean drills and joint preparation.
 
+**The plan is computed first, and a model only ever improves it.**
+`internal/plan` writes a complete, checked, athlete-specific plan from the
+snapshot alone — no model account, no network beyond the database, no budget,
+and an answer in milliseconds. `Generate` has no error return and no input that
+makes it fail: an unrecognised goal becomes balanced strength and says so, an
+empty log starts at the bottom of the ladder, an injury that removes half the
+library produces a plan around it, and a library a migration emptied out
+produces a plan that explains the fault. That is the point of it. A training
+plan should not stop existing because a provider is down or a key expired.
+
+What it knows is in `docs/training-research.md`, and every number in
+`internal/plan/knowledge.go` traces back to a line there: the ladder to each
+skill and the standard that clears each rung, statics at 50–70% of the
+athlete's best hold rather than to failure, added load from an Epley estimate
+that includes bodyweight, a deload every fourth week and a taper before the
+test, 48 hours between hard sessions of one pattern, and joint preparation in
+front of every straight-arm session. The two files are meant to be edited
+together; the tests parse the seed migrations, so a renamed exercise fails the
+build rather than quietly thinning out every plan that used it.
+
+`POST /plans/generate` is that path on its own. `POST /ai/skill-plan` runs it
+too, then hands the result to the model as the plan to improve — which anchors
+the answer to a real placement and turns "write forty sessions" into "make
+these forty better". Every way that can fail ends at the same place: the plan
+the algorithm already wrote, labelled with why the model did not touch it.
+So that endpoint no longer answers `428` or `502`. Not reaching a model is a
+reason for a less specific plan, never a reason for no plan. `plan.method`
+carries which producer wrote it, the ladder, and where on it the athlete was
+placed, so the placement can be checked rather than trusted.
+
 **A plan starts with research, not with recall.** Before writing anything, the
 coach searches for how the named skill is actually trained: the progression
 ladder, the standard each rung is held to, how the week is usually laid out,
@@ -487,15 +517,20 @@ DELETE /api/v1/routines/{id}
 POST   /api/v1/routines/{id}/apply    {week_of}
 GET    /api/v1/plans
 POST   /api/v1/plans            {plan, goal, starts_on}
+POST   /api/v1/plans/generate    {goal, weeks, days_per_week, starts_on?, notes?, save}
+       ^ the algorithm on its own: no model account, no streaming, always a plan
 DELETE /api/v1/plans/{id}
 POST   /api/v1/ai/skill-plan     {skill, weeks, days_per_week, starts_on?, notes?,
                                   save, no_research?}
+       ^ runs the algorithm first, then asks the model to improve it. Falls back
+         to the algorithm's plan on any failure, so it never answers 428 or 502
 POST   /api/v1/ai/review
 POST   /api/v1/ai/recovery
        ^ these three also answer with a progress stream instead of one JSON
          body when the request carries Accept: text/event-stream
-       ^ these three and /events/discover answer 428 when the caller has not
-         connected a model account of their own
+       ^ /ai/review, /ai/recovery and /events/discover answer 428 when the
+         caller has not connected a model account of their own. /ai/skill-plan
+         does not: it answers with the computed plan instead
 POST   /api/v1/parks/refresh?lat=&lng=
 GET    /api/v1/events?discipline=&country=&from=&to=&include_unconfirmed=
 POST   /api/v1/events/discover        {discipline, country, from, to, force}
@@ -543,9 +578,11 @@ Built and working:
 
 - Accounts, sessions, argon2id passwords
 - Exercise library, session logging, records, computed level tiers
+- A deterministic plan generator: skill ladders, injury filtering, periodisation
+  and dosage computed from the athlete's records, with no model in the loop
 - Injury tracking and the curated protocol library
-- AI skill plans, training review, recovery and nutrition guidance, each run on
-  the athlete's own Anthropic or OpenAI account
+- AI refinement of that plan, plus training review, recovery and nutrition
+  guidance, each run on the athlete's own Anthropic or OpenAI account
 - Calendar storage, planned sessions, ICS export, plan deletion
 - Repeating routines: the athlete's own week, filled ahead or dropped onto a
   single week, and sessions written straight onto a day
@@ -571,6 +608,9 @@ Not built yet:
 
 ## Notes
 
+- `docs/training-research.md` is where the planner's numbers come from, with
+  sources. Change a threshold there and in `internal/plan/knowledge.go`
+  together; the tests will tell you if the two stop agreeing with the library.
 - `go.sum` is committed and CI runs `go mod verify`, so a build resolves
   nothing at image-build time. Adding an import means running `go mod tidy`
   and committing the result, or CI fails.
