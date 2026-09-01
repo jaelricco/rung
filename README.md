@@ -349,6 +349,33 @@ report a fraction of itself is the research search — a single request that say
 nothing until it returns — so it sets `indeterminate` and the bar sweeps while
 the elapsed time ticks, rather than inventing a number.
 
+**Signing in and paying for inference are separate, because they have to be.**
+An athlete can sign in with Google instead of an email and a password, and it
+changes nothing about the AI features: identity is not model access. Neither
+provider sells that. The Claude API authenticates with an API key, Workload
+Identity Federation or App Attest and has no consumer sign-in for third-party
+sites at all; OpenAI's "Sign in with ChatGPT" is identity in the same sense as
+Sign in with Google, ChatGPT subscriptions and the API platform bill
+separately, and the flow that does charge a ChatGPT plan runs only inside
+OpenAI's own Codex tooling. So the settings page has two sections and they mean
+different things: how you get into your account, and whose key pays for the
+model.
+
+Google sign-in is the plain authorization-code flow with PKCE, written against
+`net/http` like the model transports — one provider, four URLs, no library.
+It's off unless `OAUTH_GOOGLE_CLIENT_ID` and `OAUTH_GOOGLE_CLIENT_SECRET` are
+set, and the redirect URI registered with Google has to be exactly
+`https://APP_DOMAIN/api/v1/auth/oauth/google/callback`. Three rules decide
+which account a sign-in lands on, and they are what `internal/auth/oauth.go`'s
+tests hold it to: an identity already linked signs into its own account; a
+*verified* address that matches an existing account links to it rather than
+colliding with the unique email index; anything else creates an account with no
+password. Unverified addresses are refused outright — accepting one would let
+whoever can claim it at the provider walk into an account here that already
+uses it. Starting the flow while signed in links instead of signing in, and an
+account's last remaining way in cannot be unlinked, so `PUT /me/password` is
+how an athlete who only ever used Google stops depending on it.
+
 **Every athlete brings their own model account.** The server holds no API key
 of its own and pays for nothing. Under Settings an athlete connects a key from
 Anthropic or OpenAI; every plan, review, recovery answer and event search they
@@ -501,6 +528,9 @@ GET    /healthz
 POST   /api/v1/auth/register     {email, password, display_name}
 POST   /api/v1/auth/login        {email, password}
 POST   /api/v1/auth/logout
+GET    /api/v1/auth/providers        which identity providers this server offers
+GET    /api/v1/auth/oauth/{p}/start  browser redirect; signed in, it links instead
+GET    /api/v1/auth/oauth/{p}/callback
 GET    /api/v1/exercises
 GET    /api/v1/protocols?region=wrist
 GET    /api/v1/parks?lat=&lng=&radius_km=
@@ -511,6 +541,9 @@ Requires a session cookie:
 ```
 GET    /api/v1/me
 PATCH  /api/v1/me                {display_name?, bodyweight_kg?}
+PUT    /api/v1/me/password       {current_password?, password}
+GET    /api/v1/me/logins
+DELETE /api/v1/me/logins/{provider}
 GET    /api/v1/workouts?limit=30
 POST   /api/v1/workouts          {performed_at?, notes, rpe, sets[]}
 DELETE /api/v1/workouts/{id}
@@ -600,7 +633,7 @@ A set carries one of four shapes, and the database enforces it:
 
 Built and working:
 
-- Accounts, sessions, argon2id passwords
+- Accounts, sessions, argon2id passwords, and optional Google sign-in
 - Exercise library, session logging, records, computed level tiers
 - A deterministic plan generator: skill ladders, injury filtering, periodisation
   and dosage computed from the athlete's records, with no model in the loop

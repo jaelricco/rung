@@ -34,10 +34,20 @@ type User struct {
 type Service struct {
 	pool   *pgxpool.Pool
 	secure bool
+	oauth  OAuthConfig
+	http   *http.Client
+	// endpointBase redirects every identity provider at another host. Tests
+	// set it; nothing else does.
+	endpointBase string
 }
 
-func New(pool *pgxpool.Pool, secureCookies bool) *Service {
-	return &Service{pool: pool, secure: secureCookies}
+func New(pool *pgxpool.Pool, secureCookies bool, oauth OAuthConfig) *Service {
+	return &Service{
+		pool:   pool,
+		secure: secureCookies,
+		oauth:  oauth,
+		http:   &http.Client{Timeout: 20 * time.Second},
+	}
 }
 
 type ctxKey struct{}
@@ -206,7 +216,7 @@ func (s *Service) Login(w http.ResponseWriter, r *http.Request) {
 
 	var (
 		u    User
-		hash string
+		hash *string
 	)
 	err := s.pool.QueryRow(r.Context(), `
 		select id, email, display_name, bodyweight_kg, password_hash
@@ -224,8 +234,14 @@ func (s *Service) Login(w http.ResponseWriter, r *http.Request) {
 		httpx.Fail(w, http.StatusInternalServerError, "Couldn't sign you in. Try again.")
 		return
 	}
+	// An account created by signing in with a provider has no password to
+	// check against. Say which button to press rather than "wrong password".
+	if hash == nil {
+		httpx.Fail(w, http.StatusUnauthorized, s.noPasswordMessage(r.Context(), u.ID))
+		return
+	}
 
-	ok, err := VerifyPassword(in.Password, hash)
+	ok, err := VerifyPassword(in.Password, *hash)
 	if err != nil || !ok {
 		httpx.Fail(w, http.StatusUnauthorized, "That email and password don't match.")
 		return
@@ -275,6 +291,54 @@ func (s *Service) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httpx.JSON(w, http.StatusOK, u)
+}
+
+type passwordUpdate struct {
+	CurrentPassword string `json:"current_password"`
+	Password        string `json:"password"`
+}
+
+// SetPassword gives an account a password, or changes the one it has. An
+// account created by signing in with a provider starts without one, and this
+// is how it stops depending on that provider.
+func (s *Service) SetPassword(w http.ResponseWriter, r *http.Request) {
+	var in passwordUpdate
+	if !httpx.Decode(w, r, &in) {
+		return
+	}
+	if len(in.Password) < minPassLen {
+		httpx.Fail(w, http.StatusBadRequest, "Use a password of at least 10 characters.")
+		return
+	}
+	me := MustUser(r.Context())
+
+	var current *string
+	if err := s.pool.QueryRow(r.Context(),
+		`select password_hash from users where id = $1`, me.ID).Scan(&current); err != nil {
+		httpx.Fail(w, http.StatusInternalServerError, "Couldn't change your password. Try again.")
+		return
+	}
+	// Changing an existing password takes the old one; setting the first one
+	// on a provider-created account does not, because there is none to give.
+	if current != nil {
+		ok, err := VerifyPassword(in.CurrentPassword, *current)
+		if err != nil || !ok {
+			httpx.Fail(w, http.StatusUnauthorized, "That current password doesn't match.")
+			return
+		}
+	}
+
+	hash, err := HashPassword(in.Password)
+	if err != nil {
+		httpx.Fail(w, http.StatusInternalServerError, "Couldn't change your password. Try again.")
+		return
+	}
+	if _, err := s.pool.Exec(r.Context(),
+		`update users set password_hash = $2 where id = $1`, me.ID, hash); err != nil {
+		httpx.Fail(w, http.StatusInternalServerError, "Couldn't change your password. Try again.")
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]string{"status": "password set"})
 }
 
 // PurgeExpiredSessions is run periodically from main.
