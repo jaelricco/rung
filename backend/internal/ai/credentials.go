@@ -24,8 +24,11 @@ var (
 // Provider is one account an athlete can connect, as the settings page needs
 // to describe it.
 type Provider struct {
-	ID           string   `json:"id"`
+	ID string `json:"id"`
+	// Label is the product an athlete recognises; Vendor is the company that
+	// bills them. The settings page shows both, on two lines.
 	Label        string   `json:"label"`
+	Vendor       string   `json:"vendor"`
 	DefaultModel string   `json:"default_model"`
 	Models       []string `json:"models"`
 	// KeysURL is where the athlete goes to make a key.
@@ -39,7 +42,8 @@ type Provider struct {
 var Providers = []Provider{
 	{
 		ID:           ProviderAnthropic,
-		Label:        "Claude (Anthropic)",
+		Label:        "Claude",
+		Vendor:       "Anthropic",
 		DefaultModel: defaultAnthropicModel,
 		// Opus first: plan writing is the app's hardest call — a ladder of
 		// progressions weighed against one athlete's records — and it is where
@@ -50,7 +54,8 @@ var Providers = []Provider{
 	},
 	{
 		ID:           ProviderOpenAI,
-		Label:        "ChatGPT (OpenAI)",
+		Label:        "ChatGPT",
+		Vendor:       "OpenAI",
 		DefaultModel: defaultOpenAIModel,
 		Models:       []string{"gpt-5", "gpt-5-mini", "gpt-4.1"},
 		KeysURL:      "https://platform.openai.com/api-keys",
