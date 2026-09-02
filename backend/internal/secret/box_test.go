@@ -53,7 +53,7 @@ func TestSealIsNeverTheSameTwice(t *testing.T) {
 	}
 }
 
-// A restored database with the wrong AI_CREDENTIALS_KEY must fail here rather
+// A restored database opened with the wrong sealing key must fail here rather
 // than handing garbage to a provider.
 func TestOpenRejectsAnotherBoxesCiphertext(t *testing.T) {
 	sealed, err := newTestBox(t).Seal("sk-ant-secret")

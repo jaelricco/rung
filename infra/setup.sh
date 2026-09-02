@@ -86,9 +86,6 @@ echo "--- environment"
 chown -R "$DEPLOY_USER:$DEPLOY_USER" "$APP_DIR"
 if [[ ! -f "$APP_DIR/.env" ]]; then
 	DB_PASSWORD="$(openssl rand -base64 36 | tr -dc 'A-Za-z0-9' | head -c 32)"
-	# Seals each athlete's own provider key. The server has no model key of
-	# its own to write here.
-	AI_CREDENTIALS_KEY="$(openssl rand -base64 32)"
 	cat >"$APP_DIR/.env" <<ENVFILE
 APP_DOMAIN=$APP_DOMAIN
 ACME_EMAIL=$ACME_EMAIL
@@ -99,14 +96,13 @@ OAUTH_GOOGLE_CLIENT_ID=
 OAUTH_GOOGLE_CLIENT_SECRET=
 OAUTH_CHATGPT_CLIENT_ID=
 OAUTH_CHATGPT_CLIENT_SECRET=
-AI_CREDENTIALS_KEY=$AI_CREDENTIALS_KEY
 AI_THINKING=adaptive
 WEB_SEARCH_TOOL_VERSION=web_search_20250305
 IMAGE_TAG=latest
 ENVFILE
 	chown "$DEPLOY_USER:$DEPLOY_USER" "$APP_DIR/.env"
 	chmod 600 "$APP_DIR/.env"
-	echo "    wrote $APP_DIR/.env with a generated database password and AI sealing key"
+	echo "    wrote $APP_DIR/.env with a generated database password"
 else
 	echo "    $APP_DIR/.env already exists, leaving it alone"
 fi
@@ -149,9 +145,9 @@ cat >/etc/motd <<MOTD
   Caddy keeps retrying the certificate until DNS resolves.
 
   Coaching runs on each athlete's own Anthropic or OpenAI key, connected in
-  the app under Settings. This server pays for nothing and needs no key of
-  its own; AI_CREDENTIALS_KEY in $APP_DIR/.env, generated above, is only what
-  seals theirs.
+  the app under Settings. This server pays for nothing, needs no key of its
+  own, and nothing has to be configured for it: the secret that seals their
+  keys is generated on first start.
 
 MOTD
 

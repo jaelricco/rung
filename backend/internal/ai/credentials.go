@@ -18,7 +18,7 @@ import (
 // call they make afterwards is billed to them by their own provider.
 var (
 	ErrNoCredentials = errors.New("connect your own Claude or ChatGPT key before using the coaching features")
-	ErrNoKeystore    = errors.New("this server has no AI_CREDENTIALS_KEY set, so it cannot store provider keys")
+	ErrNoKeystore    = errors.New("this server cannot seal provider keys right now, so none can be stored")
 )
 
 // Provider is one account an athlete can connect, as the settings page needs
