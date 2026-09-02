@@ -22,17 +22,26 @@ type Config struct {
 	AIThinking        string
 	SearchToolVersion string
 	SecureCookies     bool
-	AppOrigin         string
+	// AppOrigin is the public https origin of this site. Sign-in redirects are
+	// built from it, so it has to match what is registered with the provider.
+	AppOrigin string
+	// Signing in with Google is identity only — it buys no model access, which
+	// still comes from each athlete's own key. Empty means the button is not
+	// offered at all.
+	GoogleClientID     string
+	GoogleClientSecret string
 }
 
 func Load() Config {
 	return Config{
-		DatabaseURL:       os.Getenv("DATABASE_URL"),
-		Addr:              envOr("API_ADDR", ":8080"),
-		CredentialsKey:    os.Getenv("AI_CREDENTIALS_KEY"),
-		AIThinking:        envOr("AI_THINKING", envOr("ANTHROPIC_THINKING", "adaptive")),
-		SearchToolVersion: envOr("WEB_SEARCH_TOOL_VERSION", "web_search_20250305"),
-		AppOrigin:         os.Getenv("APP_ORIGIN"),
+		DatabaseURL:        os.Getenv("DATABASE_URL"),
+		Addr:               envOr("API_ADDR", ":8080"),
+		CredentialsKey:     os.Getenv("AI_CREDENTIALS_KEY"),
+		AIThinking:         envOr("AI_THINKING", envOr("ANTHROPIC_THINKING", "adaptive")),
+		SearchToolVersion:  envOr("WEB_SEARCH_TOOL_VERSION", "web_search_20250305"),
+		AppOrigin:          os.Getenv("APP_ORIGIN"),
+		GoogleClientID:     os.Getenv("OAUTH_GOOGLE_CLIENT_ID"),
+		GoogleClientSecret: os.Getenv("OAUTH_GOOGLE_CLIENT_SECRET"),
 		// Cookies are Secure unless explicitly disabled for a plain-HTTP test box.
 		SecureCookies: !strings.EqualFold(os.Getenv("INSECURE_COOKIES"), "true"),
 	}

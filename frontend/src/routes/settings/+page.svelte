@@ -1,6 +1,7 @@
 <script>
 	import { api } from '$lib/api.js';
 	import Failure from '$lib/Failure.svelte';
+	import SignInMethods from '$lib/SignInMethods.svelte';
 
 	let account = $state(null); // { connected, connection, providers, keystore_ready }
 	let error = $state(null);
@@ -75,9 +76,12 @@
 </script>
 
 <p class="eyebrow" style="margin-top:2rem">Settings</p>
-<h1>Your AI account</h1>
+<h1>Your account</h1>
 
 <div class="column form-width">
+	<SignInMethods />
+
+	<p class="eyebrow" style="margin-top:2rem">Your AI account</p>
 	<p class="muted" style="line-height:1.6">
 		Plans, reviews, recovery guidance and event search all run on a model. They run on
 		<em>your</em> model account, not this server's: connect a key from Anthropic or OpenAI, and this

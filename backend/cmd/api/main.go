@@ -46,7 +46,11 @@ func main() {
 		log.Fatalf("migrations: %v", err)
 	}
 
-	authSvc := auth.New(pool, cfg.SecureCookies)
+	authSvc := auth.New(pool, cfg.SecureCookies, auth.OAuthConfig{
+		GoogleClientID:     cfg.GoogleClientID,
+		GoogleClientSecret: cfg.GoogleClientSecret,
+		AppOrigin:          cfg.AppOrigin,
+	})
 	trainingSvc := training.New(pool)
 	parksSvc := parks.New(pool)
 	// Athletes bring their own model accounts. The server holds no key of its
@@ -86,6 +90,11 @@ func main() {
 	mux.HandleFunc("POST /api/v1/auth/register", authSvc.Register)
 	mux.HandleFunc("POST /api/v1/auth/login", authSvc.Login)
 	mux.HandleFunc("POST /api/v1/auth/logout", authSvc.Logout)
+	// Sign-in with a provider: two browser redirects, so both are plain GETs
+	// and neither can be a fetch from the app.
+	mux.HandleFunc("GET /api/v1/auth/providers", authSvc.Providers)
+	mux.HandleFunc("GET /api/v1/auth/oauth/{provider}/start", authSvc.OAuthStart)
+	mux.HandleFunc("GET /api/v1/auth/oauth/{provider}/callback", authSvc.OAuthCallback)
 	mux.HandleFunc("GET /api/v1/exercises", trainingSvc.ListExercises)
 	mux.HandleFunc("GET /api/v1/protocols", trainingSvc.ListProtocols)
 	mux.HandleFunc("GET /api/v1/parks", parksSvc.Nearby)
@@ -94,6 +103,9 @@ func main() {
 	protected := map[string]http.HandlerFunc{
 		"GET /api/v1/me":                        authSvc.Me,
 		"PATCH /api/v1/me":                      authSvc.UpdateProfile,
+		"PUT /api/v1/me/password":               authSvc.SetPassword,
+		"GET /api/v1/me/logins":                 authSvc.LoginMethods,
+		"DELETE /api/v1/me/logins/{provider}":   authSvc.Unlink,
 		"GET /api/v1/me/ai":                     aiHandler.Connection,
 		"PUT /api/v1/me/ai":                     aiHandler.Connect,
 		"DELETE /api/v1/me/ai":                  aiHandler.Disconnect,
