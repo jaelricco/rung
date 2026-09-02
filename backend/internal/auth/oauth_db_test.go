@@ -36,7 +36,18 @@ func testServiceDB(t *testing.T, identities map[string]any) (*Service, *pgxpool.
 
 	// identities is keyed by authorization code, so one fake provider can
 	// answer for several different people.
-	provider := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	mux := http.NewServeMux()
+	provider := httptest.NewUnstartedServer(mux)
+	mux.HandleFunc("/.well-known/openid-configuration", func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"issuer":                                provider.URL,
+			"authorization_endpoint":                provider.URL + "/authorize",
+			"token_endpoint":                        provider.URL + "/token",
+			"userinfo_endpoint":                     provider.URL + "/userinfo",
+			"token_endpoint_auth_methods_supported": []string{"client_secret_post"},
+		})
+	})
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/token":
 			_ = r.ParseForm()
@@ -50,7 +61,8 @@ func testServiceDB(t *testing.T, identities map[string]any) (*Service, *pgxpool.
 			}
 			_ = json.NewEncoder(w).Encode(who)
 		}
-	}))
+	})
+	provider.Start()
 	t.Cleanup(provider.Close)
 
 	s := New(pool, false, OAuthConfig{
@@ -58,7 +70,7 @@ func testServiceDB(t *testing.T, identities map[string]any) (*Service, *pgxpool.
 		GoogleClientSecret: "client-secret",
 		AppOrigin:          "https://training.example.com",
 	})
-	s.endpointBase = provider.URL
+	s.issuerOverride = provider.URL
 	return s, pool
 }
 
