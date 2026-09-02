@@ -45,10 +45,11 @@ var Providers = []Provider{
 		Label:        "Claude",
 		Vendor:       "Anthropic",
 		DefaultModel: defaultAnthropicModel,
-		// Opus first: plan writing is the app's hardest call — a ladder of
-		// progressions weighed against one athlete's records — and it is where
-		// the difference between model tiers actually shows up.
-		Models:    []string{"claude-opus-5", "claude-sonnet-5", "claude-haiku-4-5-20251001"},
+		// Cheapest useful first, dearest last. That ordering is the honest one
+		// now that the app writes the plan itself and the model only improves
+		// it: the difference between the tiers shows up in the polish, and the
+		// difference in the bill lands on the athlete.
+		Models:    []string{"claude-sonnet-5", "claude-haiku-4-5-20251001", "claude-opus-5"},
 		KeysURL:   "https://console.anthropic.com/settings/keys",
 		KeyPrefix: "sk-ant-",
 	},
@@ -57,7 +58,7 @@ var Providers = []Provider{
 		Label:        "ChatGPT",
 		Vendor:       "OpenAI",
 		DefaultModel: defaultOpenAIModel,
-		Models:       []string{"gpt-5", "gpt-5-mini", "gpt-4.1"},
+		Models:       []string{"gpt-5-mini", "gpt-5", "gpt-4.1"},
 		KeysURL:      "https://platform.openai.com/api-keys",
 		KeyPrefix:    "sk-",
 	},

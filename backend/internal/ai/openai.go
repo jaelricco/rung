@@ -14,7 +14,9 @@ import (
 
 const openAIBase = "https://api.openai.com"
 
-const defaultOpenAIModel = "gpt-5"
+// The cheaper tier, for the same reason Anthropic's default is Sonnet: the
+// bill is the athlete's. The full model is one click away.
+const defaultOpenAIModel = "gpt-5-mini"
 
 // Everything here speaks the Responses API rather than chat completions. It is
 // the only OpenAI surface that carries the two things this app depends on:
