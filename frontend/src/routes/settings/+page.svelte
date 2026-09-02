@@ -36,12 +36,41 @@
 		if (!account) load();
 	});
 
+	// The list a provider offers, plus whatever is already connected: an
+	// account may be on a model this build has never heard of, and picking the
+	// dropdown open should not silently move it off that.
+	let modelChoices = $derived.by(() => {
+		const listed = chosen?.models ?? [];
+		return model && !listed.includes(model) ? [...listed, model] : listed;
+	});
+
 	// Switching the provider switches the model with it: a Claude model name
 	// means nothing to OpenAI.
 	function pickProvider(id) {
 		provider = id;
+		typedModel = false;
 		const p = providers.find((x) => x.id === id);
 		if (p) model = p.default_model;
+	}
+
+	// Any model the account can reach is allowed, not only the ones listed —
+	// the provider is asked before anything is stored, so a name this build
+	// does not know still gets a straight answer.
+	const OTHER_MODEL = '__other__';
+	let typedModel = $state(false);
+
+	function pickModel(value) {
+		if (value === OTHER_MODEL) {
+			typedModel = true;
+			model = '';
+			return;
+		}
+		model = value;
+	}
+
+	function backToTheList() {
+		typedModel = false;
+		model = chosen?.default_model ?? '';
 	}
 
 	async function save() {
@@ -151,16 +180,25 @@
 
 		<div class="field">
 			<label for="model">Model</label>
-			<input id="model" list="models" bind:value={model} />
-			<datalist id="models">
-				{#each chosen?.models ?? [] as m (m)}
-					<option value={m}></option>
-				{/each}
-			</datalist>
-			<p class="mono muted" style="font-size:0.75rem;margin:0.4rem 0 0">
-				The first is the strongest and the most expensive. A cheaper one writes plans faster and
-				costs you less.
-			</p>
+			{#if typedModel}
+				<input id="model" bind:value={model} placeholder="model name" autocomplete="off" />
+				<p class="mono muted" style="font-size:0.75rem;margin:0.4rem 0 0">
+					Any model your account can reach. It is checked against the provider before anything is
+					saved.
+					<button class="link" onclick={backToTheList}>Back to the list</button>
+				</p>
+			{:else}
+				<select id="model" value={model} onchange={(e) => pickModel(e.currentTarget.value)}>
+					{#each modelChoices as m (m)}
+						<option value={m}>{m}</option>
+					{/each}
+					<option value={OTHER_MODEL}>Another model…</option>
+				</select>
+				<p class="mono muted" style="font-size:0.75rem;margin:0.4rem 0 0">
+					The first is the strongest and the most expensive. A cheaper one writes plans faster and
+					costs you less.
+				</p>
+			{/if}
 		</div>
 
 		<button
