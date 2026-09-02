@@ -8,8 +8,41 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"strings"
+	"sync/atomic"
 	"testing"
 )
+
+// oidcServer stands in for an identity provider: it publishes a discovery
+// document pointing at its own endpoints, which is exactly how the real ones
+// are found.
+func oidcServer(t *testing.T, authMethod string, handler http.HandlerFunc) (*httptest.Server, *atomic.Int32) {
+	t.Helper()
+
+	var hits atomic.Int32
+	mux := http.NewServeMux()
+	server := httptest.NewUnstartedServer(mux)
+
+	mux.HandleFunc("/.well-known/openid-configuration", func(w http.ResponseWriter, r *http.Request) {
+		hits.Add(1)
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"issuer":                                server.URL,
+			"authorization_endpoint":                server.URL + "/authorize",
+			"token_endpoint":                        server.URL + "/token",
+			"userinfo_endpoint":                     server.URL + "/userinfo",
+			"token_endpoint_auth_methods_supported": []string{authMethod},
+		})
+	})
+	if handler != nil {
+		mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+			hits.Add(1)
+			handler(w, r)
+		})
+	}
+
+	server.Start()
+	t.Cleanup(server.Close)
+	return server, &hits
+}
 
 func testService() *Service {
 	return New(nil, true, OAuthConfig{
@@ -19,8 +52,16 @@ func testService() *Service {
 	})
 }
 
-func TestStartSendsThePersonToTheProviderWithPKCE(t *testing.T) {
+func serviceAt(issuer string) *Service {
 	s := testService()
+	s.issuerOverride = issuer
+	return s
+}
+
+func TestStartSendsThePersonToTheProviderWithPKCE(t *testing.T) {
+	provider, _ := oidcServer(t, "client_secret_post", nil)
+	s := serviceAt(provider.URL)
+
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "/api/v1/auth/oauth/google/start", nil)
 	r.SetPathValue("provider", "google")
@@ -34,6 +75,12 @@ func TestStartSendsThePersonToTheProviderWithPKCE(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Location is not a URL: %v", err)
 	}
+	// The authorize endpoint came from the discovery document, not from a
+	// constant in this package.
+	if got := target.Scheme + "://" + target.Host + target.Path; got != provider.URL+"/authorize" {
+		t.Fatalf("redirected to %q, want the discovered authorize endpoint", got)
+	}
+
 	query := target.Query()
 	if got := query.Get("redirect_uri"); got != "https://training.example.com/api/v1/auth/oauth/google/callback" {
 		t.Fatalf("redirect_uri = %q", got)
@@ -72,6 +119,47 @@ func TestStartSendsThePersonToTheProviderWithPKCE(t *testing.T) {
 	}
 }
 
+// Discovery is a network call in the middle of a sign-in, so it is asked once
+// per issuer and remembered.
+func TestEndpointsAreDiscoveredOnceAndReused(t *testing.T) {
+	provider, hits := oidcServer(t, "client_secret_post", nil)
+	s := serviceAt(provider.URL)
+
+	for range 3 {
+		w := httptest.NewRecorder()
+		r := httptest.NewRequest(http.MethodGet, "/api/v1/auth/oauth/google/start", nil)
+		r.SetPathValue("provider", "google")
+		s.OAuthStart(w, r)
+		if w.Code != http.StatusFound {
+			t.Fatalf("status = %d, want a redirect", w.Code)
+		}
+	}
+	if got := hits.Load(); got != 1 {
+		t.Fatalf("the discovery document was fetched %d times, want once", got)
+	}
+}
+
+// An issuer that cannot be reached must fail the sign-in with something
+// readable, not a blank redirect to nowhere.
+func TestStartFailsReadablyWhenDiscoveryDoesNot(t *testing.T) {
+	broken := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer broken.Close()
+
+	s := serviceAt(broken.URL)
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/api/v1/auth/oauth/google/start", nil)
+	r.SetPathValue("provider", "google")
+
+	s.OAuthStart(w, r)
+
+	location := w.Header().Get("Location")
+	if !strings.HasPrefix(location, "/login?error=") || !strings.Contains(location, "endpoints") {
+		t.Fatalf("Location = %q, want the login page naming the problem", location)
+	}
+}
+
 func TestStartRefusesAnUnknownProvider(t *testing.T) {
 	s := testService()
 	w := httptest.NewRecorder()
@@ -85,14 +173,10 @@ func TestStartRefusesAnUnknownProvider(t *testing.T) {
 }
 
 // The state check is what stops someone else's authorization code from being
-// walked into this site. A callback carrying no cookie must not reach the
-// provider at all.
+// walked into this site. A callback carrying no cookie must not touch the
+// provider at all — not even to look up where its endpoints are.
 func TestCallbackRefusesAMissingOrForgedState(t *testing.T) {
-	reached := false
-	provider := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		reached = true
-	}))
-	defer provider.Close()
+	provider, hits := oidcServer(t, "client_secret_post", func(w http.ResponseWriter, r *http.Request) {})
 
 	for _, tc := range []struct{ name, cookie, state string }{
 		{"no cookie at all", "", "anything"},
@@ -100,8 +184,7 @@ func TestCallbackRefusesAMissingOrForgedState(t *testing.T) {
 		{"no state on the callback", "expected:verifier", ""},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			s := testService()
-			s.endpointBase = provider.URL
+			s := serviceAt(provider.URL)
 
 			r := httptest.NewRequest(http.MethodGet, "/api/v1/auth/oauth/google/callback?code=abc&state="+tc.state, nil)
 			r.SetPathValue("provider", "google")
@@ -115,10 +198,10 @@ func TestCallbackRefusesAMissingOrForgedState(t *testing.T) {
 			if !strings.HasPrefix(w.Header().Get("Location"), "/login?error=") {
 				t.Fatalf("Location = %q, want the login page with a reason", w.Header().Get("Location"))
 			}
-			if reached {
-				t.Fatal("a callback that failed its state check still called the provider")
-			}
 		})
+	}
+	if got := hits.Load(); got != 0 {
+		t.Fatalf("a callback that failed its state check still made %d requests to the provider", got)
 	}
 }
 
@@ -140,7 +223,7 @@ func TestCallbackTreatsACancelledSignInQuietly(t *testing.T) {
 // An unverified address at the provider would let anyone who can claim it walk
 // into an account here that already uses it.
 func TestCallbackRefusesAnUnverifiedEmail(t *testing.T) {
-	provider := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	provider, _ := oidcServer(t, "client_secret_post", func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/token":
 			_ = json.NewEncoder(w).Encode(map[string]string{"access_token": "at"})
@@ -149,12 +232,9 @@ func TestCallbackRefusesAnUnverifiedEmail(t *testing.T) {
 				"sub": "google-1", "email": "someone@example.com", "email_verified": false,
 			})
 		}
-	}))
-	defer provider.Close()
+	})
 
-	s := testService()
-	s.endpointBase = provider.URL
-
+	s := serviceAt(provider.URL)
 	r := httptest.NewRequest(http.MethodGet, "/api/v1/auth/oauth/google/callback?code=abc&state=st", nil)
 	r.SetPathValue("provider", "google")
 	r.AddCookie(&http.Cookie{Name: oauthCookie, Value: "st:verifier"})
@@ -171,7 +251,7 @@ func TestCallbackRefusesAnUnverifiedEmail(t *testing.T) {
 // The exchange has to send the verifier back, or PKCE protects nothing.
 func TestExchangeSendsTheVerifierAndTheSecret(t *testing.T) {
 	var form url.Values
-	provider := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	provider, _ := oidcServer(t, "client_secret_post", func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/token":
 			_ = r.ParseForm()
@@ -186,11 +266,9 @@ func TestExchangeSendsTheVerifierAndTheSecret(t *testing.T) {
 				"sub": "google-1", "email": "a@example.com", "email_verified": true, "name": "A",
 			})
 		}
-	}))
-	defer provider.Close()
+	})
 
-	s := testService()
-	s.endpointBase = provider.URL
+	s := serviceAt(provider.URL)
 	p, _ := s.provider("google")
 
 	info, err := s.exchange(t.Context(), p, "the-code", "the-verifier")
@@ -213,12 +291,81 @@ func TestExchangeSendsTheVerifierAndTheSecret(t *testing.T) {
 	}
 }
 
-func TestProviderIsOfferedOnlyWhenItIsConfigured(t *testing.T) {
+// How the secret is presented is the issuer's choice. An issuer that does not
+// advertise client_secret_post gets HTTP Basic, which is OIDC's default —
+// sending it the other way is a 401 with nothing in it to debug.
+func TestExchangeFollowsTheIssuersAuthMethod(t *testing.T) {
+	var basicUser, basicPass string
+	var hadBasic bool
+	var bodySecret string
+
+	provider, _ := oidcServer(t, "client_secret_basic", func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/token":
+			basicUser, basicPass, hadBasic = r.BasicAuth()
+			_ = r.ParseForm()
+			bodySecret = r.PostForm.Get("client_secret")
+			_ = json.NewEncoder(w).Encode(map[string]string{"access_token": "at"})
+		case "/userinfo":
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"sub": "s", "email": "a@example.com", "email_verified": true,
+			})
+		}
+	})
+
+	s := serviceAt(provider.URL)
+	p, _ := s.provider("google")
+	if _, err := s.exchange(t.Context(), p, "code", "verifier"); err != nil {
+		t.Fatalf("exchange: %v", err)
+	}
+
+	if !hadBasic {
+		t.Fatal("the secret was not sent as HTTP Basic")
+	}
+	if basicUser != "client-id" || basicPass != "client-secret" {
+		t.Fatalf("basic credentials = %q / %q", basicUser, basicPass)
+	}
+	if bodySecret != "" {
+		t.Fatal("the secret was also put in the body, which the issuer did not ask for")
+	}
+}
+
+func TestProvidersAreOfferedOnlyWhenConfigured(t *testing.T) {
 	if got := len(testService().providers()); got != 1 {
 		t.Fatalf("configured Google should be offered once, got %d", got)
 	}
+
 	bare := New(nil, true, OAuthConfig{AppOrigin: "https://training.example.com"})
 	if len(bare.providers()) != 0 {
 		t.Fatal("a provider with no client credentials must not be offered")
+	}
+
+	both := New(nil, true, OAuthConfig{
+		GoogleClientID: "g", GoogleClientSecret: "gs",
+		ChatGPTClientID: "c", ChatGPTClientSecret: "cs",
+		AppOrigin: "https://training.example.com",
+	})
+	offered := both.providers()
+	if len(offered) != 2 {
+		t.Fatalf("both configured providers should be offered, got %d", len(offered))
+	}
+	chatgpt, ok := both.provider("chatgpt")
+	if !ok {
+		t.Fatal("ChatGPT was configured but is not offered")
+	}
+	if chatgpt.issuer != chatGPTIssuer {
+		t.Fatalf("ChatGPT issuer = %q, want the default", chatgpt.issuer)
+	}
+
+	// The issuer is the one detail most likely to be documented in one place
+	// and changed in another, so it has to be settable without a code change.
+	moved := New(nil, true, OAuthConfig{
+		ChatGPTClientID: "c", ChatGPTClientSecret: "cs",
+		ChatGPTIssuer: "https://id.openai.example/",
+		AppOrigin:     "https://training.example.com",
+	})
+	p, _ := moved.provider("chatgpt")
+	if p.issuer != "https://id.openai.example" {
+		t.Fatalf("issuer override = %q, want the configured one without its trailing slash", p.issuer)
 	}
 }

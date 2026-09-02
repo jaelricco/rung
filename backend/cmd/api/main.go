@@ -47,9 +47,13 @@ func main() {
 	}
 
 	authSvc := auth.New(pool, cfg.SecureCookies, auth.OAuthConfig{
-		GoogleClientID:     cfg.GoogleClientID,
-		GoogleClientSecret: cfg.GoogleClientSecret,
-		AppOrigin:          cfg.AppOrigin,
+		GoogleClientID:      cfg.GoogleClientID,
+		GoogleClientSecret:  cfg.GoogleClientSecret,
+		GoogleIssuer:        cfg.GoogleIssuer,
+		ChatGPTClientID:     cfg.ChatGPTClientID,
+		ChatGPTClientSecret: cfg.ChatGPTClientSecret,
+		ChatGPTIssuer:       cfg.ChatGPTIssuer,
+		AppOrigin:           cfg.AppOrigin,
 	})
 	trainingSvc := training.New(pool)
 	parksSvc := parks.New(pool)

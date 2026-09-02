@@ -350,31 +350,48 @@ nothing until it returns — so it sets `indeterminate` and the bar sweeps while
 the elapsed time ticks, rather than inventing a number.
 
 **Signing in and paying for inference are separate, because they have to be.**
-An athlete can sign in with Google instead of an email and a password, and it
-changes nothing about the AI features: identity is not model access. Neither
-provider sells that. The Claude API authenticates with an API key, Workload
-Identity Federation or App Attest and has no consumer sign-in for third-party
-sites at all; OpenAI's "Sign in with ChatGPT" is identity in the same sense as
-Sign in with Google, ChatGPT subscriptions and the API platform bill
-separately, and the flow that does charge a ChatGPT plan runs only inside
-OpenAI's own Codex tooling. So the settings page has two sections and they mean
-different things: how you get into your account, and whose key pays for the
-model.
+An athlete can sign in with Google or with ChatGPT instead of an email and a
+password, and it changes nothing about the AI features: identity is not model
+access, and neither company sells the latter to a site like this one. "Sign in
+with ChatGPT" hands over a name, an email address and a profile picture — the
+same shape as Sign in with Google — while ChatGPT subscriptions and the API
+platform stay separate bills. Anthropic offers no equivalent at all: its
+consumer OAuth is reserved for Claude Code and claude.ai, and third-party
+products are pointed at API keys, so there is no "Sign in with Claude" button
+to add. That is why the settings page has two sections that mean different
+things: how you get into your account, and whose key pays for the model.
 
-Google sign-in is the plain authorization-code flow with PKCE, written against
-`net/http` like the model transports — one provider, four URLs, no library.
-It's off unless `OAUTH_GOOGLE_CLIENT_ID` and `OAUTH_GOOGLE_CLIENT_SECRET` are
-set, and the redirect URI registered with Google has to be exactly
-`https://APP_DOMAIN/api/v1/auth/oauth/google/callback`. Three rules decide
-which account a sign-in lands on, and they are what `internal/auth/oauth.go`'s
-tests hold it to: an identity already linked signs into its own account; a
-*verified* address that matches an existing account links to it rather than
-colliding with the unique email index; anything else creates an account with no
-password. Unverified addresses are refused outright — accepting one would let
-whoever can claim it at the provider walk into an account here that already
-uses it. Starting the flow while signed in links instead of signing in, and an
-account's last remaining way in cannot be unlinked, so `PUT /me/password` is
-how an athlete who only ever used Google stops depending on it.
+Sign-in is the plain authorization-code flow with PKCE, written against
+`net/http` like the model transports — no library. A provider is configured by
+its **issuer**, not by its endpoints: the server reads
+`<issuer>/.well-known/openid-configuration` and takes the authorize, token and
+userinfo URLs from there, once per issuer per process. That is what keeps a
+second provider a matter of two environment variables, and it is also honesty
+about what can be checked from a development sandbox — Google's discovery
+document is verified against the live one in the tests' sibling smoke run,
+while `auth.openai.com` is not reachable from there, so nothing about ChatGPT's
+endpoints is hardcoded on a guess. `OAUTH_CHATGPT_ISSUER` and
+`OAUTH_GOOGLE_ISSUER` move an issuer without a code change. How the client
+secret is presented follows the same rule: `client_secret_post` when the issuer
+advertises it, HTTP Basic otherwise, which is OIDC's default.
+
+Each provider is off unless its client ID and secret are set, and the redirect
+URI registered with the provider has to be exactly
+`https://APP_DOMAIN/api/v1/auth/oauth/{google,chatgpt}/callback`. Note that
+"Sign in with ChatGPT" launched with a set of named partners rather than open
+self-service registration, so whether you can register this app for it is a
+question for OpenAI, not for this code — the code is ready either way.
+
+Three rules decide which account a sign-in lands on, and they are what
+`internal/auth/oauth.go`'s tests hold it to: an identity already linked signs
+into its own account; a *verified* address that matches an existing account
+links to it rather than colliding with the unique email index; anything else
+creates an account with no password. Unverified addresses are refused outright
+— accepting one would let whoever can claim it at the provider walk into an
+account here that already uses it. Starting the flow while signed in links
+instead of signing in, and an account's last remaining way in cannot be
+unlinked, so `PUT /me/password` is how an athlete who only ever signed in with
+a provider stops depending on it.
 
 **Every athlete brings their own model account.** The server holds no API key
 of its own and pays for nothing. Under Settings an athlete connects a key from
@@ -633,7 +650,7 @@ A set carries one of four shapes, and the database enforces it:
 
 Built and working:
 
-- Accounts, sessions, argon2id passwords, and optional Google sign-in
+- Accounts, sessions, argon2id passwords, and optional Google or ChatGPT sign-in
 - Exercise library, session logging, records, computed level tiers
 - A deterministic plan generator: skill ladders, injury filtering, periodisation
   and dosage computed from the athlete's records, with no model in the loop

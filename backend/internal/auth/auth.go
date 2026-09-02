@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/mail"
 	"strings"
+	"sync"
 	"time"
 
 	"calisthenics/api/internal/httpx"
@@ -36,9 +37,12 @@ type Service struct {
 	secure bool
 	oauth  OAuthConfig
 	http   *http.Client
-	// endpointBase redirects every identity provider at another host. Tests
-	// set it; nothing else does.
-	endpointBase string
+	// issuerOverride redirects every identity provider at another issuer.
+	// Tests set it; nothing else does.
+	issuerOverride string
+	// discovered caches each issuer's published endpoints.
+	discoveryMu sync.Mutex
+	discovered  map[string]endpoints
 }
 
 func New(pool *pgxpool.Pool, secureCookies bool, oauth OAuthConfig) *Service {

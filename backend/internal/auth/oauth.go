@@ -41,26 +41,62 @@ type Provider struct {
 	ID    string `json:"id"`
 	Label string `json:"label"`
 
-	authURL     string
-	tokenURL    string
-	userInfoURL string
-	scopes      []string
+	// issuer is the OIDC issuer. Where its authorize, token and userinfo
+	// endpoints actually live is asked of the issuer itself rather than
+	// written down here: a provider that moves one, or documents it
+	// differently than we guessed, still works.
+	issuer string
+	scopes []string
 
 	clientID     string
 	clientSecret string
 }
 
+// endpoints is the part of the discovery document this flow uses.
+type endpoints struct {
+	Authorization string `json:"authorization_endpoint"`
+	Token         string `json:"token_endpoint"`
+	UserInfo      string `json:"userinfo_endpoint"`
+	// AuthMethods decides how the client secret is presented at the token
+	// endpoint. OIDC's default when the field is absent is HTTP Basic.
+	AuthMethods []string `json:"token_endpoint_auth_methods_supported"`
+}
+
+func (e endpoints) postsSecretInBody() bool {
+	for _, method := range e.AuthMethods {
+		if method == "client_secret_post" {
+			return true
+		}
+	}
+	return false
+}
+
+// The issuers this app knows by name. Both are overridable, because an issuer
+// is exactly the kind of detail that is documented in one place and changed in
+// another.
+const (
+	googleIssuer  = "https://accounts.google.com"
+	chatGPTIssuer = "https://auth.openai.com"
+)
+
 // OAuthConfig carries the client credentials for whichever providers the
 // operator has registered. A provider with no client ID is simply not offered.
 //
-// Google is the only one here for now, and not for lack of trying: "Sign in
-// with ChatGPT" still ships only inside OpenAI's own Codex tooling, with no
-// public client registration, and Anthropic offers no consumer sign-in for
-// third-party sites at all. Both slot in as another entry in providers() the
-// day they open up.
+// Google and ChatGPT are both identity only. Signing in with either says who
+// someone is and nothing else — model access still comes from the athlete's
+// own API key, because that is the only thing either company sells for it.
+// Anthropic has no equivalent: its OAuth is reserved for Claude Code and
+// claude.ai, and third-party products are pointed at API keys instead, so
+// there is no "Sign in with Claude" to offer here.
 type OAuthConfig struct {
 	GoogleClientID     string
 	GoogleClientSecret string
+	GoogleIssuer       string
+
+	ChatGPTClientID     string
+	ChatGPTClientSecret string
+	ChatGPTIssuer       string
+
 	// AppOrigin is the public https origin of this site. The redirect URI is
 	// built from it, and it must match what is registered with the provider.
 	AppOrigin string
@@ -72,27 +108,87 @@ func (s *Service) providers() []Provider {
 		out = append(out, s.at(Provider{
 			ID:           "google",
 			Label:        "Google",
-			authURL:      "https://accounts.google.com/o/oauth2/v2/auth",
-			tokenURL:     "https://oauth2.googleapis.com/token",
-			userInfoURL:  "https://openidconnect.googleapis.com/v1/userinfo",
+			issuer:       orDefault(s.oauth.GoogleIssuer, googleIssuer),
 			scopes:       []string{"openid", "email", "profile"},
 			clientID:     s.oauth.GoogleClientID,
 			clientSecret: s.oauth.GoogleClientSecret,
 		}))
 	}
+	if s.oauth.ChatGPTClientID != "" && s.oauth.ChatGPTClientSecret != "" {
+		out = append(out, s.at(Provider{
+			ID:           "chatgpt",
+			Label:        "ChatGPT",
+			issuer:       orDefault(s.oauth.ChatGPTIssuer, chatGPTIssuer),
+			scopes:       []string{"openid", "email", "profile"},
+			clientID:     s.oauth.ChatGPTClientID,
+			clientSecret: s.oauth.ChatGPTClientSecret,
+		}))
+	}
 	return out
 }
 
-// at points a provider at another host. Only the tests set endpointBase; in
-// production every provider knows its own endpoints.
-func (s *Service) at(p Provider) Provider {
-	if s.endpointBase == "" {
-		return p
+func orDefault(value, fallback string) string {
+	if strings.TrimSpace(value) != "" {
+		return strings.TrimSuffix(strings.TrimSpace(value), "/")
 	}
-	p.authURL = s.endpointBase + "/authorize"
-	p.tokenURL = s.endpointBase + "/token"
-	p.userInfoURL = s.endpointBase + "/userinfo"
+	return fallback
+}
+
+// at points a provider at another issuer. Only the tests set issuerOverride;
+// in production each provider is asked where its own endpoints are.
+func (s *Service) at(p Provider) Provider {
+	if s.issuerOverride != "" {
+		p.issuer = s.issuerOverride
+	}
 	return p
+}
+
+// discover asks the issuer where its endpoints are, and remembers the answer.
+// They do not move often, so one successful lookup per issuer per process is
+// enough; a failed one is not cached, so a provider that was briefly
+// unreachable is retried on the next sign-in.
+func (s *Service) discover(ctx context.Context, p Provider) (endpoints, error) {
+	s.discoveryMu.Lock()
+	found, ok := s.discovered[p.issuer]
+	s.discoveryMu.Unlock()
+	if ok {
+		return found, nil
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet,
+		p.issuer+"/.well-known/openid-configuration", nil)
+	if err != nil {
+		return found, err
+	}
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := s.http.Do(req)
+	if err != nil {
+		return found, fmt.Errorf("reaching %s failed. Try again", p.Label)
+	}
+	defer resp.Body.Close()
+
+	raw, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	if err != nil {
+		return found, err
+	}
+	if resp.StatusCode != http.StatusOK {
+		return found, fmt.Errorf("%s did not say where its sign-in endpoints are", p.Label)
+	}
+	if err := json.Unmarshal(raw, &found); err != nil {
+		return found, fmt.Errorf("%s sent a sign-in configuration this server couldn't read", p.Label)
+	}
+	if found.Authorization == "" || found.Token == "" || found.UserInfo == "" {
+		return found, fmt.Errorf("%s's sign-in configuration is missing an endpoint this flow needs", p.Label)
+	}
+
+	s.discoveryMu.Lock()
+	if s.discovered == nil {
+		s.discovered = map[string]endpoints{}
+	}
+	s.discovered[p.issuer] = found
+	s.discoveryMu.Unlock()
+	return found, nil
 }
 
 func (s *Service) provider(id string) (Provider, bool) {
@@ -142,6 +238,14 @@ func (s *Service) OAuthStart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	ctx, cancel := context.WithTimeout(r.Context(), 20*time.Second)
+	defer cancel()
+	where, err := s.discover(ctx, p)
+	if err != nil {
+		s.failLogin(w, r, err.Error())
+		return
+	}
+
 	state, err := randomString(24)
 	if err != nil {
 		s.failLogin(w, r, "Couldn't start the sign-in. Try again.")
@@ -179,7 +283,7 @@ func (s *Service) OAuthStart(w http.ResponseWriter, r *http.Request) {
 		// browser happens to be signed in to.
 		"prompt": {"select_account"},
 	}
-	http.Redirect(w, r, p.authURL+"?"+query.Encode(), http.StatusFound)
+	http.Redirect(w, r, where.Authorization+"?"+query.Encode(), http.StatusFound)
 }
 
 // OAuthCallback finishes the flow. Started while signed in, it links the
@@ -297,17 +401,30 @@ type identity struct {
 func (s *Service) exchange(ctx context.Context, p Provider, code, verifier string) (identity, error) {
 	var info identity
 
+	where, err := s.discover(ctx, p)
+	if err != nil {
+		return info, err
+	}
+
 	form := url.Values{
 		"grant_type":    {"authorization_code"},
 		"code":          {code},
 		"redirect_uri":  {s.redirectURI(p)},
 		"client_id":     {p.clientID},
-		"client_secret": {p.clientSecret},
 		"code_verifier": {verifier},
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, p.tokenURL, strings.NewReader(form.Encode()))
+	// How the secret is presented is the issuer's choice, not ours: OIDC's
+	// default is HTTP Basic, and only an issuer that says so takes it in the
+	// body. Sending it the wrong way is a 401 with nothing to debug.
+	if where.postsSecretInBody() {
+		form.Set("client_secret", p.clientSecret)
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, where.Token, strings.NewReader(form.Encode()))
 	if err != nil {
 		return info, err
+	}
+	if !where.postsSecretInBody() {
+		req.SetBasicAuth(url.QueryEscape(p.clientID), url.QueryEscape(p.clientSecret))
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Set("Accept", "application/json")
@@ -337,7 +454,7 @@ func (s *Service) exchange(ctx context.Context, p Provider, code, verifier strin
 		return info, fmt.Errorf("%s returned no access token", p.Label)
 	}
 
-	userReq, err := http.NewRequestWithContext(ctx, http.MethodGet, p.userInfoURL, nil)
+	userReq, err := http.NewRequestWithContext(ctx, http.MethodGet, where.UserInfo, nil)
 	if err != nil {
 		return info, err
 	}
