@@ -57,16 +57,16 @@ func main() {
 	})
 	trainingSvc := training.New(pool)
 	parksSvc := parks.New(pool)
-	// Athletes bring their own model accounts. The server holds no key of its
-	// own; all it needs is the secret that seals theirs.
-	var keystore *secret.Box
-	if cfg.CredentialsKey == "" {
-		log.Print("warning: AI_CREDENTIALS_KEY is empty, so nobody can connect an AI account and coaching stays off")
-	} else {
-		keystore, err = secret.New(cfg.CredentialsKey)
-		if err != nil {
-			log.Fatalf("AI_CREDENTIALS_KEY: %v", err)
-		}
+	// Athletes bring their own model accounts. The server holds no model key of
+	// its own; all it needs is the secret that seals theirs, and it makes one
+	// for itself when nobody has handed it one.
+	keystore, generated, err := secret.Keystore(startupCtx, pool, cfg.CredentialsKey)
+	if err != nil {
+		log.Fatalf("sealing key: %v", err)
+	}
+	if generated {
+		log.Print("sealing athletes' provider keys with a key this server generated for itself; " +
+			"set AI_CREDENTIALS_KEY to keep it out of the database instead")
 	}
 
 	aiStore := ai.NewStore(pool, keystore, ai.Settings{

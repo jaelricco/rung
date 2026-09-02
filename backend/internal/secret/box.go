@@ -1,9 +1,11 @@
 // Package secret seals the one thing this server stores on a user's behalf
 // that it must never hold in the clear: that user's own model provider key.
 //
-// The sealing key comes from the environment, not the database, so a dump of
-// the database — a backup left somewhere, a stolen volume — carries no usable
-// keys with it.
+// The sealing key comes from AI_CREDENTIALS_KEY when an operator sets one, in
+// which case a dump of the database — a backup left somewhere, a stolen volume
+// — carries no usable keys with it. When nobody sets one the server generates
+// and stores its own, which gives up that separation and keeps the rest: the
+// athletes' keys are still never written in the clear. See secret.Keystore.
 package secret
 
 import (
@@ -72,8 +74,8 @@ func (b *Box) Seal(plain string) ([]byte, error) {
 	return b.aead.Seal(nonce, nonce, []byte(plain), nil), nil
 }
 
-// Open reverses Seal. A key sealed under a different AI_CREDENTIALS_KEY fails
-// here rather than being handed to a provider as garbage.
+// Open reverses Seal. A key sealed under a different sealing key fails here
+// rather than being handed to a provider as garbage.
 func (b *Box) Open(sealed []byte) (string, error) {
 	size := b.aead.NonceSize()
 	if len(sealed) < size {
@@ -81,7 +83,22 @@ func (b *Box) Open(sealed []byte) (string, error) {
 	}
 	plain, err := b.aead.Open(nil, sealed[:size], sealed[size:], nil)
 	if err != nil {
-		return "", errors.New("the stored key could not be unsealed: is AI_CREDENTIALS_KEY the one it was sealed with?")
+		return "", errors.New("the stored key could not be unsealed: is this the sealing key it was sealed with?")
 	}
 	return string(plain), nil
+}
+
+// FromKey wraps 32 raw bytes. It is what a key generated and stored by this
+// server, rather than typed into the environment, comes back through.
+func FromKey(key []byte) (*Box, error) {
+	return New(base64.StdEncoding.EncodeToString(key))
+}
+
+// NewKey returns 32 random bytes, the size New expects.
+func NewKey() ([]byte, error) {
+	key := make([]byte, 32)
+	if _, err := rand.Read(key); err != nil {
+		return nil, err
+	}
+	return key, nil
 }

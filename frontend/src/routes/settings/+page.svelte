@@ -91,8 +91,8 @@
 
 	{#if account && !account.keystore_ready}
 		<div class="notice error">
-			This server has no AI_CREDENTIALS_KEY set, so it cannot store keys safely yet. Nothing can be
-			connected until the operator sets one.
+			This server can't store keys safely right now, so nothing can be connected. That's a fault
+			on our side, not yours.
 		</div>
 	{/if}
 
@@ -163,8 +163,20 @@
 			</p>
 		</div>
 
-		<button onclick={save} disabled={busy || !account?.keystore_ready}>
-			{busy ? 'Checking with the provider' : connection && !apiKey ? 'Save model' : 'Connect'}
+		<button
+			onclick={save}
+			disabled={busy || !account?.keystore_ready}
+			title={account && !account.keystore_ready
+				? "This server can't store keys right now, so there is nothing to connect to."
+				: ''}
+		>
+			{busy
+				? 'Checking with the provider'
+				: account && !account.keystore_ready
+					? 'Unavailable'
+					: connection && !apiKey
+						? 'Save model'
+						: 'Connect'}
 		</button>
 	</div>
 

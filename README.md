@@ -52,9 +52,9 @@ backup cron installed with 14-day retention.
 
 No model API key goes anywhere near the server config. There isn't one: each
 athlete connects their own Anthropic or OpenAI account in the app, and their
-provider bills them for what they used. The only AI secret the server holds is
-`AI_CREDENTIALS_KEY`, which seals those keys at rest and which setup generates
-for you.
+provider bills them for what they used. Nothing has to be configured for that
+to work — the secret that seals their keys at rest is generated on first start
+unless you set `AI_CREDENTIALS_KEY` yourself.
 
 ### Creating it: scripted
 
@@ -404,10 +404,19 @@ request is simply missing the one thing only they can supply.
 The key is verified before it is stored: `Store.Connect` asks the provider for
 the chosen model's own record, which costs no tokens and catches a typo on the
 settings page rather than ten minutes into a plan. What is stored is sealed
-with AES-GCM under `AI_CREDENTIALS_KEY` from the environment, so a database
-backup carries no usable keys. Only the last four characters are ever shown
-back. Changing `AI_CREDENTIALS_KEY` makes every stored key unreadable and every
-athlete reconnects.
+with AES-GCM, and only the last four characters are ever shown back.
+
+The sealing key needs no configuration. `AI_CREDENTIALS_KEY` still wins when
+it is set, and that is the stronger arrangement — the key stays out of the
+database, so a backup carries ciphertext and nothing that opens it. With the
+variable empty the server generates a key on first start and keeps it in
+`server_secrets`, which is weaker in exactly that one way and is the difference
+between coaching working out of the box and waiting on one more step in a
+`.env`. The alternative to a generated key was never a hand-managed one; it was
+storing other people's API keys in the clear. Two containers starting together
+agree on one key by insert-on-conflict, because two would leave half the
+athletes unable to open their own credential. Changing or dropping the key
+makes every stored key unreadable, and athletes reconnect.
 
 **Both providers are spoken natively.** `internal/ai/client.go` holds
 everything that is not provider-specific — ceilings, refusals, progress,
