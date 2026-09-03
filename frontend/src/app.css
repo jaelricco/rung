@@ -1,23 +1,66 @@
 /* Steel and chalk. The interface is a training instrument, so numbers are set
    in mono and given room, and the only saturated colour is the amber used on
-   equipment markings. */
+   equipment markings.
+
+   Two palettes now, one instrument. Dark is the original: a gym at six in the
+   morning, or a phone in a rack between sets. Light is its daylight twin —
+   paper and graphite — and keeps the same amber, deepened enough to stay
+   legible against white. Which one is used is decided once, in the inline
+   script in app.html, and written onto <html> as data-theme; nothing below
+   asks the browser about it again.
+
+   Three typefaces, each with one job. Archivo sets the headings, because a
+   heading is signage. Inter sets everything a person reads or types, which is
+   what it is drawn for. IBM Plex Mono sets numbers, micro-labels and anything
+   in a column, so figures line up and never reflow between renders. */
 
 :root {
+	color-scheme: light;
+
+	--ink: #f5f6f3;
+	--panel: #ffffff;
+	--panel-lift: #ebeee9;
+	--line: #ccd3cb;
+	--chalk: #12191b;
+	--muted: #5a6a6d;
+	/* A day with nothing scheduled: still drawn, just quieter than the rest. */
+	--rest: #eef0ec;
+
+	/* Amber does two different jobs and needs two values to do them in
+	   daylight: one that fills a shape, and one that can be read as text. */
+	--signal: #e8930a;
+	--signal-text: #8a5300;
+	--on-signal: #1a1305;
+
+	--good: #1c7a4c;
+	--bad: #c0392b;
+
+	--display: 'Archivo', system-ui, sans-serif;
+	--sans: 'Inter', system-ui, -apple-system, sans-serif;
+	--mono: 'IBM Plex Mono', ui-monospace, monospace;
+
+	--gap: 1.5rem;
+	--radius: 3px;
+	--nav: 15.5rem;
+}
+
+:root[data-theme='dark'] {
+	color-scheme: dark;
+
 	--ink: #0a1012;
 	--panel: #111a1d;
 	--panel-lift: #162126;
 	--line: #26343a;
 	--chalk: #e9efec;
 	--muted: #7c9296;
+	--rest: #0c1417;
+
 	--signal: #ffb300;
+	--signal-text: #ffb300;
+	--on-signal: #17140a;
+
 	--good: #7bd389;
 	--bad: #ff6b57;
-
-	--display: 'Archivo', system-ui, sans-serif;
-	--mono: 'IBM Plex Mono', ui-monospace, monospace;
-
-	--gap: 1.5rem;
-	--radius: 3px;
 }
 
 * {
@@ -29,7 +72,7 @@ body {
 	margin: 0;
 	background: var(--ink);
 	color: var(--chalk);
-	font-family: var(--display);
+	font-family: var(--sans);
 	font-size: 16px;
 	line-height: 1.55;
 	-webkit-font-smoothing: antialiased;
@@ -45,14 +88,30 @@ a:hover {
 }
 
 :focus-visible {
-	outline: 2px solid var(--signal);
+	outline: 2px solid var(--signal-text);
 	outline-offset: 2px;
+}
+
+/* --- the frame: navigation down the left, the page to the right of it ---
+
+   The nav is a column because the app is a set of instruments rather than a
+   sequence of steps: eight destinations, all of them equal, all of them
+   visible at once without competing with the page heading for the top of the
+   screen. Below the breakpoint there is no room for a column, so it becomes a
+   drawer behind a bar. */
+.app {
+	display: grid;
+	grid-template-columns: var(--nav) minmax(0, 1fr);
+	align-items: start;
+}
+.app > main {
+	min-width: 0;
 }
 
 .shell {
 	max-width: 1400px;
 	margin: 0 auto;
-	padding: 0 1.25rem 5rem;
+	padding: 0 1.75rem 5rem;
 }
 
 /* Reading text does not want 1400px of line length, and neither does a form
@@ -98,6 +157,7 @@ a:hover {
 h1,
 h2,
 h3 {
+	font-family: var(--display);
 	font-weight: 800;
 	letter-spacing: -0.02em;
 	margin: 0;
@@ -138,38 +198,212 @@ h2 {
 	color: var(--muted);
 }
 
-/* --- topbar --- */
-.topbar {
+/* --- the side navigation --- */
+.sidenav {
+	position: sticky;
+	top: 0;
+	z-index: 20;
 	display: flex;
-	align-items: baseline;
-	gap: 1.25rem;
-	padding: 1.25rem 0;
-	border-bottom: 1px solid var(--line);
-	flex-wrap: wrap;
+	flex-direction: column;
+	height: 100vh;
+	height: 100dvh;
+	padding: 1.5rem 1rem 1.1rem 1.25rem;
+	background: var(--panel);
+	border-right: 1px solid var(--line);
+	overflow-y: auto;
 }
-.topbar .mark {
+
+.sidenav .mark {
+	font-family: var(--display);
 	font-weight: 800;
 	letter-spacing: -0.03em;
-	font-size: 1.1rem;
-}
-.topbar nav {
-	display: flex;
-	gap: 1rem;
-	font-size: 0.9rem;
-	flex-wrap: wrap;
-}
-.topbar nav a {
-	text-decoration: none;
-	color: var(--muted);
-	padding-bottom: 2px;
-	border-bottom: 2px solid transparent;
-}
-.topbar nav a[aria-current='page'] {
+	font-size: 1.35rem;
+	line-height: 1;
 	color: var(--chalk);
-	border-bottom-color: var(--signal);
+	text-decoration: none;
+	display: block;
 }
-.topbar .spacer {
-	margin-left: auto;
+.sidenav .mark .sub {
+	display: block;
+	margin-top: 0.35rem;
+	font-family: var(--mono);
+	font-size: 0.62rem;
+	font-weight: 400;
+	letter-spacing: 0.18em;
+	text-transform: uppercase;
+	color: var(--muted);
+}
+
+.sidenav nav {
+	display: flex;
+	flex-direction: column;
+	gap: 1.4rem;
+	margin-top: 1.6rem;
+}
+.navgroup {
+	display: flex;
+	flex-direction: column;
+	gap: 1px;
+}
+.navgroup > .eyebrow {
+	font-size: 0.62rem;
+	letter-spacing: 0.18em;
+	margin: 0 0 0.5rem 0.55rem;
+}
+
+/* A destination is a full-width target with the amber marking down its left
+   edge when you are standing on it — the same inset the calendar uses for
+   today. */
+.navgroup a {
+	display: block;
+	padding: 0.42rem 0.6rem 0.42rem 0.55rem;
+	border-radius: var(--radius);
+	font-size: 0.9rem;
+	color: var(--muted);
+	text-decoration: none;
+	border-left: 2px solid transparent;
+}
+.navgroup a:hover {
+	color: var(--chalk);
+	background: var(--panel-lift);
+}
+.navgroup a[aria-current='page'] {
+	color: var(--chalk);
+	background: var(--panel-lift);
+	border-left-color: var(--signal);
+	font-weight: 600;
+}
+
+/* Everything about the athlete rather than the training sits at the bottom,
+   pushed there so it stays put however long the list above grows. */
+.sidenav .foot {
+	margin-top: auto;
+	padding-top: 1.4rem;
+}
+.sidenav .who {
+	font-size: 0.85rem;
+	margin: 0 0 0.15rem;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+/* The palette control: three states, because "follow my system" is a real
+   answer and not the absence of one. */
+.themepick {
+	display: flex;
+	gap: 2px;
+	margin: 0.9rem 0 0.7rem;
+	padding: 2px;
+	border: 1px solid var(--line);
+	border-radius: var(--radius);
+}
+.themepick button {
+	flex: 1;
+	padding: 0.3rem 0;
+	font-family: var(--mono);
+	font-size: 0.62rem;
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
+	background: none;
+	border: none;
+	border-radius: 2px;
+	color: var(--muted);
+	cursor: pointer;
+}
+.themepick button:hover:not(:disabled) {
+	color: var(--chalk);
+	filter: none;
+}
+.themepick button[aria-pressed='true'] {
+	background: var(--panel-lift);
+	color: var(--signal-text);
+}
+
+/* --- the drawer, below the breakpoint --- */
+.mobilebar {
+	display: none;
+	position: sticky;
+	top: 0;
+	z-index: 30;
+	align-items: center;
+	gap: 0.9rem;
+	padding: 0.8rem 1.1rem;
+	background: var(--panel);
+	border-bottom: 1px solid var(--line);
+}
+.mobilebar .mark {
+	font-family: var(--display);
+	font-weight: 800;
+	letter-spacing: -0.03em;
+	font-size: 1.05rem;
+}
+.navtoggle {
+	background: none;
+	border: 1px solid var(--line);
+	color: var(--chalk);
+	padding: 0.35rem 0.6rem;
+	line-height: 1;
+	font-size: 1.05rem;
+}
+.navtoggle:hover:not(:disabled) {
+	border-color: var(--signal);
+	filter: none;
+}
+.nav-scrim {
+	display: none;
+}
+
+@media (max-width: 900px) {
+	.app {
+		grid-template-columns: minmax(0, 1fr);
+	}
+	.mobilebar {
+		display: flex;
+	}
+	.sidenav {
+		position: fixed;
+		inset: 0 auto 0 0;
+		z-index: 60;
+		width: min(18rem, 82vw);
+		height: 100%;
+		transform: translateX(-100%);
+		transition: transform 0.18s ease;
+		border-right: 1px solid var(--line);
+	}
+	.sidenav.open {
+		transform: none;
+	}
+	.sidenav .foot {
+		padding-bottom: 1rem;
+	}
+	.nav-scrim.open {
+		display: block;
+		position: fixed;
+		inset: 0;
+		z-index: 50;
+		background: rgba(0, 0, 0, 0.45);
+		border: none;
+	}
+	.shell {
+		padding: 0 1.1rem 4rem;
+	}
+}
+
+/* A keyboard lands here first, so it can get past eight links to the page. */
+.skip {
+	position: absolute;
+	left: -9999px;
+}
+.skip:focus {
+	left: 1rem;
+	top: 0.6rem;
+	z-index: 70;
+	background: var(--panel);
+	border: 1px solid var(--signal);
+	border-radius: var(--radius);
+	padding: 0.5rem 0.8rem;
+	font-size: 0.85rem;
 }
 
 /* --- panels --- */
@@ -240,7 +474,7 @@ h2 {
 }
 /* A day with nothing scheduled is still a day: drawn, dimmer, never skipped. */
 .cal-cell.rest {
-	background: #0c1417;
+	background: var(--rest);
 }
 .cal-cell.today {
 	box-shadow: inset 0 2px 0 var(--signal);
@@ -257,7 +491,7 @@ h2 {
 	font-variant-numeric: tabular-nums;
 }
 .cal-cell.today .cal-date {
-	color: var(--signal);
+	color: var(--signal-text);
 	opacity: 1;
 	font-weight: 600;
 }
@@ -397,7 +631,12 @@ h2 {
 	background: var(--signal);
 }
 
-/* --- forms --- */
+/* --- forms ---
+
+   The label above a field is a micro-label, so it stays in mono. What goes
+   *into* the field is a name, an email address or a sentence about a session,
+   so it is set in the text face like any other writing. Only the fields that
+   hold figures keep mono, where lining up matters. */
 label {
 	display: block;
 	font-family: var(--mono);
@@ -417,14 +656,30 @@ textarea {
 	color: var(--chalk);
 	border-radius: var(--radius);
 	padding: 0.6rem 0.7rem;
-	font-family: var(--mono);
+	font-family: var(--sans);
 	font-size: 0.95rem;
+}
+input[type='number'],
+input[type='date'],
+input[type='time'],
+input[type='datetime-local'],
+input[type='password'],
+input.mono,
+select.mono,
+textarea.mono {
+	font-family: var(--mono);
+	font-variant-numeric: tabular-nums;
 }
 input:focus,
 select:focus,
 textarea:focus {
-	border-color: var(--signal);
+	border-color: var(--signal-text);
+	box-shadow: inset 0 0 0 1px var(--signal-text);
 	outline: none;
+}
+::placeholder {
+	color: var(--muted);
+	opacity: 0.8;
 }
 
 .field {
@@ -440,12 +695,12 @@ textarea:focus {
 }
 
 button {
-	font-family: var(--display);
+	font-family: var(--sans);
 	font-weight: 600;
 	font-size: 0.9rem;
-	letter-spacing: 0.02em;
+	letter-spacing: 0.01em;
 	background: var(--signal);
-	color: #17140a;
+	color: var(--on-signal);
 	border: 1px solid var(--signal);
 	border-radius: var(--radius);
 	padding: 0.6rem 1.1rem;
@@ -497,10 +752,15 @@ button.link {
 	font-size: 0.92rem;
 }
 
+/* What a model wrote back, which is the longest stretch of reading in the
+   app: text face, a line height meant for paragraphs, and a column narrow
+   enough to keep your place in. */
 .prose {
 	white-space: pre-wrap;
+	font-family: var(--sans);
 	font-size: 0.95rem;
-	line-height: 1.65;
+	line-height: 1.7;
+	max-width: 74ch;
 }
 
 table {

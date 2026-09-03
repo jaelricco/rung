@@ -415,7 +415,7 @@
 	}
 	.cal-add:hover {
 		border-color: var(--signal);
-		color: var(--signal);
+		color: var(--signal-text);
 		filter: none;
 	}
 	@media (hover: none) {
