@@ -74,6 +74,9 @@ func main() {
 		Thinking:          cfg.AIThinking,
 	})
 	aiHandler := ai.NewHandler(aiStore, pool, trainingSvc)
+	// An athlete can ask for their key to go when they do. Auth owns signing
+	// out; the AI store owns the key; this is the one line that joins them.
+	authSvc.OnSignOut(aiStore.ForgetOnSignOut)
 	// The deterministic planner. It shares nothing with the AI handler except
 	// the plan schema, and it needs no model account of any kind — which is
 	// the point: it is what answers when everything else cannot.
@@ -113,6 +116,7 @@ func main() {
 		"GET /api/v1/me/ai":                     aiHandler.Connection,
 		"GET /api/v1/me/ai/usage":               aiHandler.Usage,
 		"PUT /api/v1/me/ai":                     aiHandler.Connect,
+		"PATCH /api/v1/me/ai":                   aiHandler.Switches,
 		"DELETE /api/v1/me/ai":                  aiHandler.Disconnect,
 		"GET /api/v1/workouts":                  trainingSvc.ListWorkouts,
 		"POST /api/v1/workouts":                 trainingSvc.CreateWorkout,

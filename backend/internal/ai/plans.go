@@ -254,6 +254,8 @@ func notConnectedReason(err error) string {
 	switch {
 	case errors.Is(err, ErrNoCredentials):
 		return "No AI account is connected, so nothing was sent to a model. Connect one under Settings if you want a model to refine this."
+	case errors.Is(err, ErrPaused):
+		return "Your AI connector is switched off, so nothing was sent to a model. Switch it back on under Settings whenever you want one."
 	case errors.Is(err, ErrNoKeystore):
 		return "The server cannot open stored API keys at the moment, so nothing was sent to a model."
 	default:

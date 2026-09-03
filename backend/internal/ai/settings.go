@@ -78,6 +78,13 @@ func (h *Handler) Connect(w http.ResponseWriter, r *http.Request) {
 			httpx.Fail(w, http.StatusBadRequest, "Paste your API key to connect an account.")
 			return
 		}
+		if errors.Is(err, ErrPaused) {
+			// Checking a model costs one request to the provider, which is
+			// exactly what a switched-off connector is meant not to make.
+			httpx.Fail(w, http.StatusConflict,
+				"Switch the connector back on to change the model — checking it takes one request to your provider.")
+			return
+		}
 	} else {
 		conn, err = h.store.Connect(r.Context(), me.ID, in.Provider, in.APIKey, in.Model)
 	}
@@ -93,6 +100,39 @@ func (h *Handler) Connect(w http.ResponseWriter, r *http.Request) {
 		Connection:    &conn,
 		Providers:     Providers,
 		KeystoreReady: true,
+	})
+}
+
+type switchesRequest struct {
+	// Both are pointers so the page can send one switch without restating the
+	// other, and so "false" is distinguishable from "not mentioned".
+	Paused         *bool `json:"paused"`
+	ForgetOnLogout *bool `json:"forget_on_logout"`
+}
+
+// Switches flips the athlete's own two switches on an existing connection:
+// hold the key without spending it, and drop it at the next sign-out.
+func (h *Handler) Switches(w http.ResponseWriter, r *http.Request) {
+	var in switchesRequest
+	if !httpx.Decode(w, r, &in) {
+		return
+	}
+	me := auth.MustUser(r.Context())
+
+	conn, err := h.store.SetSwitches(r.Context(), me.ID, in.Paused, in.ForgetOnLogout)
+	if errors.Is(err, ErrNoCredentials) {
+		httpx.Fail(w, http.StatusBadRequest, "There is no connection to change. Connect an account first.")
+		return
+	}
+	if err != nil {
+		httpx.Fail(w, http.StatusInternalServerError, "Couldn't change that setting. Try again.")
+		return
+	}
+	httpx.JSON(w, http.StatusOK, connectionResponse{
+		Connected:     true,
+		Connection:    &conn,
+		Providers:     Providers,
+		KeystoreReady: h.store.Ready(),
 	})
 }
 
@@ -117,6 +157,8 @@ func FailNotConnected(w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, ErrNoCredentials):
 		httpx.Fail(w, StatusNoProvider, capitalise(ErrNoCredentials.Error())+".")
+	case errors.Is(err, ErrPaused):
+		httpx.Fail(w, StatusNoProvider, capitalise(ErrPaused.Error())+". Switch it back on under Settings.")
 	case errors.Is(err, ErrNoKeystore):
 		httpx.Fail(w, http.StatusServiceUnavailable, capitalise(ErrNoKeystore.Error())+".")
 	default:

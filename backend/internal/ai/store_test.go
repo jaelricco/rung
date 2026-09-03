@@ -178,3 +178,125 @@ func TestAStoreWithNoKeystoreRefusesEverything(t *testing.T) {
 		t.Fatalf("Connect: %v", err)
 	}
 }
+
+// Switching the connector off has to stop the spending, and it has to do it
+// before the key is unsealed — a paused connection should not have its key in
+// memory at all. Switching it back on must return the same connection, not
+// ask for the key again.
+func TestPausingHoldsTheKeyWithoutSpendingIt(t *testing.T) {
+	store, pool, userID := testStore(t, happyProvider())
+	ctx := context.Background()
+
+	if _, err := store.Connect(ctx, userID, ProviderAnthropic, "sk-ant-api03-secret-key-9876", "claude-sonnet-5"); err != nil {
+		t.Fatalf("Connect: %v", err)
+	}
+
+	off := true
+	conn, err := store.SetSwitches(ctx, userID, &off, nil)
+	if err != nil {
+		t.Fatalf("SetSwitches: %v", err)
+	}
+	if !conn.Paused {
+		t.Fatalf("connection = %+v", conn)
+	}
+
+	if _, err := store.ClientFor(ctx, userID); !errors.Is(err, ErrPaused) {
+		t.Fatalf("a paused connector still handed out a client: %v", err)
+	}
+	// Paused is not disconnected: the key is still here.
+	var stored int
+	if err := pool.QueryRow(ctx,
+		`select count(*) from user_ai_credentials where user_id = $1`, userID).Scan(&stored); err != nil {
+		t.Fatalf("count: %v", err)
+	}
+	if stored != 1 {
+		t.Fatalf("pausing deleted the key (%d rows)", stored)
+	}
+
+	on := false
+	if _, err := store.SetSwitches(ctx, userID, &on, nil); err != nil {
+		t.Fatalf("SetSwitches back on: %v", err)
+	}
+	if _, err := store.ClientFor(ctx, userID); err != nil {
+		t.Fatalf("after switching back on: %v", err)
+	}
+}
+
+// Each switch moves on its own. Sending one must not quietly reset the other,
+// which is the whole reason the request takes pointers.
+func TestOneSwitchLeavesTheOtherAlone(t *testing.T) {
+	store, _, userID := testStore(t, happyProvider())
+	ctx := context.Background()
+
+	if _, err := store.Connect(ctx, userID, ProviderAnthropic, "sk-ant-api03-secret-key-9876", "claude-sonnet-5"); err != nil {
+		t.Fatalf("Connect: %v", err)
+	}
+
+	yes := true
+	if _, err := store.SetSwitches(ctx, userID, nil, &yes); err != nil {
+		t.Fatalf("set forget: %v", err)
+	}
+	conn, err := store.SetSwitches(ctx, userID, &yes, nil)
+	if err != nil {
+		t.Fatalf("set paused: %v", err)
+	}
+	if !conn.Paused || !conn.ForgetOnLogout {
+		t.Fatalf("connection = %+v", conn)
+	}
+
+	// Reconnecting is an athlete saying "make this work", so it clears the
+	// pause — but it is not a change of mind about the logout preference.
+	conn, err = store.Connect(ctx, userID, ProviderAnthropic, "sk-ant-api03-secret-key-9876", "claude-sonnet-5")
+	if err != nil {
+		t.Fatalf("reconnect: %v", err)
+	}
+	if conn.Paused {
+		t.Fatal("reconnecting left the connector switched off")
+	}
+	if !conn.ForgetOnLogout {
+		t.Fatal("reconnecting forgot the logout preference")
+	}
+}
+
+// Signing out drops the key only for the athlete who asked for that, and it
+// must be harmless for everyone else — it runs on every sign-out.
+func TestSignOutForgetsOnlyTheKeysThatAskedToBeForgotten(t *testing.T) {
+	store, _, userID := testStore(t, happyProvider())
+	ctx := context.Background()
+
+	if _, err := store.Connect(ctx, userID, ProviderAnthropic, "sk-ant-api03-secret-key-9876", "claude-sonnet-5"); err != nil {
+		t.Fatalf("Connect: %v", err)
+	}
+
+	// Switch off, not set: signing out leaves it be.
+	if err := store.ForgetOnSignOut(ctx, userID); err != nil {
+		t.Fatalf("ForgetOnSignOut: %v", err)
+	}
+	if _, ok, _ := store.Connection(ctx, userID); !ok {
+		t.Fatal("a key that had not asked to be forgotten was deleted at sign-out")
+	}
+
+	yes := true
+	if _, err := store.SetSwitches(ctx, userID, nil, &yes); err != nil {
+		t.Fatalf("set forget: %v", err)
+	}
+	if err := store.ForgetOnSignOut(ctx, userID); err != nil {
+		t.Fatalf("ForgetOnSignOut: %v", err)
+	}
+	if _, ok, _ := store.Connection(ctx, userID); ok {
+		t.Fatal("the key survived a sign-out it was meant to be dropped at")
+	}
+	// And it stays harmless once there is nothing left to forget.
+	if err := store.ForgetOnSignOut(ctx, userID); err != nil {
+		t.Fatalf("ForgetOnSignOut with no row: %v", err)
+	}
+}
+
+// Nothing to switch is a plain refusal, not a row conjured into existence.
+func TestSwitchesNeedAConnectionToActOn(t *testing.T) {
+	store, _, userID := testStore(t, happyProvider())
+	yes := true
+	if _, err := store.SetSwitches(context.Background(), userID, &yes, nil); !errors.Is(err, ErrNoCredentials) {
+		t.Fatalf("SetSwitches with no connection: %v", err)
+	}
+}

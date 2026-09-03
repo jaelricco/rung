@@ -411,6 +411,20 @@ the model's pass over the plan, the review, the recovery guidance and the event
 search. For scale, a full plan plus two reviews on the default model came to
 about 26 cents in testing.
 
+**Two switches on a connection.** Neither needs the key pasted again, and
+neither calls the provider, so both answer immediately. *Switch the connector
+off* holds the key sealed but spends nothing: `credential` refuses with
+`ErrPaused` before it unseals anything, so a paused connection does not have
+its key in memory, and the coaching endpoints answer 428 while plan generation
+falls back to the app's own planner and says why. Reconnecting clears the
+pause, since pasting a key means wanting it to work. *Forget the key when I
+sign out* is for a shared machine: `Logout` deletes the session row `returning
+user_id` and hands that to a sign-out hook the AI store registers at startup,
+which drops the row only for athletes who asked. The hook is best effort — a
+failure is logged and the athlete is still signed out — and it fires only on a
+real sign-out, not on a session that merely expires, which the settings page
+says.
+
 **Every athlete brings their own model account.** The server holds no API key
 of its own and pays for nothing. Under Settings an athlete connects a key from
 Anthropic or OpenAI; every plan, review, recovery answer and event search they
@@ -593,6 +607,7 @@ POST   /api/v1/workouts          {performed_at?, notes, rpe, sets[]}
 DELETE /api/v1/workouts/{id}
 GET    /api/v1/me/ai
 PUT    /api/v1/me/ai             {provider, api_key, model}  — key omitted switches model
+PATCH  /api/v1/me/ai             {paused?, forget_on_logout?} — either switch, neither calls the provider
 DELETE /api/v1/me/ai
 GET    /api/v1/level
 GET    /api/v1/baseline
