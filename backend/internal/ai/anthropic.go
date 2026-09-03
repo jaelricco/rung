@@ -21,7 +21,12 @@ const anthropicBase = "https://api.anthropic.com"
 // nesting.
 const defaultSearchToolVersion = "web_search_20250305"
 
-const defaultAnthropicModel = "claude-opus-5"
+// Sonnet rather than Opus. The model's job here is to improve a plan the app
+// has already written and to put a few hundred words of review together — not
+// to invent training from nothing — and the athlete pays for it out of their
+// own pocket. Opus costs two and a half times as much per token and is one
+// click away in the picker for anyone who wants it.
+const defaultAnthropicModel = "claude-sonnet-5"
 
 type anthropicAPI struct {
 	key           string

@@ -7,6 +7,7 @@
 	// two named products is a choice you make by looking, not by opening a
 	// dropdown and reading model strings.
 	let account = $state(null); // { connected, connection, providers, keystore_ready }
+	let usage = $state(null); // { month, total, since }
 	let error = $state(null);
 	let busy = $state(false);
 	let saved = $state('');
@@ -42,9 +43,21 @@
 				model = next.providers[0].default_model;
 			}
 			account = next;
+			// What it has actually cost so far, which is the question anyone
+			// asks before pasting a key. Only worth asking once connected.
+			if (next.connected) {
+				usage = await api.get('/me/ai/usage').catch(() => null);
+			}
 		} catch (e) {
 			error = e;
 		}
+	}
+
+	// "about $0.31", or "at least" when a model in the window has no published
+	// price and the figure is therefore incomplete.
+	function spent(window) {
+		if (!window?.estimated) return null;
+		return `${window.priced ? 'about' : 'at least'} ${window.estimated}`;
 	}
 
 	$effect(() => {
@@ -147,6 +160,31 @@
 				</div>
 				<button class="ghost" onclick={disconnect} disabled={busy}>Disconnect</button>
 			</div>
+
+			{#if usage && usage.total.calls > 0}
+				<dl class="usage">
+					<div>
+						<dt>This month</dt>
+						<dd>
+							{usage.month.calls}
+							{usage.month.calls === 1 ? 'request' : 'requests'}
+							{#if spent(usage.month)}· {spent(usage.month)}{/if}
+						</dd>
+					</div>
+					<div>
+						<dt>{usage.since ? `Since ${shortDate(usage.since)}` : 'All time'}</dt>
+						<dd>
+							{usage.total.calls}
+							{usage.total.calls === 1 ? 'request' : 'requests'}
+							{#if spent(usage.total)}· {spent(usage.total)}{/if}
+						</dd>
+					</div>
+				</dl>
+				<p class="mono muted hint">
+					Estimated from published rates, from the tokens this app recorded. The figure that
+					counts is on your provider's own billing page.
+				</p>
+			{/if}
 		{/if}
 
 		<p class="eyebrow step">{connection ? 'Replace the connection' : 'Choose a provider'}</p>
@@ -167,6 +205,9 @@
 		{#if chosen}
 			<p class="caption">
 				Runs on your own {chosen.vendor} account, and is billed to you by {chosen.vendor}.
+				<strong>A {chosen.label} subscription does not pay for this</strong> — {chosen.vendor} bills
+				API use separately from it. A small top-up covers months of ordinary use, and the
+				cheapest model in the list is a fraction of the dearest.
 			</p>
 		{/if}
 
@@ -206,8 +247,8 @@
 					<option value={OTHER_MODEL}>Another model…</option>
 				</select>
 				<p class="mono muted hint">
-					The first is the strongest and the most expensive. A cheaper one is faster and costs you
-					less.
+					Cheapest first, dearest last. The default is sized for what the model does here — improve
+					a plan the app has already written — not for writing one from nothing.
 				</p>
 			{/if}
 		</div>
@@ -232,8 +273,10 @@
 		<Failure {error} style="margin-top:0.9rem" />
 
 		<p class="foot muted">
-			Without a connection the coaching features stay off; everything else — logging, the calendar,
-			your routines and the computed plan — works exactly the same.
+			You do not have to connect anything. Without a key the app still writes your training plans
+			itself, from your own records, and logging, the calendar, your routines and the baseline all
+			work unchanged. A key buys four things on top: the model's pass over the plan, the four-week
+			review, the recovery guidance, and the event search.
 		</p>
 	{/if}
 </section>
@@ -357,6 +400,29 @@
 	.hint {
 		font-size: 0.75rem;
 		margin: 0.4rem 0 0;
+	}
+	.usage {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+		gap: 0.6rem;
+		margin: 0.7rem 0 0;
+	}
+	.usage div {
+		border: 1px solid var(--line);
+		border-radius: var(--radius);
+		padding: 0.6rem 0.7rem;
+	}
+	.usage dt {
+		font-family: var(--mono);
+		font-size: 0.68rem;
+		text-transform: uppercase;
+		letter-spacing: 0.12em;
+		color: var(--muted);
+	}
+	.usage dd {
+		margin: 0.25rem 0 0;
+		font-family: var(--mono);
+		font-size: 0.95rem;
 	}
 	.notice.ok {
 		margin-top: 0.9rem;

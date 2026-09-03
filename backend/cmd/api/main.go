@@ -111,6 +111,7 @@ func main() {
 		"GET /api/v1/me/logins":                 authSvc.LoginMethods,
 		"DELETE /api/v1/me/logins/{provider}":   authSvc.Unlink,
 		"GET /api/v1/me/ai":                     aiHandler.Connection,
+		"GET /api/v1/me/ai/usage":               aiHandler.Usage,
 		"PUT /api/v1/me/ai":                     aiHandler.Connect,
 		"DELETE /api/v1/me/ai":                  aiHandler.Disconnect,
 		"GET /api/v1/workouts":                  trainingSvc.ListWorkouts,

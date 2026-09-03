@@ -393,6 +393,24 @@ instead of signing in, and an account's last remaining way in cannot be
 unlinked, so `PUT /me/password` is how an athlete who only ever signed in with
 a provider stops depending on it.
 
+**What it costs the athlete, said out loud.** A Claude Pro or ChatGPT Plus
+subscription does not pay for any of this: both companies bill API use
+separately from the consumer plan, and an athlete with Pro still tops up an API
+balance. Since that is the real barrier to anyone connecting anything, the app
+does three things about it rather than hoping nobody notices. The default model
+is the middle tier, not the top one — the model's job here is to improve a plan
+the app has already written, and the picker runs cheapest first with the
+dearest last. `GET /me/ai/usage` totals the athlete's own rows in `ai_calls`
+into requests and an estimated spend for the month and for all time, which the
+settings page shows next to the connection; the rate table in `prices.go` is a
+dated copy for display only, an unlisted model contributes tokens but no money
+rather than a wrong figure, and the page points at the provider's billing page
+for what actually counts. And the card says plainly that connecting is
+optional: without a key the app still writes the plans itself, and a key buys
+the model's pass over the plan, the review, the recovery guidance and the event
+search. For scale, a full plan plus two reviews on the default model came to
+about 26 cents in testing.
+
 **Every athlete brings their own model account.** The server holds no API key
 of its own and pays for nothing. Under Settings an athlete connects a key from
 Anthropic or OpenAI; every plan, review, recovery answer and event search they
