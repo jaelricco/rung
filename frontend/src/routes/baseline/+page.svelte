@@ -171,7 +171,7 @@
 	The plan will not prescribe a movement you have nothing to perform it on. Leave this untouched and
 	it assumes you have the usual bar and bars.
 </p>
-<div class="grid">
+<div class="grid roomy">
 	{#each equipment as item (item.key)}
 		<label
 			class="choice panel"
@@ -184,7 +184,7 @@
 				style="width:auto;margin-top:0.2rem"
 			/>
 			<span>
-				<span style="font-weight:600">{item.label}</span>
+				<span class="item-title">{item.label}</span>
 				<span class="note" style="display:block">{item.note}</span>
 			</span>
 		</label>
@@ -226,7 +226,7 @@
 			{#each core as question (question.exercise_slug)}
 				<tr>
 					<td>
-						<label for={question.exercise_slug} style="text-transform:none;letter-spacing:0">
+						<label class="choice" for={question.exercise_slug}>
 							{question.prompt}
 						</label>
 					</td>
@@ -262,7 +262,7 @@
 			{#each ladder as question (question.exercise_slug)}
 				<tr>
 					<td>
-						<label for={question.exercise_slug} style="text-transform:none;letter-spacing:0">
+						<label class="choice" for={question.exercise_slug}>
 							{question.prompt}
 						</label>
 					</td>

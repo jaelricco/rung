@@ -16,7 +16,7 @@
 </script>
 
 {#if session?.warmup_protocols?.length}
-	<p class="mono muted warmup">Warm-up: {session.warmup_protocols.join(', ')}</p>
+	<p class="muted warmup">Warm-up: {session.warmup_protocols.join(', ')}</p>
 {/if}
 
 <table>

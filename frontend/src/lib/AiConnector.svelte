@@ -180,7 +180,7 @@
 						</dd>
 					</div>
 				</dl>
-				<p class="mono muted hint">
+				<p class="note hint">
 					Estimated from published rates, from the tokens this app recorded. The figure that
 					counts is on your provider's own billing page.
 				</p>
@@ -194,7 +194,7 @@
 				<button class="tile" class:on={provider === p.id} onclick={() => pickProvider(p.id)}>
 					<span class="glyph" aria-hidden="true">{p.id === 'anthropic' ? '✳' : '◍'}</span>
 					<span class="names">
-						<strong>{p.label}</strong>
+						<strong class="item-title">{p.label}</strong>
 						<span class="vendor">{p.vendor}</span>
 					</span>
 					{#if provider === p.id}<span class="tick" aria-hidden="true">✓</span>{/if}
@@ -221,8 +221,8 @@
 				placeholder={chosen ? `${chosen.key_prefix}…` : ''}
 			/>
 			{#if chosen}
-				<p class="mono muted hint">
-					Make one at <a href={chosen.keys_url} target="_blank" rel="noreferrer noopener"
+				<p class="note hint">
+					Make one at <a class="mono" href={chosen.keys_url} target="_blank" rel="noreferrer noopener"
 						>{chosen.keys_url}</a
 					>. Stored encrypted, and never shown back to you.
 				</p>
@@ -233,7 +233,7 @@
 			<label for="model">Model</label>
 			{#if typedModel}
 				<input id="model" bind:value={model} placeholder="model name" autocomplete="off" />
-				<p class="mono muted hint">
+				<p class="note hint">
 					Any model your account can reach; it is checked before anything is saved.
 					<button class="link" onclick={() => ((typedModel = false), (model = chosen?.default_model ?? ''))}>
 						Back to the list
@@ -246,7 +246,7 @@
 					{/each}
 					<option value={OTHER_MODEL}>Another model…</option>
 				</select>
-				<p class="mono muted hint">
+				<p class="note hint">
 					Cheapest first, dearest last. The default is sized for what the model does here — improve
 					a plan the app has already written — not for writing one from nothing.
 				</p>

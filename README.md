@@ -537,13 +537,18 @@ text face and only the fields holding figures stay mono.
 **Small type is still type someone has to read.** The kicker over a section,
 the sentence under a heading and the line under a title in a card are the app's
 way of saying what a thing is, and all three were set small enough to be taken
-for leftovers rather than labels. `.eyebrow`, `.lede` and `.note` in
-`frontend/src/app.css` are the three sizes, used everywhere instead of a
+for leftovers rather than labels. `.eyebrow`, `.lede`, `.note` and `.item-title` in
+`frontend/src/app.css` are the four sizes, used everywhere instead of a
 font-size typed into a `style` attribute — which is what most of them were, at
-seven slightly different values. A label that wraps a checkbox and a sentence
-gets `.choice`: the rule for `label` dresses a micro-label above a field, and
-every page using one as a container had been undoing its case and its tracking
-inline while forgetting its typeface, leaving a paragraph set in mono.
+seven slightly different values. `.item-title` is the title of a card, a tile
+or a row, a step above the note it heads and set in the signage face: a title
+the same size as its own explanation reads as two sentences rather than as a
+hierarchy. A label whose content is a sentence rather than a
+name for the field gets `.choice`: the rule for `label` dresses a micro-label
+above a field, and every page using one otherwise had been undoing its case and
+its tracking inline while forgetting its typeface, leaving a paragraph set in
+mono. That is the recurring fault worth watching for — mono is for figures and
+labels, and a full sentence in it reads as a value rather than as prose.
 
 ---
 

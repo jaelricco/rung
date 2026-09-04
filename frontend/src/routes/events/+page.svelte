@@ -82,13 +82,15 @@
 
 	function badgeColour(confidence) {
 		if (confidence === 'date_confirmed' || confidence === 'human_confirmed') return 'var(--good)';
-		return 'var(--signal)';
+		// The badge is read, not filled, so it takes the amber that can be read
+		// against paper as well as against steel.
+		return 'var(--signal-text)';
 	}
 </script>
 
 <p class="eyebrow" style="margin-top:2rem">Competitions</p>
 <h1>Find an event</h1>
-<p class="muted" style="margin-top:0.6rem;max-width:58ch">
+<p class="muted column" style="margin-top:0.6rem">
 	Every date here was read off a live page and then checked against that page again by the server.
 	The source is shown so you can look yourself.
 </p>
@@ -178,7 +180,7 @@
 							? ` – ${event.ends_on}`
 							: ''}
 					</p>
-					<p style="margin:0;font-weight:600">{event.name}</p>
+					<p class="item-title" style="margin:0">{event.name}</p>
 					<span class="spacer" style="margin-left:auto"></span>
 					<span class="eyebrow" style="color:{badgeColour(event.confidence)}">
 						{LABELS[event.confidence] ?? event.confidence}
