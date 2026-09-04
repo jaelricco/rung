@@ -398,7 +398,7 @@
 		vertical-align: 0.1rem;
 	}
 	.tag.on {
-		color: var(--signal);
+		color: var(--signal-text);
 		border-color: var(--signal);
 	}
 	.day {

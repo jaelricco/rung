@@ -77,7 +77,7 @@
 	.pct {
 		font-size: 1.05rem;
 		font-weight: 600;
-		color: var(--signal);
+		color: var(--signal-text);
 		font-variant-numeric: tabular-nums;
 	}
 

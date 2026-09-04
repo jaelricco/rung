@@ -505,6 +505,35 @@ weeks of appointments.
 serves them by distance. The map has real data on day one instead of an empty
 table.
 
+**The interface is drawn in two palettes and one set of tokens.**
+`frontend/src/app.css` declares every colour once as a custom property and
+nothing else in the app names a colour. Dark is the original — steel and
+chalk, for a phone in a rack between sets — and light is its daylight twin,
+paper and graphite, keeping the same amber. Which one is used is decided once,
+by the inline script in `app.html`, and written onto `<html>` as `data-theme`
+before the first paint, so there is no flash of the wrong instrument on load.
+The athlete's choice is one of three: light, dark, or follow the machine, which
+is the default and keeps following it as it changes. Amber needs two tokens
+rather than one, because amber that fills a button and amber that has to be
+read as text are not the same colour in daylight: `--signal` fills, and
+`--signal-text` is read.
+
+**Navigation runs down the left, not across the top.** The app is eight
+instruments rather than eight steps, so they sit in a column where all of them
+are visible at once and none of them competes with the page heading for the top
+of the screen — split into what you do this week and what you set once. Below
+900px there is no room for a column, so the same list becomes a drawer behind a
+bar, kept out of the tab order while it is shut.
+
+**Three typefaces, each with one job.** Archivo sets headings, because a
+heading is signage. Inter sets everything a person reads or types — body copy,
+buttons, form fields, and the coach's written answer, which is the longest
+stretch of reading in the app. IBM Plex Mono is kept for what it is good at:
+figures, micro-labels and anything in a column, so numbers line up and never
+reflow between renders. What a field *holds* decides its face rather than the
+label above it, so an email address or a note about a session is set in the
+text face and only the fields holding figures stay mono.
+
 ---
 
 ## How event discovery is kept honest

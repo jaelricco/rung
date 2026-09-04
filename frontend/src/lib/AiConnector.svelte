@@ -305,7 +305,7 @@
 		height: 2rem;
 		border-radius: var(--radius);
 		background: var(--panel-lift);
-		color: var(--signal);
+		color: var(--signal-text);
 	}
 	.chevron {
 		background: none;
@@ -356,7 +356,7 @@
 		border-radius: var(--radius);
 		padding: 0.8rem 0.9rem;
 		color: var(--chalk);
-		font-family: var(--display);
+		font-family: var(--sans);
 		cursor: pointer;
 	}
 	.tile:hover {
@@ -374,7 +374,7 @@
 		height: 2.1rem;
 		border-radius: var(--radius);
 		background: var(--panel);
-		color: var(--signal);
+		color: var(--signal-text);
 		font-size: 1.05rem;
 	}
 	.names {
@@ -389,7 +389,7 @@
 		color: var(--muted);
 	}
 	.tick {
-		color: var(--signal);
+		color: var(--signal-text);
 		font-size: 1.1rem;
 	}
 	.caption {

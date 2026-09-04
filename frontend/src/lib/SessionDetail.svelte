@@ -77,7 +77,7 @@
 		gap: 0.15rem 0.9rem;
 	}
 	.detail .next {
-		color: var(--signal);
+		color: var(--signal-text);
 		opacity: 0.85;
 	}
 	.cooldown {

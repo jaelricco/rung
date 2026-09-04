@@ -109,7 +109,7 @@
 		display: block;
 		text-align: center;
 		text-decoration: none;
-		font-family: var(--display);
+		font-family: var(--sans);
 		font-weight: 600;
 		font-size: 0.9rem;
 		color: var(--chalk);
