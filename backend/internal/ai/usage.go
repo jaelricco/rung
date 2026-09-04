@@ -72,7 +72,9 @@ func (h *Handler) usageSince(ctx context.Context, userID string, since time.Time
 	var window usageWindow
 
 	rows, err := h.pool.Query(ctx, `
-		select model, count(*), coalesce(sum(input_tokens), 0), coalesce(sum(output_tokens), 0)
+		select model, count(*),
+		       coalesce(sum(input_tokens), 0), coalesce(sum(output_tokens), 0),
+		       coalesce(sum(cache_read_tokens), 0), coalesce(sum(cache_write_tokens), 0)
 		from ai_calls
 		where user_id = $1 and created_at >= $2
 		group by model`, userID, since)
@@ -88,18 +90,22 @@ func (h *Handler) usageSince(ctx context.Context, userID string, since time.Time
 	)
 	for rows.Next() {
 		var (
-			model   string
-			calls   int64
-			in, out int64
+			model                 string
+			calls                 int64
+			in, out               int64
+			cacheRead, cacheWrite int64
 		)
-		if err := rows.Scan(&model, &calls, &in, &out); err != nil {
+		if err := rows.Scan(&model, &calls, &in, &out, &cacheRead, &cacheWrite); err != nil {
 			return window, err
 		}
 		window.Calls += calls
-		window.InputTokens += in
+		// A cached prefix was still sent and still reasoned over, so it counts
+		// towards what this athlete asked the model to read; only its price
+		// differs, and estimate is where that is applied.
+		window.InputTokens += in + cacheRead + cacheWrite
 		window.OutputTokens += out
 
-		if cost, ok := estimate(model, in, out); ok {
+		if cost, ok := estimate(model, in, out, cacheRead, cacheWrite); ok {
 			usd += cost
 			known = true
 		} else if calls > 0 {

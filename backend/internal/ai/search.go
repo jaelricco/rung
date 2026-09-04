@@ -33,6 +33,22 @@ type SearchOptions struct {
 	Schema json.RawMessage
 }
 
+// Searches are what a search turn costs: each one is billed as a search and,
+// far more expensively, drags the pages it found into the input. So the count
+// is clamped rather than trusted — a caller asking for none gets the fallback,
+// and a caller asking for fifty does not get to spend that.
+const maxSearchesEver = 12
+
+func clampSearches(want, fallback int) int {
+	if want <= 0 {
+		want = fallback
+	}
+	if want > maxSearchesEver {
+		return maxSearchesEver
+	}
+	return want
+}
+
 // Source is a page the API actually retrieved. Only URLs that appear here are
 // ever trusted downstream; anything else the model writes is treated as invented.
 type Source struct {
@@ -74,9 +90,7 @@ func (c *Client) Search(ctx context.Context, userID, purpose, system, prompt str
 	if !c.Configured() {
 		return result, ErrNotConfigured
 	}
-	if opts.MaxSearches <= 0 {
-		opts.MaxSearches = 6
-	}
+	opts.MaxSearches = clampSearches(opts.MaxSearches, 6)
 	if len(opts.AllowedDomains) > 0 && len(opts.BlockedDomains) > 0 {
 		return result, errors.New("set allowed_domains or blocked_domains, not both")
 	}
@@ -95,7 +109,8 @@ func (c *Client) Search(ctx context.Context, userID, purpose, system, prompt str
 
 	answered := strings.TrimSpace(result.Text) != ""
 	c.record(ctx, userID, purpose, prompt, result.Text,
-		res.InputTokens, res.OutputTokens, time.Since(started), answered)
+		res.InputTokens, res.OutputTokens, time.Since(started), answered,
+		res.CacheReadTokens, res.CacheWriteTokens)
 
 	// Same failure as a plan that never got written: reasoning and search
 	// results are spent from the same ceiling as the answer.

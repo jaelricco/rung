@@ -61,6 +61,12 @@ type generateRequest struct {
 	StartsOn    string `json:"starts_on"`
 	Notes       string `json:"notes"`
 	Save        bool   `json:"save"`
+	// NoResearch is the AI endpoint's switch, accepted and ignored here so
+	// that the two endpoints keep taking the same body. This planner reads
+	// nothing but the athlete's own records, so there is no research to skip
+	// — but the browser posts one object to whichever route the checkbox
+	// selects, and rejecting the field would fail the request outright.
+	NoResearch bool `json:"no_research"`
 }
 
 func (in generateRequest) goal() string {

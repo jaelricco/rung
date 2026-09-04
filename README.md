@@ -448,6 +448,34 @@ deadline raised to match — that deadline is absolute rather than idle, so at
 the measured hundred tokens a second the old 180s could not have carried the
 new ceiling, and a truncated plan would have become a severed connection.
 
+**The two cost levers, and which one is worth having.** Measured on a real
+plan, the research turn dominates the bill: seven web searches pulled 87,000
+tokens of retrieved pages in as input, roughly half the price of the whole
+plan. So the search count is the sharp lever and it is now a setting —
+`AI_RESEARCH_SEARCHES`, default five, clamped at both ends so an unset value
+falls back rather than turning the limit into "no searches" and a mistyped one
+cannot spend a fortune.
+
+Prompt caching is the blunt one, and worth being honest about. The exercise
+catalogue is about 3,700 tokens, identical for every athlete on every request,
+and it sits in front of a cache breakpoint together with the standing brief —
+which is why `buildContext` hands back the stable half and the volatile half
+separately rather than one string. Prefix matching is unforgiving: a single
+changing byte in front of the catalogue would make the entry unreadable, so a
+test asserts the order and that only the stable block is marked. The plan,
+review and recovery turns share that prefix, so a review asked for soon after
+a plan reads it back at a tenth of the price. The research turn deliberately
+does not cache: it has its own system prompt, and its findings are already
+cached per skill for sixty days, so a breakpoint there would almost always be
+a write nobody reads. A write costs 1.25x and a read 0.1x, so the arrangement
+pays above roughly a one-in-five hit rate and costs a little below it.
+
+Caching also changes the accounting, because the API counts cached tokens
+apart from `input_tokens`: recording only the latter would have quietly
+undercounted every cached call. `ai_calls` therefore carries
+`cache_read_tokens` and `cache_write_tokens`, and `estimate` prices them at
+their own multiples of the input rate.
+
 **Two switches on a connection.** Neither needs the key pasted again, and
 neither calls the provider, so both answer immediately. *Switch the connector
 off* holds the key sealed but spends nothing: `credential` refuses with

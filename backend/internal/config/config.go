@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -21,7 +22,11 @@ type Config struct {
 	// enough to reject the parameter.
 	AIThinking        string
 	SearchToolVersion string
-	SecureCookies     bool
+	// ResearchSearches caps the web searches one research turn may run, and is
+	// the sharpest lever on what the coaching costs: every page the tool
+	// retrieves is billed as input. Zero leaves the built-in default.
+	ResearchSearches int
+	SecureCookies    bool
 	// AppOrigin is the public https origin of this site. Sign-in redirects are
 	// built from it, so it has to match what is registered with the provider.
 	AppOrigin string
@@ -47,6 +52,7 @@ func Load() Config {
 		CredentialsKey:      os.Getenv("AI_CREDENTIALS_KEY"),
 		AIThinking:          envOr("AI_THINKING", envOr("ANTHROPIC_THINKING", "adaptive")),
 		SearchToolVersion:   envOr("WEB_SEARCH_TOOL_VERSION", "web_search_20250305"),
+		ResearchSearches:    envInt("AI_RESEARCH_SEARCHES", 0),
 		AppOrigin:           os.Getenv("APP_ORIGIN"),
 		GoogleClientID:      os.Getenv("OAUTH_GOOGLE_CLIENT_ID"),
 		GoogleClientSecret:  os.Getenv("OAUTH_GOOGLE_CLIENT_SECRET"),
@@ -64,4 +70,15 @@ func envOr(key, fallback string) string {
 		return v
 	}
 	return fallback
+}
+
+// envInt reads a whole number, falling back on anything it cannot read. A
+// mistyped cap should leave the built-in default in place rather than take the
+// setting to zero and turn a limit into "no searches at all".
+func envInt(key string, fallback int) int {
+	n, err := strconv.Atoi(strings.TrimSpace(os.Getenv(key)))
+	if err != nil || n <= 0 {
+		return fallback
+	}
+	return n
 }

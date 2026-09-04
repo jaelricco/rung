@@ -72,8 +72,10 @@ func (c *Client) parseOrRepair(ctx context.Context, userID, purpose, text string
 		return fmt.Errorf("the model's answer wasn't usable JSON: %w", cause)
 	}
 
+	// No cached prefix: a repair is a one-off document that never recurs, so
+	// there is nothing here a cache write would ever be read back for.
 	fixed, err := c.completeStream(ctx, userID, purpose+"_repair", repairSystem,
-		repairPrompt(text, schema, cause), repairTokens(text), schema, nil)
+		repairPrompt(text, schema, cause), "", repairTokens(text), schema, nil)
 	if err != nil {
 		return fmt.Errorf("the model's answer wasn't usable JSON: %w", cause)
 	}

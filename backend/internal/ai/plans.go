@@ -166,7 +166,7 @@ func (h *Handler) SkillPlan(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 
 	out.report(Progress{Stage: "reading", Label: "Reading your training history", Percent: 2})
-	snapshot, lib, promptContext, err := h.buildContext(ctx, me)
+	snapshot, lib, catalogue, athlete, err := h.buildContext(ctx, me)
 	if err != nil {
 		// The one thing there is no working around: without the athlete's log
 		// there is nothing for either producer to write from.
@@ -203,14 +203,17 @@ func (h *Handler) SkillPlan(w http.ResponseWriter, r *http.Request) {
 	}
 
 	expected := in.Weeks * in.DaysPerWeek
-	prompt := planPrompt(promptContext, found, baseline, in, expected)
+	prompt := planPrompt(athlete, found, baseline, in, expected)
 
 	tracker := newPlanTracker(expected)
 	out.report(Progress{Stage: "sending", Label: "Asking the coach to sharpen it",
 		Percent: researchCeiling, Total: expected})
 
 	var refined Plan
-	err = client.CompleteJSONStream(ctx, me.ID, "skill_plan", coachSystem, prompt,
+	// The catalogue leads, and is where the cache breakpoint falls: it is
+	// identical for every athlete, so a review or a recovery note asked for
+	// soon after this plan reads it back at a tenth of the price.
+	err = client.CompleteJSONStream(ctx, me.ID, "skill_plan", coachSystem, catalogue, prompt,
 		planTokens(expected), planSchema, func(d Delta) { out.report(tracker.update(d)) }, &refined)
 	if err != nil {
 		deliver(fallback(baseline, "The model could not be reached: "+err.Error()), plan.SourceFallback, baseWarnings)
@@ -512,25 +515,31 @@ func baselineBrief(baseline Plan) string {
 // athlete's computed snapshot and the two libraries it must choose within. The
 // snapshot comes back as well as its rendering, because the algorithm reasons
 // from the struct and the model from the text.
-func (h *Handler) buildContext(ctx context.Context, user auth.User) (training.Snapshot, plan.Library, string, error) {
-	snapshot, err := h.training.BuildSnapshot(ctx, user)
+//
+// The two halves are kept apart on purpose. The catalogue is the same for
+// every athlete and the same on every request; the snapshot is different every
+// time. Sending the stable half first is what lets it be cached, and mixing
+// the two would put a changing byte in front of 3,700 tokens that never change
+// — which is a cache that never hits.
+func (h *Handler) buildContext(ctx context.Context, user auth.User) (
+	snapshot training.Snapshot, lib plan.Library, catalogue, athlete string, err error) {
+
+	snapshot, err = h.training.BuildSnapshot(ctx, user)
 	if err != nil {
-		return snapshot, plan.Library{}, "", err
+		return snapshot, plan.Library{}, "", "", err
 	}
 	snapshotJSON, err := json.MarshalIndent(snapshot, "", "  ")
 	if err != nil {
-		return snapshot, plan.Library{}, "", err
+		return snapshot, plan.Library{}, "", "", err
 	}
 
-	lib, err := plan.LoadLibrary(ctx, h.pool)
+	lib, err = plan.LoadLibrary(ctx, h.pool)
 	if err != nil {
-		return snapshot, lib, "", err
+		return snapshot, lib, "", "", err
 	}
 
-	return snapshot, lib, fmt.Sprintf(`ATHLETE SNAPSHOT (computed from their log, treat as fact)
-%s
-
-%s`, snapshotJSON, lib.Text()), nil
+	return snapshot, lib, lib.Text(),
+		fmt.Sprintf("ATHLETE SNAPSHOT (computed from their log, treat as fact)\n%s", snapshotJSON), nil
 }
 
 // ---------- review and recovery ----------
@@ -557,7 +566,7 @@ func (h *Handler) Review(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 
 	out.report(Progress{Stage: "reading", Label: "Reading your last four weeks", Percent: 3})
-	_, _, ctxText, err := h.buildContext(ctx, me)
+	_, _, catalogue, ctxText, err := h.buildContext(ctx, me)
 	if err != nil {
 		out.fail(http.StatusInternalServerError, "Couldn't read your training history.")
 		return
@@ -574,8 +583,8 @@ If there is too little data to judge, say so and name what to log first.
 Answer as prose, not JSON.`
 
 	tracker := newProseTracker(1800, "Reading your records")
-	text, err := client.CompleteStream(ctx, me.ID, "review", coachSystem, prompt, proseTokens,
-		func(d Delta) { out.report(tracker.update(d)) })
+	text, err := client.CompleteCachedStream(ctx, me.ID, "review", coachSystem, catalogue, prompt,
+		proseTokens, func(d Delta) { out.report(tracker.update(d)) })
 	if err != nil {
 		out.fail(http.StatusBadGateway, "Couldn't produce a review: "+err.Error())
 		return
@@ -598,7 +607,7 @@ func (h *Handler) Recovery(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 
 	out.report(Progress{Stage: "reading", Label: "Reading your recent load", Percent: 3})
-	_, _, ctxText, err := h.buildContext(ctx, me)
+	_, _, catalogue, ctxText, err := h.buildContext(ctx, me)
 	if err != nil {
 		out.fail(http.StatusInternalServerError, "Couldn't read your training history.")
 		return
@@ -618,8 +627,8 @@ End with one line on when to stop self-managing and see a clinician.
 Answer as prose, not JSON.`
 
 	tracker := newProseTracker(2100, "Weighing your recent load")
-	text, err := client.CompleteStream(ctx, me.ID, "recovery", coachSystem, prompt, proseTokens,
-		func(d Delta) { out.report(tracker.update(d)) })
+	text, err := client.CompleteCachedStream(ctx, me.ID, "recovery", coachSystem, catalogue, prompt,
+		proseTokens, func(d Delta) { out.report(tracker.update(d)) })
 	if err != nil {
 		out.fail(http.StatusBadGateway, "Couldn't produce recovery guidance: "+err.Error())
 		return

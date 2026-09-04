@@ -26,14 +26,26 @@ var prices = map[string]price{
 	"claude-sonnet-4-6":         {input: 3, output: 15},
 }
 
+// Cached prompt tokens are billed at their own multiples of the input rate: a
+// five-minute write costs a quarter more than sending the text plainly, and a
+// read a tenth of it. Both are counted apart from input_tokens by the API, so
+// leaving them out would undercount every cached call rather than round it.
+const (
+	cacheWriteMultiple = 1.25
+	cacheReadMultiple  = 0.1
+)
+
 // estimate returns the dollar cost of one model's tokens, and whether the
 // model's price is known at all.
-func estimate(model string, in, out int64) (float64, bool) {
+func estimate(model string, in, out, cacheRead, cacheWrite int64) (float64, bool) {
 	p, ok := prices[model]
 	if !ok {
 		return 0, false
 	}
-	return float64(in)/1e6*p.input + float64(out)/1e6*p.output, true
+	return float64(in)/1e6*p.input +
+		float64(cacheWrite)/1e6*p.input*cacheWriteMultiple +
+		float64(cacheRead)/1e6*p.input*cacheReadMultiple +
+		float64(out)/1e6*p.output, true
 }
 
 // money renders a figure small enough to be reassuring without rounding it to
