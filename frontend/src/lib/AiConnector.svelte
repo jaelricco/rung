@@ -317,7 +317,7 @@
 	}
 	.lede {
 		color: var(--muted);
-		font-size: 0.9rem;
+		font-size: 0.95rem;
 		line-height: 1.6;
 	}
 	.step {
@@ -336,7 +336,7 @@
 		margin-top: 1rem;
 	}
 	.meta {
-		font-size: 0.78rem;
+		font-size: 0.9rem;
 		margin: 0.25rem 0 0;
 	}
 
@@ -385,7 +385,7 @@
 	}
 	.vendor {
 		font-family: var(--mono);
-		font-size: 0.75rem;
+		font-size: 0.82rem;
 		color: var(--muted);
 	}
 	.tick {
@@ -394,11 +394,11 @@
 	}
 	.caption {
 		color: var(--muted);
-		font-size: 0.85rem;
+		font-size: 0.95rem;
 		margin: 0.6rem 0 1.2rem;
 	}
 	.hint {
-		font-size: 0.75rem;
+		font-size: 0.85rem;
 		margin: 0.4rem 0 0;
 	}
 	.usage {
@@ -414,7 +414,7 @@
 	}
 	.usage dt {
 		font-family: var(--mono);
-		font-size: 0.68rem;
+		font-size: 0.76rem;
 		text-transform: uppercase;
 		letter-spacing: 0.12em;
 		color: var(--muted);
@@ -428,7 +428,7 @@
 		margin-top: 0.9rem;
 	}
 	.foot {
-		font-size: 0.82rem;
+		font-size: 0.9rem;
 		line-height: 1.6;
 		margin: 1.4rem 0 0;
 	}

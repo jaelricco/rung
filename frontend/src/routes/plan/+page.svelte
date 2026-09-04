@@ -183,7 +183,7 @@
 	<textarea id="notes" rows="2" bind:value={notes} placeholder="Equipment, schedule, past problems"></textarea>
 </div>
 
-<label class="form-width" style="display:flex;align-items:center;gap:0.5rem;text-transform:none;letter-spacing:0">
+<label class="choice form-width" style="display:flex;align-items:center;gap:0.5rem">
 	<input type="checkbox" bind:checked={useAi} style="width:auto" />
 	Sharpen it with AI. Slower, billed to your own model account, and it never replaces the plan with
 	nothing: if the model cannot answer, you get the planner's version and a note saying why.
@@ -191,8 +191,8 @@
 
 {#if useAi}
 	<label
-		class="form-width"
-		style="display:flex;align-items:center;gap:0.5rem;text-transform:none;letter-spacing:0;padding-left:1.4rem"
+		class="choice form-width"
+		style="display:flex;align-items:center;gap:0.5rem;padding-left:1.4rem"
 	>
 		<input type="checkbox" bind:checked={research} style="width:auto" />
 		Search coaching sources for the skill first. Slower again, and the plan is written against what
@@ -200,7 +200,7 @@
 	</label>
 {/if}
 
-<p class="muted form-width" style="font-size:0.85rem;margin-top:0.9rem">
+<p class="lede form-width" style="margin-top:0.9rem">
 	The plan is only as sharp as what it knows about you. If you have not logged much here yet, put
 	your current numbers in on the <a href={`/baseline?goal=${encodeURIComponent(skill)}`}>baseline
 	page</a> first — bodyweight, a few maxes, what you train on — and this starts where you actually
@@ -231,7 +231,7 @@
 	<div class="bar"></div>
 	<h2>{plan.title}</h2>
 	{#if SOURCE_LABEL[source]}
-		<p class="muted" style="margin:0.3rem 0 0;font-size:0.85rem">{SOURCE_LABEL[source]}</p>
+		<p class="lede" style="margin:0.3rem 0 0">{SOURCE_LABEL[source]}</p>
 	{/if}
 	<p class="prose" style="margin-top:0.6rem">{plan.summary}</p>
 
@@ -258,7 +258,7 @@
 			<button style="flex:0 0 auto" onclick={addToCalendar} disabled={saving}>
 				{saving ? 'Adding' : 'Add to my calendar'}
 			</button>
-			<p class="muted" style="margin:0;font-size:0.85rem;flex:1 1 200px">
+			<p class="lede" style="margin:0;flex:1 1 200px">
 				Schedules every session from {startsOn}.
 			</p>
 		{/if}
@@ -292,7 +292,7 @@
 
 	{#if plan.method?.ladder?.length}
 		<p class="eyebrow" style="margin-top:1.2rem">Where you are on the ladder</p>
-		<p class="muted" style="font-size:0.85rem;margin:0.3rem 0 0.4rem">
+		<p class="lede" style="margin:0.3rem 0 0.4rem">
 			Computed from your records, so you can check it rather than take it on faith. Log the rung
 			you are on and the next plan moves with you.
 		</p>
@@ -307,13 +307,13 @@
 							{rung.current ? '▶' : rung.cleared ? '✓' : ''}
 						</td>
 						<td style={rung.current ? 'font-weight:600' : ''}>{rung.name}</td>
-						<td class="muted" style="font-size:0.85rem">{rung.standard}</td>
+						<td class="note">{rung.standard}</td>
 					</tr>
 				{/each}
 			</tbody>
 		</table>
 		{#if plan.method.readiness}
-			<p class="muted" style="font-size:0.85rem;margin:0.6rem 0 0">{plan.method.readiness}</p>
+			<p class="lede" style="margin:0.6rem 0 0">{plan.method.readiness}</p>
 		{/if}
 	{/if}
 
@@ -323,14 +323,14 @@
 				<div class="panel">
 					<p class="eyebrow">Weeks {phase.weeks}</p>
 					<p style="font-weight:600;margin:0.2rem 0 0.2rem">{phase.name}</p>
-					<p class="muted" style="font-size:0.85rem;margin:0">{phase.aim}</p>
+					<p class="lede" style="margin:0">{phase.aim}</p>
 				</div>
 			{/each}
 		</div>
 
 		{#if plan.progression_rules?.length}
 			<p class="eyebrow" style="margin-top:1.2rem">How the load moves</p>
-			<ul class="muted" style="margin:0.3rem 0 0;padding-left:1.1rem;font-size:0.9rem">
+			<ul class="lede" style="margin:0.3rem 0 0;padding-left:1.1rem">
 				{#each plan.progression_rules as rule}
 					<li>{rule}</li>
 				{/each}
@@ -345,7 +345,7 @@
 
 	<div class="bar"></div>
 	<p class="eyebrow">The plan, week by week</p>
-	<p class="muted" style="font-size:0.85rem;margin:0.3rem 0 0">
+	<p class="lede" style="margin:0.3rem 0 0">
 		Dates come from the start date above. Open a session to see the work in it.
 	</p>
 
@@ -405,7 +405,7 @@
 							{/if}
 							<button class="link" onclick={() => (openKey = '')}>Close</button>
 						</div>
-						<p class="muted" style="margin:0 0 0.6rem;font-size:0.88rem">
+						<p class="lede" style="margin:0 0 0.6rem">
 							{openSession.session.focus}{#if openSession.session.duration_minutes}{` · ${openSession.session.duration_minutes} min`}{/if}
 						</p>
 						<SessionDetail session={openSession.session} />
@@ -417,7 +417,7 @@
 	{#if plan.research}
 		<div class="bar"></div>
 		<h2>What the coach read</h2>
-		<p class="muted" style="font-size:0.88rem;margin:0.3rem 0 0.8rem">
+		<p class="lede" style="margin:0.3rem 0 0.8rem">
 			{plan.research.searches_used} searches{#if plan.research.cached}, reused from earlier
 				research{/if}. The plan was written against these.
 		</p>

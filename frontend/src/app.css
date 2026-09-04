@@ -175,10 +175,27 @@ h2 {
 
 .eyebrow {
 	font-family: var(--mono);
-	font-size: 0.72rem;
+	font-size: 0.82rem;
+	font-weight: 500;
 	text-transform: uppercase;
-	letter-spacing: 0.16em;
+	letter-spacing: 0.13em;
 	color: var(--muted);
+}
+
+/* The sentence under a heading that says what the section is for, and the
+   line under a title inside a card or a row. Both were being set a few
+   points too small to register as deliberate, so they read as leftovers
+   rather than as the subtitle they are. Neither sets a margin: the spacing
+   around them is the page's business, and much of it is still inline. */
+.lede {
+	color: var(--muted);
+	font-size: 0.95rem;
+	line-height: 1.6;
+}
+.note {
+	color: var(--muted);
+	font-size: 0.9rem;
+	line-height: 1.5;
 }
 
 .stat {
@@ -246,8 +263,8 @@ h2 {
 	gap: 1px;
 }
 .navgroup > .eyebrow {
-	font-size: 0.62rem;
-	letter-spacing: 0.18em;
+	font-size: 0.72rem;
+	letter-spacing: 0.14em;
 	margin: 0 0 0.5rem 0.55rem;
 }
 
@@ -441,7 +458,7 @@ h2 {
 
 .cal-dow {
 	font-family: var(--mono);
-	font-size: 0.68rem;
+	font-size: 0.74rem;
 	text-transform: uppercase;
 	letter-spacing: 0.14em;
 	color: var(--muted);
@@ -455,13 +472,13 @@ h2 {
 	padding: 0.5rem 0.3rem;
 	text-align: center;
 	font-family: var(--mono);
-	font-size: 0.72rem;
+	font-size: 0.76rem;
 	color: var(--muted);
 	line-height: 1.3;
 }
 .cal-wk .count {
 	display: block;
-	font-size: 0.66rem;
+	font-size: 0.72rem;
 	opacity: 0.75;
 }
 
@@ -558,7 +575,7 @@ h2 {
 .cal-item .meta {
 	display: block;
 	font-family: var(--mono);
-	font-size: 0.68rem;
+	font-size: 0.74rem;
 	color: var(--muted);
 	overflow: hidden;
 	text-overflow: ellipsis;
@@ -640,11 +657,27 @@ h2 {
 label {
 	display: block;
 	font-family: var(--mono);
-	font-size: 0.72rem;
+	font-size: 0.78rem;
 	text-transform: uppercase;
 	letter-spacing: 0.12em;
 	color: var(--muted);
 	margin-bottom: 0.35rem;
+}
+
+/* A label that wraps its control and a sentence, rather than sitting above a
+   field: a checkbox and what ticking it means. That is prose, so it undoes
+   the micro-label styling wholesale — every page doing it was undoing the
+   case and the tracking inline and forgetting the typeface, which left a
+   paragraph set in mono at label size. */
+label.choice {
+	font-family: var(--sans);
+	font-size: 1rem;
+	font-weight: 400;
+	line-height: 1.5;
+	text-transform: none;
+	letter-spacing: 0;
+	color: var(--chalk);
+	cursor: pointer;
 }
 
 input,
@@ -771,7 +804,7 @@ table {
 th {
 	text-align: left;
 	font-family: var(--mono);
-	font-size: 0.68rem;
+	font-size: 0.74rem;
 	text-transform: uppercase;
 	letter-spacing: 0.12em;
 	color: var(--muted);

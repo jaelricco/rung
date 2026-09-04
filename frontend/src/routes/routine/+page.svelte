@@ -224,13 +224,13 @@
 								{routine.active ? 'Every week' : 'Paused'}
 							</span>
 						</strong>
-						<span class="mono muted" style="flex:0 0 auto;font-size:0.82rem">
+						<span class="mono note" style="flex:0 0 auto">
 							{summarise(routine)}{routine.upcoming ? ` · ${routine.upcoming} ahead` : ''}
 						</span>
 					</div>
 
 					{#if routine.notes}
-						<p class="muted" style="margin:0.4rem 0 0;font-size:0.88rem">{routine.notes}</p>
+						<p class="lede" style="margin:0.4rem 0 0">{routine.notes}</p>
 					{/if}
 
 					<div class="row" style="margin-top:0.7rem;align-items:flex-end">
@@ -262,7 +262,7 @@
 							Remove
 						</button>
 					</div>
-					<p class="muted" style="margin:0.5rem 0 0;font-size:0.78rem">
+					<p class="note" style="margin:0.5rem 0 0">
 						That week runs to {applyWeekEnd}. Days already holding this routine are left as they are.
 					</p>
 				</div>
@@ -302,7 +302,7 @@
 				<input id="routine-week" type="date" bind:value={draft.week_of} />
 			</div>
 		</div>
-		<p class="muted" style="margin:0.4rem 0 0;font-size:0.82rem">
+		<p class="note" style="margin:0.4rem 0 0">
 			{draft.repeat === 'weekly'
 				? 'Every week keeps filling ahead until you stop it. Days you clear stay cleared.'
 				: 'One week only. The routine stays saved, so you can put it on another week whenever you want.'}
@@ -316,7 +316,7 @@
 			<div class="day" class:rest={day.sessions.length === 0}>
 				<div class="row" style="align-items:baseline">
 					<strong style="flex:0 0 110px">{day.name}</strong>
-					<span class="muted" style="flex:1 1 auto;font-size:0.85rem">
+					<span class="lede" style="flex:1 1 auto">
 						{day.sessions.length === 0 ? 'Rest' : day.sessions.map((s) => s.body.title || 'Untitled').join(' · ')}
 					</span>
 					<button class="ghost small" style="flex:0 0 auto" onclick={() => addSession(day.day)}>
@@ -371,13 +371,13 @@
 		<button class="ghost" style="flex:0 0 auto" onclick={() => (draft = null)} disabled={busy}>
 			Cancel
 		</button>
-		<p class="muted" style="flex:1 1 auto;margin:0;text-align:right;font-size:0.82rem">
+		<p class="note" style="flex:1 1 auto;margin:0;text-align:right">
 			{sessionCount} session{sessionCount === 1 ? '' : 's'} in the week
 		</p>
 	</div>
 
 	{#if draft.id}
-		<p class="muted" style="margin-top:0.6rem;font-size:0.82rem">
+		<p class="note" style="margin-top:0.6rem">
 			Saving rewrites this routine's sessions from today on. Sessions already ticked off, and
 			everything before today, are left as they are.
 		</p>
@@ -387,7 +387,7 @@
 <style>
 	.tag {
 		font-family: var(--mono);
-		font-size: 0.68rem;
+		font-size: 0.76rem;
 		text-transform: uppercase;
 		letter-spacing: 0.1em;
 		color: var(--muted);

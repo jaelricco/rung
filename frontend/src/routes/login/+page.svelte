@@ -79,7 +79,7 @@
 			onkeydown={(e) => e.key === 'Enter' && submit()}
 		/>
 		{#if mode === 'register'}
-			<p class="muted" style="font-size:0.8rem;margin:0.4rem 0 0">At least 10 characters.</p>
+			<p class="note" style="margin:0.4rem 0 0">At least 10 characters.</p>
 		{/if}
 	</div>
 
@@ -91,7 +91,7 @@
 		{busy ? 'Working' : mode === 'signin' ? 'Sign in' : 'Create account'}
 	</button>
 
-	<p style="margin-top:1rem;font-size:0.88rem" class="muted">
+	<p style="margin-top:1rem" class="lede">
 		{#if mode === 'signin'}
 			No account yet?
 			<button class="link" onclick={() => ((mode = 'register'), (failed = ''))}>Create one</button>
@@ -128,7 +128,7 @@
 		margin: 1.1rem 0;
 		color: var(--muted);
 		font-family: var(--mono);
-		font-size: 0.7rem;
+		font-size: 0.78rem;
 		text-transform: uppercase;
 		letter-spacing: 0.12em;
 	}

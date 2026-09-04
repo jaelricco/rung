@@ -158,7 +158,7 @@
 		<input id="sleep" type="number" min="3" max="14" step="0.5" bind:value={sleepHours} />
 	</div>
 </div>
-<p class="muted" style="font-size:0.85rem;margin:0.4rem 0 0;max-width:44rem">
+<p class="lede" style="margin:0.4rem 0 0;max-width:44rem">
 	Bodyweight is what turns a weighted set into a percentage — without it the plan can only say "add
 	a little". Sessions a week sets the starting volume before you have a log here. Sleep under about
 	eight hours raises injury risk by roughly a third, so the plan adds volume more slowly when it is
@@ -167,15 +167,15 @@
 
 <div class="bar"></div>
 <p class="eyebrow">What you can train on</p>
-<p class="muted" style="font-size:0.85rem;margin:0.3rem 0 0.7rem;max-width:44rem">
+<p class="lede" style="margin:0.3rem 0 0.7rem;max-width:44rem">
 	The plan will not prescribe a movement you have nothing to perform it on. Leave this untouched and
 	it assumes you have the usual bar and bars.
 </p>
 <div class="grid">
 	{#each equipment as item (item.key)}
 		<label
-			class="panel"
-			style="display:flex;gap:0.6rem;align-items:flex-start;text-transform:none;letter-spacing:0;cursor:pointer"
+			class="choice panel"
+			style="display:flex;gap:0.6rem;align-items:flex-start"
 		>
 			<input
 				type="checkbox"
@@ -185,7 +185,7 @@
 			/>
 			<span>
 				<span style="font-weight:600">{item.label}</span>
-				<span class="muted" style="display:block;font-size:0.82rem">{item.note}</span>
+				<span class="note" style="display:block">{item.note}</span>
 			</span>
 		</label>
 	{/each}
@@ -201,7 +201,7 @@
 		{loading ? 'Loading' : 'Ask about this goal'}
 	</button>
 </div>
-<p class="muted" style="font-size:0.85rem;margin:0.4rem 0 0;max-width:44rem">
+<p class="lede" style="margin:0.4rem 0 0;max-width:44rem">
 	{#if goalMatched}
 		Naming a goal adds the rungs of its ladder below, because those are what decide where you start.
 		Currently asking for <strong>{goalName}</strong>.
@@ -214,7 +214,7 @@
 {#if core.length}
 	<div class="bar"></div>
 	<p class="eyebrow">The eight that decide everything else</p>
-	<p class="muted" style="font-size:0.85rem;margin:0.3rem 0 0">
+	<p class="lede" style="margin:0.3rem 0 0">
 		{filled} of {questions.length} answered. Every one of these changes something the plan does.
 	</p>
 
@@ -240,7 +240,7 @@
 							placeholder={fieldFor(question).unit}
 						/>
 					</td>
-					<td class="muted" style="font-size:0.85rem">{question.why}</td>
+					<td class="note">{question.why}</td>
 				</tr>
 			{/each}
 		</tbody>
@@ -249,7 +249,7 @@
 
 {#if ladder.length}
 	<p class="eyebrow" style="margin-top:1.6rem">The ladder to {goalName}</p>
-	<p class="muted" style="font-size:0.85rem;margin:0.3rem 0 0">
+	<p class="lede" style="margin:0.3rem 0 0">
 		Fill in the ones you can hold or hit. The first rung you cannot is roughly where the plan will
 		start you.
 	</p>
@@ -276,7 +276,7 @@
 							placeholder={fieldFor(question).unit}
 						/>
 					</td>
-					<td class="muted" style="font-size:0.85rem">{question.why}</td>
+					<td class="note">{question.why}</td>
 				</tr>
 			{/each}
 		</tbody>
@@ -292,7 +292,7 @@
 			Saved. <a href={`/plan?goal=${encodeURIComponent(goal)}`}>Build a plan from it</a>.
 		</p>
 	{:else}
-		<p class="muted" style="margin:0;font-size:0.85rem;flex:1 1 200px">
+		<p class="lede" style="margin:0;flex:1 1 200px">
 			Used by every plan from now on, until you log the movement for real.
 		</p>
 	{/if}

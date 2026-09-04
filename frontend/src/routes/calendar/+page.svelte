@@ -211,7 +211,7 @@
 		Today
 	</button>
 	<button class="ghost" style="flex:0 0 auto" onclick={() => shift(WEEKS_SHOWN)}>Later →</button>
-	<p class="mono muted" style="margin:0;flex:1 1 auto;text-align:right;font-size:0.85rem">
+	<p class="mono note" style="margin:0;flex:1 1 auto;text-align:right">
 		{formatDate(isoDate(from))} – {formatDate(isoDate(to))}{` · ${scheduled} sessions`}
 	</p>
 </div>
@@ -244,7 +244,7 @@
 				{busyId === 'editor' ? 'Saving…' : editor.id ? 'Save changes' : 'Add to calendar'}
 			</button>
 			<button class="ghost" style="flex:0 0 auto" onclick={() => (editor = null)}>Cancel</button>
-			<p class="muted" style="flex:1 1 auto;margin:0;text-align:right;font-size:0.82rem">
+			<p class="note" style="flex:1 1 auto;margin:0;text-align:right">
 				Training the same week every week? <a href="/routine">Save it as a routine</a> instead.
 			</p>
 		</div>
@@ -331,7 +331,7 @@
 					</button>
 					<button class="link" onclick={() => (openId = '')}>Close</button>
 				</div>
-				<p class="muted" style="margin:0 0 0.6rem;font-size:0.88rem">
+				<p class="lede" style="margin:0 0 0.6rem">
 					{open.focus}
 					<span class="mono" style="font-size:0.76rem;opacity:0.75">
 						{open.focus ? ' · ' : ''}{SOURCES[open.source] ?? ''}
@@ -387,7 +387,7 @@
 
 <div class="bar"></div>
 <h2>Take it with you</h2>
-<p class="muted" style="font-size:0.88rem;margin:0.3rem 0 0.9rem">
+<p class="lede" style="margin:0.3rem 0 0.9rem">
 	Every scheduled session as an .ics file, for the calendar app you already use.
 </p>
 <a class="mono" href="/api/v1/calendar.ics" download="training.ics">Download training.ics</a>
