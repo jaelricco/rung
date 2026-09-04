@@ -166,8 +166,13 @@ func main() {
 		Handler:           handler,
 		ReadHeaderTimeout: 10 * time.Second,
 		ReadTimeout:       30 * time.Second,
-		// Generous: plan generation waits on the model.
-		WriteTimeout: 180 * time.Second,
+		// Generous, because plan generation waits on the model and this is an
+		// absolute deadline rather than an idle one: a streamed plan is cut
+		// here however busy the connection is. A measured plan wrote about a
+		// hundred tokens a second, so 180s could not even carry the ceiling
+		// planTokens now asks for, and the fix for a truncated plan would
+		// have been a severed connection instead.
+		WriteTimeout: 12 * time.Minute,
 		IdleTimeout:  120 * time.Second,
 	}
 

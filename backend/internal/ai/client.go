@@ -63,6 +63,12 @@ type turn struct {
 	System    string
 	Prompt    string
 	MaxTokens int
+	// Schema is the JSON Schema the answer must satisfy, empty when the turn
+	// is prose. A transport whose provider can enforce it sends it and the
+	// answer is guaranteed to parse; one that cannot ignores it, and the
+	// repair turn in CompleteJSONStream and SearchJSON is what catches the
+	// difference.
+	Schema json.RawMessage
 }
 
 // outcome is a finished turn, normalised across providers.
@@ -159,6 +165,13 @@ func (c *Client) Complete(ctx context.Context, userID, purpose, system, prompt s
 func (c *Client) CompleteStream(ctx context.Context, userID, purpose, system, prompt string,
 	maxTokens int, onDelta func(Delta)) (string, error) {
 
+	return c.completeStream(ctx, userID, purpose, system, prompt, maxTokens, nil, onDelta)
+}
+
+// completeStream is CompleteStream with the shape the answer must satisfy.
+func (c *Client) completeStream(ctx context.Context, userID, purpose, system, prompt string,
+	maxTokens int, schema json.RawMessage, onDelta func(Delta)) (string, error) {
+
 	if !c.Configured() {
 		return "", ErrNotConfigured
 	}
@@ -167,7 +180,8 @@ func (c *Client) CompleteStream(ctx context.Context, userID, purpose, system, pr
 	}
 
 	started := time.Now()
-	res, err := c.api.Stream(ctx, turn{System: system, Prompt: prompt, MaxTokens: maxTokens}, onDelta)
+	res, err := c.api.Stream(ctx,
+		turn{System: system, Prompt: prompt, MaxTokens: maxTokens, Schema: schema}, onDelta)
 	if err != nil {
 		c.record(ctx, userID, purpose, prompt, err.Error(), res.InputTokens, res.OutputTokens, time.Since(started), false)
 		return res.Text, err
@@ -189,23 +203,21 @@ func (c *Client) CompleteStream(ctx context.Context, userID, purpose, system, pr
 
 // CompleteJSON asks for JSON and unmarshals into dst, tolerating a model that
 // wraps its answer in a code fence or adds a sentence around it.
-func (c *Client) CompleteJSON(ctx context.Context, userID, purpose, system, prompt string, maxTokens int, dst any) error {
-	return c.CompleteJSONStream(ctx, userID, purpose, system, prompt, maxTokens, nil, dst)
+func (c *Client) CompleteJSON(ctx context.Context, userID, purpose, system, prompt string,
+	maxTokens int, schema json.RawMessage, dst any) error {
+	return c.CompleteJSONStream(ctx, userID, purpose, system, prompt, maxTokens, schema, nil, dst)
 }
 
-// CompleteJSONStream is CompleteJSON with progress reporting.
+// CompleteJSONStream is CompleteJSON with progress reporting. schema may be
+// empty, in which case the answer is only asked for in the prompt.
 func (c *Client) CompleteJSONStream(ctx context.Context, userID, purpose, system, prompt string,
-	maxTokens int, onDelta func(Delta), dst any) error {
+	maxTokens int, schema json.RawMessage, onDelta func(Delta), dst any) error {
 
-	out, err := c.CompleteStream(ctx, userID, purpose, system, prompt, maxTokens, onDelta)
+	out, err := c.completeStream(ctx, userID, purpose, system, prompt, maxTokens, schema, onDelta)
 	if err != nil {
 		return err
 	}
-	cleaned := extractJSON(out)
-	if err := json.Unmarshal([]byte(cleaned), dst); err != nil {
-		return fmt.Errorf("the model's answer wasn't usable JSON: %w", err)
-	}
-	return nil
+	return c.parseOrRepair(ctx, userID, purpose, out, schema, dst)
 }
 
 // Configured is false only for a client built without a key, which the store

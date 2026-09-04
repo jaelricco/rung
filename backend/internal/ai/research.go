@@ -132,7 +132,7 @@ Return JSON:
 
 	var found SkillResearch
 	searchResult, err := client.SearchJSON(ctx, userID, "skill_research", researchSystem, prompt,
-		researchTokens, SearchOptions{MaxSearches: researchSearches}, &found)
+		researchTokens, SearchOptions{MaxSearches: researchSearches, Schema: researchSchema}, &found)
 	if err != nil {
 		// A plan without research is the old behaviour, which is still a plan.
 		log.Printf("skill research for %q failed, writing the plan without it: %v", skill, err)

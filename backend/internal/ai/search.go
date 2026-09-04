@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"strings"
 	"time"
 )
@@ -29,6 +28,9 @@ type SearchOptions struct {
 	AllowedDomains []string
 	BlockedDomains []string
 	UserLocation   *UserLocation
+	// Schema is the shape the answer must satisfy. A provider that can enforce
+	// it does; SearchJSON repairs the answer where one cannot.
+	Schema json.RawMessage
 }
 
 // Source is a page the API actually retrieved. Only URLs that appear here are
@@ -83,7 +85,8 @@ func (c *Client) Search(ctx context.Context, userID, purpose, system, prompt str
 	}
 
 	started := time.Now()
-	res, err := c.api.Search(ctx, turn{System: system, Prompt: prompt, MaxTokens: maxTokens}, opts)
+	res, err := c.api.Search(ctx,
+		turn{System: system, Prompt: prompt, MaxTokens: maxTokens, Schema: opts.Schema}, opts)
 	result = SearchResult{Text: res.Text, Sources: res.Sources, SearchCount: res.Searches}
 	if err != nil {
 		c.record(ctx, userID, purpose, prompt, err.Error(), res.InputTokens, res.OutputTokens, time.Since(started), false)
@@ -117,8 +120,11 @@ func (c *Client) SearchJSON(ctx context.Context, userID, purpose, system, prompt
 	if strings.TrimSpace(result.Text) == "" {
 		return result, errors.New("the search returned no answer")
 	}
-	if err := json.Unmarshal([]byte(extractJSON(result.Text)), dst); err != nil {
-		return result, fmt.Errorf("the model's answer wasn't usable JSON: %w", err)
+	// A search turn is the most expensive thing this app does — the retrieved
+	// pages are billed as input — so it is also the one least worth throwing
+	// away over a stray quote.
+	if err := c.parseOrRepair(ctx, userID, purpose, result.Text, opts.Schema, dst); err != nil {
+		return result, err
 	}
 	return result, nil
 }
