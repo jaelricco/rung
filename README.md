@@ -462,13 +462,20 @@ and it sits in front of a cache breakpoint together with the standing brief —
 which is why `buildContext` hands back the stable half and the volatile half
 separately rather than one string. Prefix matching is unforgiving: a single
 changing byte in front of the catalogue would make the entry unreadable, so a
-test asserts the order and that only the stable block is marked. The plan,
-review and recovery turns share that prefix, so a review asked for soon after
-a plan reads it back at a tenth of the price. The research turn deliberately
-does not cache: it has its own system prompt, and its findings are already
-cached per skill for sixty days, so a breakpoint there would almost always be
-a write nobody reads. A write costs 1.25x and a read 0.1x, so the arrangement
-pays above roughly a one-in-five hit rate and costs a little below it.
+test asserts the order and that only the stable block is marked.
+
+Which turns actually share that prefix was measured rather than assumed, and
+the first answer was wrong. A schema is part of what the cache is keyed on, so
+the plan turn — which carries one — has a prefix of its own: a measured plan
+wrote 8,501 tokens of cache and the review right after it read none of them,
+writing 7,332 of its own. A second review then read all 7,332 back. So the
+breakpoint is on the prose turns, review and recovery, which share a prefix
+and hit each other; the plan turn sends its prompt whole, because a second
+plan inside the five-minute window is unlikely when a plan takes four minutes
+to write. The research turn does not cache either: its own system prompt, and
+findings already cached per skill for sixty days. A write costs 1.25x and a
+read 0.1x, so a breakpoint only earns its place where a hit is likely — which
+here means two prose turns in one sitting, and nothing else.
 
 Caching also changes the accounting, because the API counts cached tokens
 apart from `input_tokens`: recording only the latter would have quietly

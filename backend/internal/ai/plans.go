@@ -210,11 +210,16 @@ func (h *Handler) SkillPlan(w http.ResponseWriter, r *http.Request) {
 		Percent: researchCeiling, Total: expected})
 
 	var refined Plan
-	// The catalogue leads, and is where the cache breakpoint falls: it is
-	// identical for every athlete, so a review or a recovery note asked for
-	// soon after this plan reads it back at a tenth of the price.
-	err = client.CompleteJSONStream(ctx, me.ID, "skill_plan", coachSystem, catalogue, prompt,
-		planTokens(expected), planSchema, func(d Delta) { out.report(tracker.update(d)) }, &refined)
+	// No cache breakpoint here, which was measured rather than assumed. The
+	// schema is part of the request the cache is keyed on, so this turn's
+	// prefix is its own: a plan wrote 8,501 tokens of cache and the review
+	// that followed read none of them, writing 7,332 of its own instead. A
+	// second plan inside five minutes would hit it, but a plan takes four to
+	// write — so the entry would almost always be a write nobody reads, which
+	// costs a quarter more than sending the catalogue plainly.
+	err = client.CompleteJSONStream(ctx, me.ID, "skill_plan", coachSystem,
+		"", catalogue+"\n\n"+prompt, planTokens(expected), planSchema,
+		func(d Delta) { out.report(tracker.update(d)) }, &refined)
 	if err != nil {
 		deliver(fallback(baseline, "The model could not be reached: "+err.Error()), plan.SourceFallback, baseWarnings)
 		return

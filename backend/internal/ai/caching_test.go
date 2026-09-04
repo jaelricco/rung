@@ -130,6 +130,29 @@ func TestARepairTurnIsNotCached(t *testing.T) {
 	}
 }
 
+// A schema is part of what the cache is keyed on, so a turn that carries one
+// has a prefix of its own and cannot read back an entry written by a turn that
+// does not. Measured: a plan wrote 8,501 tokens of cache and the review right
+// after it read none of them. Marking a JSON turn is therefore a write nobody
+// reads, at a quarter more than sending the text plainly — so the shaped path
+// sends its prompt whole.
+func TestAShapedTurnDoesNotOpenACacheEntryItCannotShare(t *testing.T) {
+	c, seen := captureRequest(t, textFrames(`{"skill":"x","summary":"y"}`))
+
+	var out SkillResearch
+	if err := c.CompleteJSONStream(context.Background(), "", "skill_plan", "sys",
+		"", "EXERCISE LIBRARY\n- pull_up\n\nATHLETE SNAPSHOT\n{}", 4000,
+		researchSchema, nil, &out); err != nil {
+		t.Fatalf("CompleteJSONStream: %v", err)
+	}
+	if strings.Contains(*seen, "cache_control") {
+		t.Error("a schema-carrying turn opened a cache entry no other turn can read")
+	}
+	if !strings.Contains(*seen, "output_config") {
+		t.Fatal("the schema stopped being sent, which is the thing worth keeping")
+	}
+}
+
 // The search cap is the sharpest cost control here, so it is clamped rather
 // than trusted: every retrieved page is billed as input.
 func TestSearchCountIsClampedBothWays(t *testing.T) {
