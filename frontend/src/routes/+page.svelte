@@ -67,7 +67,7 @@
 {#if level}
 	<div class="bar"></div>
 	<h2>Level by category</h2>
-	<p class="muted" style="font-size:0.88rem;margin:0.3rem 0 1rem">
+	<p class="lede" style="margin:0.3rem 0 1rem">
 		Computed from your logged sets, not estimated.
 	</p>
 
@@ -81,7 +81,7 @@
 						<span class:on={i < category.tier_rank}></span>
 					{/each}
 				</div>
-				<p class="muted" style="font-size:0.78rem;margin:0.55rem 0 0">
+				<p class="note" style="margin:0.55rem 0 0">
 					{category.based_on || 'Nothing logged yet'}
 				</p>
 			</div>
@@ -134,7 +134,7 @@
 
 <div class="bar"></div>
 <h2>Coach review</h2>
-<p class="muted" style="font-size:0.88rem;margin:0.3rem 0 0.9rem">
+<p class="lede" style="margin:0.3rem 0 0.9rem">
 	Reads your last four weeks and names what to change.
 </p>
 
@@ -183,7 +183,7 @@
 					{/each}
 				</div>
 				{#if workout.notes}
-					<p class="muted" style="font-size:0.85rem;margin:0.6rem 0 0">{workout.notes}</p>
+					<p class="lede" style="margin:0.6rem 0 0">{workout.notes}</p>
 				{/if}
 			</div>
 		{/each}

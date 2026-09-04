@@ -109,7 +109,7 @@
 	</div>
 </div>
 
-<label style="display:flex;align-items:center;gap:0.5rem;text-transform:none;letter-spacing:0;margin-top:0.7rem">
+<label class="choice" style="display:flex;align-items:center;gap:0.5rem;margin-top:0.7rem">
 	<input type="checkbox" bind:checked={includeUnconfirmed} style="width:auto" />
 	Also show events that haven't been confirmed
 </label>
@@ -147,14 +147,14 @@
 
 	{#if report.rejected > 0}
 		<details style="margin-top:0.7rem">
-			<summary class="muted" style="cursor:pointer;font-size:0.88rem">
+			<summary class="lede" style="cursor:pointer">
 				What was discarded and why
 			</summary>
 			<div style="margin-top:0.6rem;display:grid;gap:0.4rem">
 				{#each report.outcomes.filter((o) => o.confidence === 'rejected') as outcome}
 					<div class="panel" style="border-left:2px solid var(--bad)">
 						<p style="margin:0;font-size:0.9rem">{outcome.candidate.name}</p>
-						<p class="muted" style="margin:0.25rem 0 0;font-size:0.83rem">{outcome.note}</p>
+						<p class="note" style="margin:0.25rem 0 0">{outcome.note}</p>
 					</div>
 				{/each}
 			</div>
@@ -173,7 +173,7 @@
 		{#each events as event (event.id)}
 			<div class="panel">
 				<div style="display:flex;gap:1rem;align-items:baseline;flex-wrap:wrap">
-					<p class="mono" style="margin:0;font-size:0.95rem;color:var(--signal)">
+					<p class="mono" style="margin:0;font-size:0.95rem;color:var(--signal-text)">
 						{event.starts_on}{event.ends_on && event.ends_on !== event.starts_on
 							? ` – ${event.ends_on}`
 							: ''}
@@ -185,21 +185,21 @@
 					</span>
 				</div>
 
-				<p class="muted" style="margin:0.35rem 0 0;font-size:0.87rem">
+				<p class="lede" style="margin:0.35rem 0 0">
 					{event.discipline} · {event.city}{event.city && event.country ? ', ' : ''}{event.country}
 				</p>
 
 				{#if event.evidence}
 					<p
-						class="mono muted"
-						style="margin:0.6rem 0 0;font-size:0.78rem;border-left:2px solid var(--line);padding-left:0.6rem"
+						class="mono note"
+						style="margin:0.6rem 0 0;border-left:2px solid var(--line);padding-left:0.6rem"
 					>
 						{event.evidence}
 					</p>
 				{/if}
 
 				{#if event.confidence !== 'date_confirmed' && event.confidence !== 'human_confirmed'}
-					<p style="margin:0.6rem 0 0;font-size:0.85rem;color:var(--signal)">{event.check_note}</p>
+					<p class="note" style="margin:0.6rem 0 0;color:var(--signal-text)">{event.check_note}</p>
 				{/if}
 
 				<div style="display:flex;gap:0.9rem;margin-top:0.8rem;flex-wrap:wrap;align-items:center">
@@ -214,7 +214,7 @@
 						</a>
 					{/if}
 					{#if event.checked_at}
-						<span class="mono muted" style="font-size:0.76rem">last checked {event.checked_at}</span>
+						<span class="mono note">last checked {event.checked_at}</span>
 					{/if}
 					<span style="margin-left:auto"></span>
 

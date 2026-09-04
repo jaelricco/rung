@@ -54,7 +54,7 @@
 
 <style>
 	.warmup {
-		font-size: 0.76rem;
+		font-size: 0.85rem;
 		margin: 0 0 0.5rem;
 	}
 	.slug {
@@ -70,7 +70,7 @@
 	   what changes next week. Separated so the prescription itself stays
 	   scannable. */
 	.detail {
-		font-size: 0.8rem;
+		font-size: 0.85rem;
 		padding-top: 0;
 		display: flex;
 		flex-wrap: wrap;
@@ -81,7 +81,7 @@
 		opacity: 0.85;
 	}
 	.cooldown {
-		font-size: 0.82rem;
+		font-size: 0.85rem;
 		margin: 0.6rem 0 0;
 	}
 </style>

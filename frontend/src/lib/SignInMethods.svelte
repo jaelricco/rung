@@ -104,7 +104,7 @@
 		</ul>
 
 		{#if !methods.has_password && methods.identities.length <= 1}
-			<p class="muted" style="font-size:0.85rem;margin:0 0 0.8rem">
+			<p class="lede" style="margin:0 0 0.8rem">
 				This is currently the only way into your account. Set a password, or link a second
 				provider, so losing access to it doesn't lose you the account.
 			</p>
@@ -126,7 +126,7 @@
 			<div class="field">
 				<label for="new">{methods.has_password ? 'New password' : 'Password'}</label>
 				<input id="new" type="password" bind:value={password} autocomplete="new-password" />
-				<p class="mono muted" style="font-size:0.75rem;margin:0.4rem 0 0">At least 10 characters.</p>
+				<p class="mono note" style="margin:0.4rem 0 0">At least 10 characters.</p>
 			</div>
 			<button onclick={savePassword} disabled={busy}>
 				{busy ? 'Saving' : 'Save password'}

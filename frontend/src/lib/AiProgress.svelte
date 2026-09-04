@@ -108,7 +108,7 @@
 	}
 
 	.meta {
-		font-size: 0.76rem;
+		font-size: 0.85rem;
 		margin: 0.45rem 0 0;
 		min-height: 1.1em;
 		overflow-wrap: anywhere;
