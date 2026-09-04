@@ -120,12 +120,34 @@ type thinkingConfig struct {
 }
 
 type anthropicRequest struct {
-	Model     string          `json:"model"`
-	MaxTokens int             `json:"max_tokens"`
-	System    string          `json:"system,omitempty"`
-	Messages  []message       `json:"messages"`
-	Stream    bool            `json:"stream,omitempty"`
-	Thinking  *thinkingConfig `json:"thinking,omitempty"`
+	Model        string          `json:"model"`
+	MaxTokens    int             `json:"max_tokens"`
+	System       string          `json:"system,omitempty"`
+	Messages     []message       `json:"messages"`
+	Stream       bool            `json:"stream,omitempty"`
+	Thinking     *thinkingConfig `json:"thinking,omitempty"`
+	OutputConfig *outputConfig   `json:"output_config,omitempty"`
+}
+
+// Structured outputs. With a schema attached the API constrains generation, so
+// the answer parses by construction rather than by hope — which is the whole
+// fix for a model that writes an unescaped quote into a JSON string after the
+// call has already been paid for.
+type outputConfig struct {
+	Format *jsonSchemaFormat `json:"format,omitempty"`
+}
+
+type jsonSchemaFormat struct {
+	Type   string          `json:"type"`
+	Schema json.RawMessage `json:"schema"`
+}
+
+// outputConfigFor is nil for a prose turn, which is most of them.
+func outputConfigFor(t turn) *outputConfig {
+	if len(t.Schema) == 0 {
+		return nil
+	}
+	return &outputConfig{Format: &jsonSchemaFormat{Type: "json_schema", Schema: t.Schema}}
 }
 
 // thinkingConfig returns what to send as the thinking parameter. Adaptive is
@@ -175,12 +197,13 @@ func (a *anthropicAPI) Stream(ctx context.Context, t turn, onDelta func(Delta)) 
 	var res outcome
 
 	body, err := json.Marshal(anthropicRequest{
-		Model:     a.model,
-		MaxTokens: t.MaxTokens,
-		System:    t.System,
-		Messages:  []message{{Role: "user", Content: t.Prompt}},
-		Stream:    true,
-		Thinking:  a.thinkingConfig(),
+		Model:        a.model,
+		MaxTokens:    t.MaxTokens,
+		System:       t.System,
+		Messages:     []message{{Role: "user", Content: t.Prompt}},
+		Stream:       true,
+		Thinking:     a.thinkingConfig(),
+		OutputConfig: outputConfigFor(t),
 	})
 	if err != nil {
 		return res, err
@@ -300,6 +323,9 @@ type searchRequest struct {
 	Messages  []anyMessage    `json:"messages"`
 	Tools     []searchTool    `json:"tools"`
 	Thinking  *thinkingConfig `json:"thinking,omitempty"`
+	// A schema and a server-side tool coexist: the tool runs during the turn,
+	// the schema constrains what the turn finally answers with.
+	OutputConfig *outputConfig `json:"output_config,omitempty"`
 }
 
 type searchResponse struct {
@@ -338,12 +364,13 @@ func (a *anthropicAPI) Search(ctx context.Context, t turn, opts SearchOptions) (
 	// message back untouched. Bounded so a pathological turn cannot loop.
 	for continuation := 0; continuation < 6; continuation++ {
 		body, err := json.Marshal(searchRequest{
-			Model:     a.model,
-			MaxTokens: t.MaxTokens,
-			System:    t.System,
-			Messages:  messages,
-			Tools:     []searchTool{tool},
-			Thinking:  a.thinkingConfig(),
+			Model:        a.model,
+			MaxTokens:    t.MaxTokens,
+			System:       t.System,
+			Messages:     messages,
+			Tools:        []searchTool{tool},
+			Thinking:     a.thinkingConfig(),
+			OutputConfig: outputConfigFor(t),
 		})
 		if err != nil {
 			return res, err

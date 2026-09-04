@@ -408,8 +408,59 @@ rather than a wrong figure, and the page points at the provider's billing page
 for what actually counts. And the card says plainly that connecting is
 optional: without a key the app still writes the plans itself, and a key buys
 the model's pass over the plan, the review, the recovery guidance and the event
-search. For scale, a full plan plus two reviews on the default model came to
-about 26 cents in testing.
+search.
+
+For scale, measured against the real API on the default model rather than
+against seeded numbers: one plan for a two-week skill is two calls — the
+research turn at 83k input and 5k output tokens, and the plan turn at 16k in
+and 20k out — which is around 40 cents and four and a half minutes. The
+research dominates it, because pages retrieved by web search are billed as
+input, and it is cached per skill rather than per athlete. A review or a
+recovery note is a fraction of that. An earlier figure here of "about 26
+cents" came from seeded token counts and was wrong.
+
+**Asking for JSON is not the same as getting it.** The first real run against
+Anthropic — as opposed to a test double, which had never produced anything but
+clean output — failed twice, and both failures cost a full paid call. The
+research turn wrote a quoted phrase into a JSON string without escaping it
+(`more than lack of "back strength."`) and the document would not parse. The
+plan turn spent exactly its ceiling and was cut off mid-block, because the old
+`8000 + 650` a session had been written before anyone watched a model fill it:
+a real session runs about 2,600 tokens once every block carries a
+prescription, an intensity, a tempo and two notes, and the thinking comes out
+of the same budget. The athlete waited three minutes and got the algorithmic
+plan they would have had for free.
+
+Both are fixed at the point where they happen. Turns that must answer in a
+shape now carry that shape: `schema.go` holds the JSON Schema for the research
+findings and for a plan, and `output_config.format` puts it on the Anthropic
+request, so generation is constrained and the malformed answer cannot be
+produced. The schemas are hand-written and therefore checked by a test that
+compares every object against the struct it fills — a schema naming a field
+the struct does not read would parse cleanly and quietly leave the plan empty,
+which is worse than being rejected. For a provider whose wire format for this
+is not something this build can rely on, `parseOrRepair` spends one short turn
+handing the broken document and the parser's complaint back for a fix; the
+repair carries neither the retrieved pages nor the athlete's records, so it is
+priced at the length of the answer rather than the length of what produced it.
+And `planTokens` is now `12000 + 3000` a session, with the server's write
+deadline raised to match — that deadline is absolute rather than idle, so at
+the measured hundred tokens a second the old 180s could not have carried the
+new ceiling, and a truncated plan would have become a severed connection.
+
+**Two switches on a connection.** Neither needs the key pasted again, and
+neither calls the provider, so both answer immediately. *Switch the connector
+off* holds the key sealed but spends nothing: `credential` refuses with
+`ErrPaused` before it unseals anything, so a paused connection does not have
+its key in memory, and the coaching endpoints answer 428 while plan generation
+falls back to the app's own planner and says why. Reconnecting clears the
+pause, since pasting a key means wanting it to work. *Forget the key when I
+sign out* is for a shared machine: `Logout` deletes the session row `returning
+user_id` and hands that to a sign-out hook the AI store registers at startup,
+which drops the row only for athletes who asked. The hook is best effort — a
+failure is logged and the athlete is still signed out — and it fires only on a
+real sign-out, not on a session that merely expires, which the settings page
+says.
 
 **Every athlete brings their own model account.** The server holds no API key
 of its own and pays for nothing. Under Settings an athlete connects a key from
@@ -638,6 +689,7 @@ POST   /api/v1/workouts          {performed_at?, notes, rpe, sets[]}
 DELETE /api/v1/workouts/{id}
 GET    /api/v1/me/ai
 PUT    /api/v1/me/ai             {provider, api_key, model}  — key omitted switches model
+PATCH  /api/v1/me/ai             {paused?, forget_on_logout?} — either switch, neither calls the provider
 DELETE /api/v1/me/ai
 GET    /api/v1/level
 GET    /api/v1/baseline

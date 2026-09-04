@@ -19,6 +19,10 @@ import (
 var (
 	ErrNoCredentials = errors.New("connect your own Claude or ChatGPT key before using the coaching features")
 	ErrNoKeystore    = errors.New("this server cannot seal provider keys right now, so none can be stored")
+	// ErrPaused is the athlete's own doing, and reads differently from the
+	// other two because of it: the key is here and it works, they have simply
+	// switched the connector off. Nothing to fix, one toggle to flip.
+	ErrPaused = errors.New("your AI connector is switched off, so nothing was sent to a model")
 )
 
 // Provider is one account an athlete can connect, as the settings page needs
@@ -90,6 +94,10 @@ type Connection struct {
 	KeyHint    string     `json:"key_hint"`
 	UpdatedAt  time.Time  `json:"updated_at"`
 	LastUsedAt *time.Time `json:"last_used_at"`
+	// Paused holds the key without spending it. ForgetOnLogout drops it at
+	// the next sign-out. Both are the athlete's switches, not the server's.
+	Paused         bool `json:"paused"`
+	ForgetOnLogout bool `json:"forget_on_logout"`
 }
 
 // Store is the per-user credential table plus the sealing key that makes it
@@ -121,9 +129,10 @@ func (s *Store) Connection(ctx context.Context, userID string) (Connection, bool
 		lastUse *time.Time
 	)
 	err := s.pool.QueryRow(ctx, `
-		select provider, model, key_hint, updated_at, last_used_at
+		select provider, model, key_hint, updated_at, last_used_at, paused, forget_on_logout
 		from user_ai_credentials where user_id = $1`, userID).
-		Scan(&conn.Provider, &conn.Model, &hint, &conn.UpdatedAt, &lastUse)
+		Scan(&conn.Provider, &conn.Model, &hint, &conn.UpdatedAt, &lastUse,
+			&conn.Paused, &conn.ForgetOnLogout)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Connection{}, false, nil
 	}
@@ -187,6 +196,9 @@ func (s *Store) Connect(ctx context.Context, userID, providerID, key, model stri
 		    key_sealed = excluded.key_sealed,
 		    key_hint   = excluded.key_hint,
 		    model      = excluded.model,
+		    -- Pasting a key and pressing Connect means you want it working.
+		    -- forget_on_logout is a standing preference, so it survives.
+		    paused     = false,
 		    updated_at = now()`,
 		userID, provider.ID, sealed, keyHint(key), model)
 	if err != nil {
@@ -232,6 +244,38 @@ func (s *Store) Disconnect(ctx context.Context, userID string) error {
 	return err
 }
 
+// SetSwitches flips either of the athlete's own switches. Both are optional:
+// a nil leaves that one alone, so the settings page can send one toggle
+// without having to restate the other.
+//
+// Neither switch touches the key, and neither needs the provider's agreement,
+// so unlike Connect and UseModel this makes no network call at all.
+func (s *Store) SetSwitches(ctx context.Context, userID string, paused, forgetOnLogout *bool) (Connection, error) {
+	tag, err := s.pool.Exec(ctx, `
+		update user_ai_credentials
+		set paused           = coalesce($2, paused),
+		    forget_on_logout = coalesce($3, forget_on_logout),
+		    updated_at       = now()
+		where user_id = $1`, userID, paused, forgetOnLogout)
+	if err != nil {
+		return Connection{}, err
+	}
+	if tag.RowsAffected() == 0 {
+		return Connection{}, ErrNoCredentials
+	}
+	conn, _, err := s.Connection(ctx, userID)
+	return conn, err
+}
+
+// ForgetOnSignOut drops the key of an athlete who asked for it to go when they
+// sign out. It is wired into logout, and it is deliberately quiet: signing out
+// must succeed whether or not there was ever a key to forget.
+func (s *Store) ForgetOnSignOut(ctx context.Context, userID string) error {
+	_, err := s.pool.Exec(ctx,
+		`delete from user_ai_credentials where user_id = $1 and forget_on_logout`, userID)
+	return err
+}
+
 // ClientFor builds the caller's own client. Every coaching path starts here,
 // which is what guarantees no call is ever made on anyone else's account.
 func (s *Store) ClientFor(ctx context.Context, userID string) (*Client, error) {
@@ -268,15 +312,22 @@ func (s *Store) credential(ctx context.Context, userID string) (Credentials, err
 	var (
 		creds  Credentials
 		sealed []byte
+		paused bool
 	)
 	err := s.pool.QueryRow(ctx, `
-		select provider, key_sealed, model from user_ai_credentials where user_id = $1`, userID).
-		Scan(&creds.Provider, &sealed, &creds.Model)
+		select provider, key_sealed, model, paused
+		from user_ai_credentials where user_id = $1`, userID).
+		Scan(&creds.Provider, &sealed, &creds.Model, &paused)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Credentials{}, ErrNoCredentials
 	}
 	if err != nil {
 		return Credentials{}, err
+	}
+	// Refuse before unsealing. A switched-off connector should not have its
+	// key in memory at all, let alone on its way to a provider.
+	if paused {
+		return Credentials{}, ErrPaused
 	}
 
 	creds.Key, err = s.box.Open(sealed)

@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"errors"
+	"log"
 	"net/http"
 	"net/mail"
 	"strings"
@@ -43,6 +44,16 @@ type Service struct {
 	// discovered caches each issuer's published endpoints.
 	discoveryMu sync.Mutex
 	discovered  map[string]endpoints
+	// onSignOut runs for the athlete who just signed out. The AI store hangs
+	// its "forget my key at logout" switch off this; auth itself knows
+	// nothing about provider keys and does not want to.
+	onSignOut func(ctx context.Context, userID string) error
+}
+
+// OnSignOut registers work to do when an athlete signs out. Called once at
+// startup, before the server serves anything.
+func (s *Service) OnSignOut(fn func(ctx context.Context, userID string) error) {
+	s.onSignOut = fn
 }
 
 func New(pool *pgxpool.Pool, secureCookies bool, oauth OAuthConfig) *Service {
@@ -259,7 +270,18 @@ func (s *Service) Login(w http.ResponseWriter, r *http.Request) {
 
 func (s *Service) Logout(w http.ResponseWriter, r *http.Request) {
 	if c, err := r.Cookie(cookieName); err == nil && c.Value != "" {
-		_, _ = s.pool.Exec(r.Context(), `delete from sessions where token_hash = $1`, hashToken(c.Value))
+		var userID string
+		err := s.pool.QueryRow(r.Context(),
+			`delete from sessions where token_hash = $1 returning user_id`, hashToken(c.Value)).
+			Scan(&userID)
+		// Whatever else happens, the cookie goes and the answer is "signed
+		// out". A hook that fails must not strand someone in a session they
+		// have asked to leave.
+		if err == nil && s.onSignOut != nil {
+			if err := s.onSignOut(r.Context(), userID); err != nil {
+				log.Printf("sign-out cleanup for %s: %v", userID, err)
+			}
+		}
 	}
 	s.clearCookie(w)
 	httpx.JSON(w, http.StatusOK, map[string]string{"status": "signed out"})

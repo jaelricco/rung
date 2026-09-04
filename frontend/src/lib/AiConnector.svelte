@@ -99,6 +99,22 @@
 		}
 	}
 
+	// The two switches on an existing connection. Neither touches the key and
+	// neither calls the provider, so they answer immediately.
+	async function flip(change, note) {
+		busy = true;
+		error = null;
+		saved = '';
+		try {
+			account = await api.patch('/me/ai', change);
+			saved = note;
+		} catch (e) {
+			error = e;
+		} finally {
+			busy = false;
+		}
+	}
+
 	async function disconnect() {
 		busy = true;
 		error = null;
@@ -149,16 +165,63 @@
 		{/if}
 
 		{#if connection}
-			<div class="connected">
+			<div class="connected" class:off={connection.paused}>
 				<div>
 					<strong>{connection.label || connection.provider}</strong>
 					<span class="mono muted"> · {connection.model}</span>
+					{#if connection.paused}<span class="badge">off</span>{/if}
 					<p class="mono muted meta">
 						key ••••{connection.key_hint} · added {shortDate(connection.updated_at)}
 						{#if connection.last_used_at}· last used {shortDate(connection.last_used_at)}{/if}
 					</p>
 				</div>
 				<button class="ghost" onclick={disconnect} disabled={busy}>Disconnect</button>
+			</div>
+
+			<div class="switches">
+				<label class="switch">
+					<input
+						type="checkbox"
+						checked={connection.paused}
+						disabled={busy}
+						onchange={(e) =>
+							flip(
+								{ paused: e.currentTarget.checked },
+								e.currentTarget.checked
+									? 'Connector switched off. Your key stays here; nothing is sent to a model.'
+									: 'Connector switched back on.'
+							)}
+					/>
+					<span>
+						<strong>Switch the connector off</strong>
+						<span class="mono muted hint">
+							Keeps the key, spends nothing. Plans keep being written from your own records —
+							they just do not get a model's pass over them.
+						</span>
+					</span>
+				</label>
+
+				<label class="switch">
+					<input
+						type="checkbox"
+						checked={connection.forget_on_logout}
+						disabled={busy}
+						onchange={(e) =>
+							flip(
+								{ forget_on_logout: e.currentTarget.checked },
+								e.currentTarget.checked
+									? 'This key will be deleted when you sign out.'
+									: 'The key will stay until you disconnect it.'
+							)}
+					/>
+					<span>
+						<strong>Forget the key when I sign out</strong>
+						<span class="mono muted hint">
+							For a shared or borrowed machine. It applies when you sign out yourself — a session
+							that simply expires leaves the key in place.
+						</span>
+					</span>
+				</label>
 			</div>
 
 			{#if usage && usage.total.calls > 0}
@@ -335,9 +398,58 @@
 		padding: 0.8rem 0.9rem;
 		margin-top: 1rem;
 	}
+	.connected.off {
+		border-style: dashed;
+		opacity: 0.75;
+	}
+	.badge {
+		font-family: var(--mono);
+		font-size: 0.65rem;
+		text-transform: uppercase;
+		letter-spacing: 0.12em;
+		border: 1px solid var(--line);
+		border-radius: 999px;
+		padding: 0.1rem 0.45rem;
+		margin-left: 0.4rem;
+		color: var(--muted);
+		vertical-align: middle;
+	}
 	.meta {
 		font-size: 0.9rem;
 		margin: 0.25rem 0 0;
+	}
+
+	/* The two switches on an existing connection, below the connection they
+	   act on rather than down with the fields that replace it. */
+	.switches {
+		display: grid;
+		gap: 0.55rem;
+		margin-top: 0.7rem;
+	}
+	.switch {
+		display: flex;
+		align-items: flex-start;
+		gap: 0.65rem;
+		cursor: pointer;
+	}
+	.switch input {
+		width: auto;
+		margin: 0.15rem 0 0;
+		flex: none;
+		accent-color: var(--signal);
+	}
+	.switch > span {
+		display: flex;
+		flex-direction: column;
+		gap: 0.15rem;
+	}
+	.switch strong {
+		font-weight: 500;
+		font-size: 0.9rem;
+	}
+	.switch .hint {
+		margin: 0;
+		line-height: 1.5;
 	}
 
 	/* The providers, as things you point at rather than names in a list. */

@@ -74,6 +74,9 @@ func main() {
 		Thinking:          cfg.AIThinking,
 	})
 	aiHandler := ai.NewHandler(aiStore, pool, trainingSvc)
+	// An athlete can ask for their key to go when they do. Auth owns signing
+	// out; the AI store owns the key; this is the one line that joins them.
+	authSvc.OnSignOut(aiStore.ForgetOnSignOut)
 	// The deterministic planner. It shares nothing with the AI handler except
 	// the plan schema, and it needs no model account of any kind — which is
 	// the point: it is what answers when everything else cannot.
@@ -113,6 +116,7 @@ func main() {
 		"GET /api/v1/me/ai":                     aiHandler.Connection,
 		"GET /api/v1/me/ai/usage":               aiHandler.Usage,
 		"PUT /api/v1/me/ai":                     aiHandler.Connect,
+		"PATCH /api/v1/me/ai":                   aiHandler.Switches,
 		"DELETE /api/v1/me/ai":                  aiHandler.Disconnect,
 		"GET /api/v1/workouts":                  trainingSvc.ListWorkouts,
 		"POST /api/v1/workouts":                 trainingSvc.CreateWorkout,
@@ -162,8 +166,13 @@ func main() {
 		Handler:           handler,
 		ReadHeaderTimeout: 10 * time.Second,
 		ReadTimeout:       30 * time.Second,
-		// Generous: plan generation waits on the model.
-		WriteTimeout: 180 * time.Second,
+		// Generous, because plan generation waits on the model and this is an
+		// absolute deadline rather than an idle one: a streamed plan is cut
+		// here however busy the connection is. A measured plan wrote about a
+		// hundred tokens a second, so 180s could not even carry the ceiling
+		// planTokens now asks for, and the fix for a truncated plan would
+		// have been a severed connection instead.
+		WriteTimeout: 12 * time.Minute,
 		IdleTimeout:  120 * time.Second,
 	}
 

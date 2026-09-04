@@ -93,8 +93,27 @@ const (
 // budget, and a ceiling that only fits the answer gets spent on the thinking
 // and returns nothing at all. A session now carries intensity, tempo and its
 // own progression rule, so it costs more to write than it used to.
+// planTokens sizes the ceiling for a plan of this many sessions.
+//
+// The old figure — 8000 plus 650 a session — was written before anyone had
+// watched a real model fill it. A measured six-session plan spent exactly its
+// 11,900 and was cut off mid-block: the model writes a prescription, an
+// intensity, a tempo, a progression note and a coaching note for every
+// movement, which is around 2,600 tokens a session and not 650. The ceiling
+// also has to cover the thinking, which is spent from the same budget.
+//
+// So: room for the reasoning, then three thousand a session. This path
+// streams and only generated tokens are billed, so a generous ceiling costs
+// nothing when it is not used, while a tight one costs the entire call.
+//
+// The cap is not the model's limit — Sonnet 5 and Opus 5 both answer up to
+// 128k. It is the clock. Measured throughput on a real plan was about a
+// hundred tokens a second, so 64k is already ten minutes of writing, and the
+// server's own write deadline is what a plan actually runs out of first. A
+// plan long enough to reach this cap wants writing a phase at a time rather
+// than in one turn; that is a larger change than a bigger number.
 func planTokens(sessions int) int {
-	tokens := 8000 + sessions*650
+	tokens := 12000 + sessions*3000
 	if tokens > 64000 {
 		tokens = 64000
 	}
@@ -192,7 +211,7 @@ func (h *Handler) SkillPlan(w http.ResponseWriter, r *http.Request) {
 
 	var refined Plan
 	err = client.CompleteJSONStream(ctx, me.ID, "skill_plan", coachSystem, prompt,
-		planTokens(expected), func(d Delta) { out.report(tracker.update(d)) }, &refined)
+		planTokens(expected), planSchema, func(d Delta) { out.report(tracker.update(d)) }, &refined)
 	if err != nil {
 		deliver(fallback(baseline, "The model could not be reached: "+err.Error()), plan.SourceFallback, baseWarnings)
 		return
@@ -254,6 +273,8 @@ func notConnectedReason(err error) string {
 	switch {
 	case errors.Is(err, ErrNoCredentials):
 		return "No AI account is connected, so nothing was sent to a model. Connect one under Settings if you want a model to refine this."
+	case errors.Is(err, ErrPaused):
+		return "Your AI connector is switched off, so nothing was sent to a model. Switch it back on under Settings whenever you want one."
 	case errors.Is(err, ErrNoKeystore):
 		return "The server cannot open stored API keys at the moment, so nothing was sent to a model."
 	default:
