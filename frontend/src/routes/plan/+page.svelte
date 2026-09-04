@@ -322,7 +322,7 @@
 			{#each plan.phases ?? [] as phase (phase.weeks)}
 				<div class="panel">
 					<p class="eyebrow">Weeks {phase.weeks}</p>
-					<p style="font-weight:600;margin:0.2rem 0 0.2rem">{phase.name}</p>
+					<p class="item-title" style="margin:0.2rem 0 0.2rem">{phase.name}</p>
 					<p class="lede" style="margin:0">{phase.aim}</p>
 				</div>
 			{/each}
@@ -394,7 +394,7 @@
 							<p class="eyebrow" style="margin:0">
 								Week {week.week}{` · ${formatDate(isoDate(openSession.slot.date))}`}
 							</p>
-							<strong style="flex:1 1 auto">{openSession.session.title}</strong>
+							<strong class="item-title" style="flex:1 1 auto">{openSession.session.title}</strong>
 							{#if openSession.session.load}
 								<span
 									class="chip"

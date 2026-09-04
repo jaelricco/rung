@@ -218,7 +218,7 @@
 			{#each routines as routine (routine.id)}
 				<div class="panel">
 					<div class="row" style="align-items:baseline">
-						<strong style="flex:1 1 auto">
+						<strong class="item-title" style="flex:1 1 auto">
 							{routine.title}
 							<span class="tag" class:on={routine.active}>
 								{routine.active ? 'Every week' : 'Paused'}
@@ -315,7 +315,7 @@
 		{#each week as day (day.day)}
 			<div class="day" class:rest={day.sessions.length === 0}>
 				<div class="row" style="align-items:baseline">
-					<strong style="flex:0 0 110px">{day.name}</strong>
+					<strong class="item-title" style="flex:0 0 110px">{day.name}</strong>
 					<span class="lede" style="flex:1 1 auto">
 						{day.sessions.length === 0 ? 'Rest' : day.sessions.map((s) => s.body.title || 'Untitled').join(' · ')}
 					</span>

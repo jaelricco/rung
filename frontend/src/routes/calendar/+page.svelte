@@ -223,7 +223,7 @@
 				<p class="eyebrow" style="margin:0 0 0.2rem">
 					{editor.id ? 'Edit session' : 'New session'}
 				</p>
-				<strong>{formatDate(editor.scheduled_on)}</strong>
+				<strong class="item-title">{formatDate(editor.scheduled_on)}</strong>
 			</div>
 			<div style="flex:0 1 170px">
 				<label for="editor-date">Day</label>
@@ -310,7 +310,7 @@
 				<div class="cal-detail">
 					<div class="cal-detail-head">
 					<p class="eyebrow" style="margin:0">{formatDate(open.scheduled_on)}</p>
-					<strong style="flex:1 1 auto">{open.title}</strong>
+					<strong class="item-title" style="flex:1 1 auto">{open.title}</strong>
 					<button
 						class="ghost"
 						style="padding:0.35rem 0.7rem;font-size:0.8rem"
@@ -333,7 +333,7 @@
 				</div>
 				<p class="lede" style="margin:0 0 0.6rem">
 					{open.focus}
-					<span class="mono" style="font-size:0.76rem;opacity:0.75">
+					<span class="note">
 						{open.focus ? ' · ' : ''}{SOURCES[open.source] ?? ''}
 					</span>
 				</p>
