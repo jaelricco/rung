@@ -382,6 +382,18 @@ URI registered with the provider has to be exactly
 self-service registration, so whether you can register this app for it is a
 question for OpenAI, not for this code — the code is ready either way.
 
+Worth being explicit, because it is asked often: signing in with either
+provider buys **no model access**. Sign in with ChatGPT is an identity
+provider — a third-party app receives name, email address and profile picture,
+and nothing else. Anthropic goes further and prohibits routing third-party
+traffic through Claude.ai credentials at all. The tools that appear to spend a
+subscription from outside reuse a first-party CLI's OAuth client and shape
+their requests to pass its checks, which is impersonation, and OpenAI's own
+issue tracker has that returning 429. The supported route to "the athlete's
+subscription pays" is to run inside the provider's own surface — an app in
+ChatGPT — which is a different product, not a connector setting. Here, model
+access comes from the athlete's own API key and nothing else.
+
 Three rules decide which account a sign-in lands on, and they are what
 `internal/auth/oauth.go`'s tests hold it to: an identity already linked signs
 into its own account; a *verified* address that matches an existing account
@@ -447,6 +459,26 @@ And `planTokens` is now `12000 + 3000` a session, with the server's write
 deadline raised to match — that deadline is absolute rather than idle, so at
 the measured hundred tokens a second the old 180s could not have carried the
 new ceiling, and a truncated plan would have become a severed connection.
+
+**Getting a key, for someone who has never made one.** The account an athlete
+already has is the wrong one: a ChatGPT or Claude subscription is a consumer
+product, the key comes from a separate developer account with its own balance,
+and neither company's pages say so. Left to work it out, people top up the
+subscription and still cannot connect. So each provider in the catalogue
+carries `Steps` — open the console, add credit, make the key, paste it — shown
+only to whoever asks for them, so the field stays a field for anyone who has
+done this before. A test asserts the order rather than the wording: credit
+before key, because a key made against an empty account looks valid and
+refuses every request.
+
+The same gap shows up again in the provider's own refusal. "You exceeded your
+current quota" is accurate and useless to a first-time user, so `guide` appends
+the next move to the failures that have one and leaves everything else exactly
+as the provider wrote it — guessing at an unfamiliar error sends someone to fix
+what is not broken. It matches on sets of words rather than one phrase, which
+is not fussiness: the first version looked for "invalid api key" and missed
+Anthropic's actual "API key is invalid.", the same words in the other order and
+the commonest refusal there is.
 
 **The two cost levers, and which one is worth having.** Measured on a real
 plan, the research turn dominates the bill: seven web searches pulled 87,000

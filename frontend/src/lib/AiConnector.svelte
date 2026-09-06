@@ -12,6 +12,9 @@
 	let busy = $state(false);
 	let saved = $state('');
 	let open = $state(true);
+	// The walkthrough starts closed for anyone who already has a connection —
+	// they have plainly done it before — and open for anyone who has not.
+	let showSteps = $state(false);
 
 	let provider = $state('anthropic');
 	let apiKey = $state('');
@@ -288,7 +291,26 @@
 					Make one at <a class="mono" href={chosen.keys_url} target="_blank" rel="noreferrer noopener"
 						>{chosen.keys_url}</a
 					>. Stored encrypted, and never shown back to you.
+					{#if chosen.steps?.length}
+						<button class="link" onclick={() => (showSteps = !showSteps)} aria-expanded={showSteps}>
+							{showSteps ? 'Hide the steps' : "I've never made one"}
+						</button>
+					{/if}
 				</p>
+				{#if showSteps && chosen.steps?.length}
+					<ol class="steps">
+						{#each chosen.steps as step (step.do)}
+							<li>
+								{#if step.url}
+									<a href={step.url} target="_blank" rel="noreferrer noopener">{step.do}</a>
+								{:else}
+									{step.do}
+								{/if}
+								{#if step.note}<span class="mono muted note">{step.note}</span>{/if}
+							</li>
+						{/each}
+					</ol>
+				{/if}
 			{/if}
 		</div>
 
