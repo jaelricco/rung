@@ -133,3 +133,43 @@ func TestTheWalkthroughWarnsThatTheSubscriptionIsTheWrongAccount(t *testing.T) {
 		}
 	}
 }
+
+// The connector calls the string a connection code, because that is what an
+// athlete is doing: connecting their account. The provider's own pages call it
+// an API key. Both names are right in their own place, and a walkthrough that
+// renamed the provider's button would send someone hunting for a control that
+// does not exist there.
+func TestTheWalkthroughKeepsTheProvidersOwnWordForTheirOwnPages(t *testing.T) {
+	for _, p := range Providers {
+		var onTheirSite, onOurs int
+		for _, step := range p.Steps {
+			if step.URL != "" && strings.Contains(strings.ToLower(step.Do), "key") {
+				onTheirSite++
+			}
+			if step.URL == "" && strings.Contains(strings.ToLower(step.Do), "connection code") {
+				onOurs++
+			}
+		}
+		if onTheirSite == 0 {
+			t.Errorf("%s: no step on the provider's own site says \"key\", which is what "+
+				"their page calls it", p.Label)
+		}
+		if onOurs == 0 {
+			t.Errorf("%s: the step taken here does not name the connection code, which is "+
+				"what this app's field is labelled", p.Label)
+		}
+	}
+}
+
+// Nothing an athlete reads should tell them to connect a "key" — they connect
+// an account, and the code is how. The message every coaching endpoint answers
+// with when nothing is connected is the one they see most.
+func TestTheNotConnectedMessageAsksForAnAccount(t *testing.T) {
+	msg := ErrNoCredentials.Error()
+	if !strings.Contains(msg, "account") {
+		t.Errorf("ErrNoCredentials = %q, which does not name what is being connected", msg)
+	}
+	if strings.Contains(msg, "key") {
+		t.Errorf("ErrNoCredentials = %q; the athlete connects an account, not a key", msg)
+	}
+}

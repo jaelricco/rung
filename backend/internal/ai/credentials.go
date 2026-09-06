@@ -17,7 +17,7 @@ import (
 // Claude or ChatGPT account, the key is sealed into the database, and every
 // call they make afterwards is billed to them by their own provider.
 var (
-	ErrNoCredentials = errors.New("connect your own Claude or ChatGPT key before using the coaching features")
+	ErrNoCredentials = errors.New("connect your own Claude or ChatGPT account before using the coaching features")
 	ErrNoKeystore    = errors.New("this server cannot seal provider keys right now, so none can be stored")
 	// ErrPaused is the athlete's own doing, and reads differently from the
 	// other two because of it: the key is here and it works, they have simply
@@ -91,7 +91,10 @@ var Providers = []Provider{
 				URL:  "https://console.anthropic.com/settings/keys",
 				Note: "It is shown once. Paste it below straight away; if you lose it, make another.",
 			},
-			{Do: "Paste it in the box below and press Connect"},
+			{
+				Do:   "Paste it below as your connection code",
+				Note: "That code is the key. It is what connects your account here; nothing else about your Claude account is touched.",
+			},
 		},
 	},
 	{
@@ -118,7 +121,10 @@ var Providers = []Provider{
 				URL:  "https://platform.openai.com/api-keys",
 				Note: "It is shown once. Paste it below straight away; if you lose it, make another.",
 			},
-			{Do: "Paste it in the box below and press Connect"},
+			{
+				Do:   "Paste it below as your connection code",
+				Note: "That code is the key. It is what connects your account here; nothing else about your ChatGPT account is touched.",
+			},
 		},
 	},
 }

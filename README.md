@@ -460,6 +460,17 @@ deadline raised to match — that deadline is absolute rather than idle, so at
 the measured hundred tokens a second the old 180s could not have carried the
 new ceiling, and a truncated plan would have become a severed connection.
 
+**An account you connect, not a secret you paste.** The connector asks for a
+*connection code*, and the walkthrough is open by default for anyone who
+arrives without a connection — because that is exactly who has never done this.
+The naming rule is worth stating, since getting it wrong in either direction
+costs someone their afternoon: here it is a connection code, on the provider's
+own pages it is an API key, and the field's own help text bridges the two. A
+test holds both halves, so a later tidy-up cannot rename the provider's button
+and send people hunting for a control that does not exist there. Nothing an
+athlete reads asks them to connect a key — they connect an account, and the
+code is how.
+
 **Getting a key, for someone who has never made one.** The account an athlete
 already has is the wrong one: a ChatGPT or Claude subscription is a consumer
 product, the key comes from a separate developer account with its own balance,
