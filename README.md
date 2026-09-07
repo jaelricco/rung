@@ -357,6 +357,43 @@ a row whichever ladder also happens to list it. §10 of
 `docs/training-research.md` has the sources, and says plainly which of them
 could not be read directly.
 
+**Accessories are chosen at the athlete's level, not from a list.** The
+supporting work used to come from fixed chains, and a fixed chain keeps
+prescribing the movement that used to be hard: three of the twenty accessory
+lists in the catalogue named an australian row and thirteen named a hollow body
+hold, and the antagonist block was a row or a push-up at every level of the
+sport. Someone holding a front lever and training the front lever pull-up does
+not need either. Those are not light accessory work for them — they are a
+warm-up with a set count, and the slot they take is one a real block would have
+had.
+
+The fix is not more tiers. The core chain already had three and still produced
+the problem, because every one of them keyed on a single movement — a hanging
+leg raise, an L-sit — so an athlete whose log is full of levers and empty of
+leg raises fell to the bottom and got planks. Two numbers the app already has
+answer it instead: the library rates every movement 1 to 10 for difficulty, and
+the records name the hardest thing the athlete has done. Accessories come from
+one ordered pool per pattern, and a band around that ceiling picks the entry —
+so a movement joins the right level by being rated and an athlete moves up by
+logging a set, with nothing to keep in step.
+
+The band is per pattern, because a maltese does not make you ready for a
+one-arm pull-up; an unlogged pattern floors at two steps below the overall
+figure rather than resetting to beginner; weighted and band work are exempt,
+since a weighted pull-up is as hard as the plate on it; and inside the band
+what the athlete has a record for comes first, because a block priced from a
+standard rather than a logged set is a guess. Rep counts are capped by the
+movement rather than by the slot that asked, so an accessory slot's "twelve
+reps" cannot turn into 8-15 reps of a one-arm negative. The antagonist block is
+one step easier and never the goal's own work — an ice cream maker is not the
+counterweight to a front lever day, it is another front lever day.
+
+Scaling up must not scale a beginner up, and the first version of this did
+exactly that: a plan for somebody's first pull-up prescribing deficit handstand
+push-ups, because the band closed over nothing and the fallback returned the
+first entry of a list written hardest-first. A level never falls below one, and
+an empty band falls back easiest-first. Both are covered by tests.
+
 **A new athlete can say where they are instead of proving it.** The planner
 reads records, so someone who has trained for years and joined yesterday would
 start at the bottom of every ladder. `/baseline` is the eight benchmarks that

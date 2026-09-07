@@ -230,33 +230,63 @@ var ordinaryWork = map[string]bool{
 	"hanging_knee_raise": true, "plank": true, "arch_body_hold": true,
 }
 
-// offLine is every rung of every *other* skill in the catalogue, with this
-// goal's own line and the ordinary work taken back out. What remains is the
-// set of movements that mean "a second skill" on a day that already has one.
+// offLine is the work that means "a second skill" on a day that already has
+// one: the rungs, assists and drills of every *other* skill in the catalogue,
+// with this goal's own line and the ordinary work taken back out.
+//
+// Two narrowings matter, and both were learned the hard way.
+//
+// Only straight-arm work counts. The rule exists because the tendon budget is
+// one account and a second maximal static spends from it — an L-sit or a back
+// lever beside a maltese hold. A hard *bent-arm* movement that happens to sit
+// on somebody else's ladder is not that: a typewriter pull-up is the
+// antagonist a maltese day wants, and refusing it because a one-arm pull-up is
+// climbed through one would leave the counterweight to a heavy push day as a
+// band face pull. So the filter is straight-arm goals and static holds, not
+// every ladder in the catalogue.
+//
+// And it is the whole line, not just the rungs. An ice cream maker is a front
+// lever drill rather than a front lever, and putting one on a planche day is
+// exactly the mistake this rule is about.
 func (b *builder) offLineOf(g Goal) map[string]bool {
 	own := b.lineOf(g)
 	out := map[string]bool{}
+	mark := func(slugs chain, straightArm bool) {
+		for _, slug := range slugs {
+			if own[slug] || ordinaryWork[slug] {
+				continue
+			}
+			if straightArm || b.lib.Exercises[slug].Measure == "static_hold" {
+				out[slug] = true
+			}
+		}
+	}
 	for _, other := range Goals {
 		if other.Key == g.Key || other.Foundation {
 			continue
 		}
 		for _, step := range other.Ladder {
-			for _, slug := range step.Movement {
-				if !own[slug] && !ordinaryWork[slug] {
-					out[slug] = true
-				}
-			}
+			mark(step.Movement, other.StraightArm)
+			mark(step.Assist, other.StraightArm)
 		}
+		mark(other.Drills, other.StraightArm)
 	}
 	return out
 }
 
-// keepOnLine drops another skill's rungs from a candidate list. It is used for
-// the supporting slots of a skill day and nowhere else: the strength block is
-// allowed its dips whatever ladder they also appear on, and a day that is not
-// about the skill is not covered by this rule at all.
+// keepOnLine drops another skill's straight-arm work from a candidate list. It
+// is used for the supporting slots and nowhere else: the strength block is
+// allowed its dips whatever ladder they also appear on.
+//
+// It applies on every day of the week rather than only on the skill days,
+// which is a change from where this rule started. The argument for the skill
+// day was rehearsal — one line per session. The argument for the rest of the
+// week is the tendon budget, and it is the stronger one: a back lever on the
+// day *after* a maltese day is loading the same tissue during the recovery
+// that day exists to give it. Another skill is another skill whenever it shows
+// up.
 func (s *sessionBuilder) keepOnLine(candidates chain) chain {
-	if !s.oneLineDay() {
+	if s.goal.Foundation {
 		return candidates
 	}
 	kept := make(chain, 0, len(candidates))
@@ -268,9 +298,9 @@ func (s *sessionBuilder) keepOnLine(candidates chain) chain {
 	return kept
 }
 
-// oneLineDay reports a session built around the skill, which is the only kind
-// the one-line rule applies to.
-func (s *sessionBuilder) oneLineDay() bool {
+// skillDay reports a session built around the goal's own skill, as opposed to
+// the days that carry the pattern it does not train.
+func (s *sessionBuilder) skillDay() bool {
 	if s.goal.Foundation {
 		return false
 	}
@@ -379,8 +409,8 @@ func (b *builder) holdWeekToShare(p *Plan, indexes []int, ceiling float64) (floa
 		return 0, false
 	}
 
-	// Largest block first, so the trim comes off the volume block rather than
-	// off the two-set opener that the whole session is pointed at.
+	// Order for the second pass: the blocks a session can give up entirely go
+	// from the end of its span backwards.
 	sort.SliceStable(skill, func(x, y int) bool {
 		return p.Sessions[skill[x].session].Blocks[skill[x].block].Sets >
 			p.Sessions[skill[y].session].Blocks[skill[y].block].Sets
@@ -389,24 +419,30 @@ func (b *builder) holdWeekToShare(p *Plan, indexes []int, ceiling float64) (floa
 	touched := map[int]bool{}
 	over := func() bool { return float64(spent) > ceiling*float64(total) }
 
-	// First pass: take sets off, largest block first, down to a floor of two.
-	// Below two a block is not a smaller dose of the same thing, it is a
-	// gesture, and a gesture in a plan is worse than an absence.
+	// First pass: take sets off, whichever block is currently largest, down to
+	// a floor of two. Below two a block is not a smaller dose of the same
+	// thing, it is a gesture, and a gesture in a plan is worse than an
+	// absence. Re-finding the largest each time is what keeps the two skill
+	// days of a week the same size as each other, rather than emptying Monday
+	// to protect Thursday.
 	for over() {
-		took := false
+		var biggest *Block
 		for _, r := range skill {
 			block := &p.Sessions[r.session].Blocks[r.block]
-			if block.Sets <= 2 {
-				continue
+			if block.Sets > 2 && (biggest == nil || block.Sets > biggest.Sets) {
+				biggest = block
 			}
-			block.Sets--
-			block.Prescription = renumber(block.Prescription, block.Sets)
-			touched[r.session] = true
-			spent, total, took = spent-1, total-1, true
+		}
+		if biggest == nil {
 			break
 		}
-		if !took {
-			break
+		biggest.Sets--
+		biggest.Prescription = renumber(biggest.Prescription, biggest.Sets)
+		spent, total = spent-1, total-1
+		for _, r := range skill {
+			if &p.Sessions[r.session].Blocks[r.block] == biggest {
+				touched[r.session] = true
+			}
 		}
 	}
 

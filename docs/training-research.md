@@ -781,7 +781,116 @@ the second, and the top of the dial is a cap rather than a target.
 
 ---
 
-## 11. What this means for an algorithm
+## 11. An accessory has a level too
+
+The focus dial in §10 decided how much of the week the skill gets. It said
+nothing about what fills the rest of the session, and what filled it was a
+fixed list. Fixed lists have one failure mode, and it gets worse the better the
+athlete is: they keep prescribing the movement that used to be hard.
+
+The report that surfaced it is worth quoting in shape, because it is the honest
+test of every accessory rule: *I can hold a front lever and a straddle planche
+and I am training the front lever pull-up. An australian row is not accessory
+work for me. A hollow body hold is not accessory work for me. Give me front
+lever tuck rows, weighted pull-ups, dragon flags.* Every word of that is right,
+and the planner was doing exactly what was described — three of the twenty
+accessory lists in the catalogue named `australian_row` and thirteen named
+`hollow_body_hold`, and the antagonist block was a fixed `australian_row` or
+`push_up` at every level of the sport.
+
+### Why tiers were the wrong fix
+
+The core chain already *had* tiers — three of them — and it still produced the
+complaint, because every tier keyed on one movement: a hanging leg raise or an
+L-sit hold. An athlete whose log is full of levers and planches and empty of
+hanging leg raises fell straight through to the bottom of it and was prescribed
+planks. That is not a missing tier, it is the wrong evidence. Any rule that
+asks "have you logged *this* movement" fails for the athlete who got strong
+some other way.
+
+Two numbers already in the app answer it without any new tiers at all. The
+exercise library rates every movement 1 to 10 for difficulty. The athlete's
+records name the hardest thing they have done. The band between them is the
+tier, and it needs nothing kept in step: a movement added to the library joins
+the right level by being rated, and an athlete moves up it by logging a set.
+
+### The rules that fall out
+
+**Level is per pattern, not overall.** Someone holding a maltese is not
+therefore ready for a one-arm pull-up, and someone with a front lever is not
+therefore a runner. The ceiling a movement is measured against is the hardest
+thing on record in the same kind of work — pull, push, legs, core — with
+statics measured against the overall figure, because that is what the ladders
+are rated on.
+
+**A pattern with nothing logged does not make a beginner.** Somebody with a
+full planche has been training for years whatever their pull-up column says. So
+the floor under an unlogged category is the overall figure less two: one useful
+step down rather than a reset to push-ups.
+
+**Movements that scale with load are exempt from the floor.** A weighted
+pull-up is as hard as the plate on the belt, and a band face pull is prescribed
+for what it does to a shoulder rather than for how hard it is. Neither is ever
+"too easy for this athlete".
+
+**Inside the band, what they have a record for comes first.** The point of
+scaling accessories up is to stop prescribing work the athlete outgrew, not to
+fill their week with movements nobody has a number for. A block priced from a
+rung's standard rather than from a logged set is a guess, and a guess is
+tolerable for one block and wrong for three.
+
+**The rep count is capped by the movement, not by the slot that asked.** An
+accessory slot asks for twelve reps because twelve is what an accessory is
+worth. Hand that number to a one-arm negative and the block reads "8-15 reps"
+of something nobody does more than three of. The library's difficulty rating
+reads directly as what a set of the thing looks like:
+
+| Difficulty | Most reps prescribed |
+| --- | --- |
+| 9–10 | 3 |
+| 8 | 5 |
+| 6–7 | 8 |
+| 4–5 | 12 |
+| 3 | 15 |
+| 1–2 | 20 |
+
+**The antagonist is one step easier, and never the goal's own work.** That
+block exists to balance the day. A block that trains the same thing balances
+nothing — an ice cream maker is not the counterweight to a front lever day, it
+is another front lever day — and a maximal set is not a counterweight either.
+
+**Scaling up must not scale a beginner up.** The first version of this rule
+prescribed deficit handstand push-ups in a plan for somebody's first pull-up,
+because the band closed over nothing and the fallback handed back the first
+entry of a list written hardest-first. Two guards: a level never falls below
+one, so the bottom of the library stays reachable; and when nothing in a list
+is at the athlete's level, the fallback sorts it easiest-first, because that is
+the only safe direction to be wrong in.
+
+### Where the one-line rule ended up
+
+§10 filtered another skill's rungs out of a skill day's supporting slots. Two
+things changed once the pools reached into the rest of the catalogue.
+
+It now covers **the whole line rather than just the rungs** — an ice cream
+maker is a front lever drill rather than a front lever, and putting one on a
+planche day is exactly the mistake the rule is about — and it applies on
+**every day of the week rather than only the skill days**. The argument for the
+skill day was rehearsal: one line per session. The argument for the rest of the
+week is the tendon budget of §7, and it is the stronger one — a back lever on
+the day *after* a maltese day is loading the same tissue during the recovery
+that day exists to provide.
+
+And it narrowed in the other direction, to **straight-arm work only**. The rule
+exists because one maximal static spends from the same account as another. A
+hard *bent-arm* movement that happens to sit on somebody else's ladder is not
+that: a typewriter pull-up is the antagonist a maltese day wants, and refusing
+it because a one-arm pull-up is climbed through one leaves the counterweight to
+a heavy push day as a band face pull.
+
+---
+
+## 12. What this means for an algorithm
 
 Rules the generator implements directly, each traceable to a section above:
 
@@ -848,3 +957,11 @@ Rules the generator implements directly, each traceable to a section above:
 27. **Maintenance of the skills a goal is built on is not charged to the goal.**
     Holding a planche while chasing a maltese costs two or three sets a week,
     not a second programme (§7, §10).
+28. **Choose accessories from the athlete's own level, per pattern**, as a band
+    around the hardest thing they have on record rather than from a fixed list
+    or a tier keyed on one movement (§11).
+29. **Cap a rep count by the movement**, never by the slot that asked for it
+    (§11).
+30. **The antagonist is one step easier than the athlete's ceiling and never
+    the goal's own work**, because a block that trains the same thing balances
+    nothing (§11).

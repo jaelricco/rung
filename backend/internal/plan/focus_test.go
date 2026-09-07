@@ -10,6 +10,16 @@ import (
 
 // An athlete deep enough into the catalogue for the focus dial to have
 // anything to move: a planche that is held, so the maltese ladder is open.
+// The athlete this whole pass is about: years in, holds a front lever and a
+// straddle planche, training the front lever pull-up. Nothing in their week
+// should be an australian row.
+func advancedAthlete() training.Snapshot {
+	return snapshotOf(18, 70,
+		rec("pull_up", 18, 0, 0), rec("dip", 20, 0, 0), rec("weighted_pull_up", 6, 30, 0),
+		rec("front_lever", 0, 0, 12), rec("straddle_planche", 0, 0, 10),
+		rec("front_lever_row", 3, 0, 0), rec("l_sit", 0, 0, 45))
+}
+
 func maltesePlacedAthlete() training.Snapshot {
 	return snapshotOf(16, 72,
 		rec("pull_up", 12, 0, 0), rec("dip", 14, 0, 0),
@@ -323,11 +333,17 @@ func TestTheShareCapNeverEmptiesASkillSession(t *testing.T) {
 	}
 }
 
-// The one-line rule reads "another skill's rung", and it decides that by
-// subtracting the movements this planner treats as ordinary work. That list is
-// written out by hand in focus.go, so this holds it to the chains it claims to
-// come from: a movement the planner would prescribe as general strength must
-// never be filtered off a skill day as somebody else's skill.
+// The one-line rule subtracts the movements this planner treats as ordinary
+// work before deciding what counts as another skill. That list is written out
+// by hand in focus.go, so this holds the two ends of it honest: the basic
+// strength chains must be inside it, or a skill day would refuse a row as
+// somebody else's skill, and every slug in it has to name a real exercise —
+// a typo there is silent, it just quietly stops filtering something.
+//
+// The core and accessory pools are deliberately *not* held to it. They reach
+// into other ladders on purpose now, because a typewriter pull-up is the right
+// counterweight for an advanced athlete whichever ladder also lists it, and
+// whether it belongs on a given day is what the filter is for.
 func TestTheOrdinaryWorkListMatchesTheChainsItCameFrom(t *testing.T) {
 	lib := seededLibrary(t)
 
@@ -341,10 +357,11 @@ func TestTheOrdinaryWorkListMatchesTheChainsItCameFrom(t *testing.T) {
 			rec("bulgarian_split", 10, 0, 0), rec("hollow_body_hold", 0, 0, 40)),
 		snapshotOf(20, 70, rec("pull_up", 14, 0, 0), rec("dip", 16, 0, 0),
 			rec("pistol_squat", 6, 0, 0), rec("hanging_leg_raise", 14, 0, 0)),
+		advancedAthlete(),
 	}
 	for _, snap := range athletes {
 		b := newBuilder(Request{Goal: "planche", Weeks: 6, DaysPerWeek: 3}, snap, lib)
-		for _, group := range []chain{b.pullChain(), b.pushChain(), b.legChain(), b.coreChain()} {
+		for _, group := range []chain{b.pullChain(), b.pushChain(), b.legChain()} {
 			for _, slug := range group {
 				if !ordinaryWork[slug] {
 					t.Errorf("%q is prescribed as general strength but is missing from ordinaryWork, "+
@@ -353,11 +370,39 @@ func TestTheOrdinaryWorkListMatchesTheChainsItCameFrom(t *testing.T) {
 			}
 		}
 	}
-	// And the other direction, because a typo in that list is silent: it would
-	// simply stop filtering something and nothing would ever say so.
 	for slug := range ordinaryWork {
 		if !lib.Has(slug) {
 			t.Errorf("ordinaryWork names %q, which is not an exercise the app has", slug)
+		}
+	}
+}
+
+// And the invariant that actually matters, which the list above only serves:
+// the one-line rule must never leave a skill day without its counterweight or
+// its core work. Filtering is allowed to change what fills a slot; it is not
+// allowed to empty one.
+func TestTheOneLineRuleNeverEmptiesASupportingSlot(t *testing.T) {
+	lib := seededLibrary(t)
+	athletes := []training.Snapshot{snapshotOf(0, 70), maltesePlacedAthlete(), advancedAthlete()}
+
+	for _, snap := range athletes {
+		for _, goal := range allGoalKeys() {
+			req := Request{Goal: goal, Weeks: 4, DaysPerWeek: 6, Focus: FocusHigh}
+			b := newBuilder(req, snap, lib)
+			for day := 1; day <= 7; day++ {
+				s := &sessionBuilder{builder: b, week: weekSpec{Week: 1, Phase: phaseAccumulation, Fraction: 0.6},
+					day: daySpec{Day: day, Role: roleSkill, Hard: true}, used: map[string]bool{}}
+				for name, group := range map[string]chain{
+					"balance": s.keepOnLine(s.balanceChain()),
+					"support": s.keepOnLine(s.supportChain()),
+					"core":    s.keepOnLine(rotate(s.coreChain(), day-1)),
+				} {
+					if s.available(group) == "" {
+						t.Errorf("%s, day %d: the %s slot has nothing left after the one-line rule",
+							goal, day, name)
+					}
+				}
+			}
 		}
 	}
 }

@@ -170,6 +170,12 @@ type builder struct {
 	focus focusSpec
 	share *Focus
 	line  map[string]bool
+	// hardest is the difficulty of the hardest movement the athlete has on
+	// record, as the library rates it, overall and per category. It is what
+	// places their accessory work, so that someone holding a front lever is
+	// not handed an australian row to balance a session.
+	hardest   int
+	hardestIn map[string]int
 	// rungSlugs is the movement of the rung being trained. The share cap may
 	// take sets off it but never takes it out: a session that has lost the
 	// thing it is named after is not a lighter session, it is a different one.
@@ -202,6 +208,7 @@ func newBuilder(req Request, snap training.Snapshot, lib Library) *builder {
 	// The catalogue is package state shared by every request, so the ladder
 	// this plan may trim is a copy of it.
 	b.owned, b.answered = ownedEquipment(snap.Equipment)
+	b.hardest, b.hardestIn = b.gaugeLevel()
 	b.focus = focusFor(req.Focus)
 	b.line = b.lineOf(goal)
 	b.fedLine = b.fedLineOf(goal)
@@ -639,15 +646,13 @@ func (b *builder) legChain() chain {
 	}
 }
 
+// The core chain used to be three tiers keyed on a hanging leg raise and an
+// L-sit, which is how an athlete whose log is full of levers and empty of leg
+// raises ended up prescribed planks. It is now the pool at their own level:
+// the evidence is the hardest thing they have done, whatever movement that
+// happened to be.
 func (b *builder) coreChain() chain {
-	switch {
-	case b.rec.reps("hanging_leg_raise") >= 10 || b.rec.hold("l_sit") >= 20:
-		return chain{"toes_to_bar", "dragon_flag_negative", "hanging_leg_raise", "ab_wheel_rollout"}
-	case b.rec.reps("hanging_knee_raise") >= 8 || b.rec.hold("hollow_body_hold") >= 30:
-		return chain{"hanging_leg_raise", "hollow_rock", "ab_wheel_rollout", "hollow_body_hold"}
-	default:
-		return chain{"hollow_body_hold", "hanging_knee_raise", "plank", "arch_body_hold"}
-	}
+	return b.keepAtLevel(accessoryPools[patternCore], accessoryGap, 0)
 }
 
 // ---------- the week and the block of weeks ----------
