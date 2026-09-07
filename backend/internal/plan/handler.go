@@ -59,16 +59,16 @@ func (h *Handler) Benchmarks(w http.ResponseWriter, r *http.Request) {
 // else.
 func (h *Handler) Skills(w http.ResponseWriter, r *http.Request) {
 	rows, err := h.pool.Query(r.Context(), `
-		select s.key, s.name, s.phrase, s.pattern, s.straight_arm, s.wrists,
+		select s.key, s.foundation, s.name, s.phrase, s.pattern, s.straight_arm, s.wrists,
 		       s.cost, s.timeline, s.frequency, s.aliases,
 		       coalesce(json_agg(json_build_object(
 		           'name', t.name, 'metric', t.metric, 'standard', t.standard,
 		           'typical', t.typical, 'exercise_slugs', t.movements
-		       ) order by t.position) filter (where t.skill_key is not null), '[]') as ladder
+		       ) order by t.position) filter (where t.skill_key is not null), '[]'::json) as ladder
 		from skills s
 		left join skill_steps t on t.skill_key = s.key
-		group by s.key, s.position, s.name, s.phrase, s.pattern, s.straight_arm,
-		         s.wrists, s.cost, s.timeline, s.frequency, s.aliases
+		group by s.key, s.position, s.foundation, s.name, s.phrase, s.pattern,
+		         s.straight_arm, s.wrists, s.cost, s.timeline, s.frequency, s.aliases
 		order by s.position`)
 	if err != nil {
 		httpx.Fail(w, http.StatusInternalServerError, "Couldn't read the skill catalogue.")
@@ -78,6 +78,7 @@ func (h *Handler) Skills(w http.ResponseWriter, r *http.Request) {
 
 	type skill struct {
 		Key         string          `json:"key"`
+		Foundation  bool            `json:"foundation"`
 		Name        string          `json:"name"`
 		Phrase      string          `json:"phrase"`
 		Pattern     string          `json:"pattern"`
@@ -90,15 +91,22 @@ func (h *Handler) Skills(w http.ResponseWriter, r *http.Request) {
 		Ladder      json.RawMessage `json:"ladder"`
 	}
 
-	out := []skill{}
+	out := struct {
+		Skills []skill `json:"skills"`
+		// The ceiling the picker weighs a selection against, so the athlete
+		// sees what a fourth maximal skill costs at the moment they pick it
+		// rather than in the plan afterwards.
+		TendonCeiling int `json:"tendon_ceiling"`
+	}{Skills: []skill{}, TendonCeiling: tendonCeiling}
+
 	for rows.Next() {
 		var s skill
-		if err := rows.Scan(&s.Key, &s.Name, &s.Phrase, &s.Pattern, &s.StraightArm,
+		if err := rows.Scan(&s.Key, &s.Foundation, &s.Name, &s.Phrase, &s.Pattern, &s.StraightArm,
 			&s.Wrists, &s.Cost, &s.Timeline, &s.Frequency, &s.Aliases, &s.Ladder); err != nil {
 			httpx.Fail(w, http.StatusInternalServerError, "Couldn't read the skill catalogue.")
 			return
 		}
-		out = append(out, s)
+		out.Skills = append(out.Skills, s)
 	}
 	if err := rows.Err(); err != nil {
 		httpx.Fail(w, http.StatusInternalServerError, "Couldn't read the skill catalogue.")
