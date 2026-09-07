@@ -51,6 +51,12 @@
 				out.weight_kg = Number(s.weight_kg);
 			}
 			if (kind === 'static_hold') out.hold_seconds = Number(s.hold_seconds);
+			// A weighted hold is both numbers. Either on its own is a
+			// different exercise, and the server refuses the set without both.
+			if (kind === 'weighted_hold') {
+				out.hold_seconds = Number(s.hold_seconds);
+				out.weight_kg = Number(s.weight_kg);
+			}
 			if (kind === 'skill_attempt') out.success = Boolean(s.success);
 			return out;
 		});
@@ -114,14 +120,14 @@
 					</div>
 				{/if}
 
-				{#if measure === 'weighted_reps'}
+				{#if measure === 'weighted_reps' || measure === 'weighted_hold'}
 					<div>
 						<label for={`kg-${index}`}>Added kg</label>
 						<input id={`kg-${index}`} type="number" step="0.5" bind:value={set.weight_kg} />
 					</div>
 				{/if}
 
-				{#if measure === 'static_hold'}
+				{#if measure === 'static_hold' || measure === 'weighted_hold'}
 					<div>
 						<label for={`hold-${index}`}>Hold (s)</label>
 						<input id={`hold-${index}`} type="number" step="0.5" min="0" bind:value={set.hold_seconds} />

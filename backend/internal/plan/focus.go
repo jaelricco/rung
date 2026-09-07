@@ -256,7 +256,7 @@ func (b *builder) offLineOf(g Goal) map[string]bool {
 			if own[slug] || ordinaryWork[slug] {
 				continue
 			}
-			if straightArm || b.lib.Exercises[slug].Measure == "static_hold" {
+			if straightArm || isHold(b.lib.Exercises[slug].Measure) {
 				out[slug] = true
 			}
 		}
@@ -272,6 +272,14 @@ func (b *builder) offLineOf(g Goal) map[string]bool {
 		mark(other.Drills, other.StraightArm)
 	}
 	return out
+}
+
+// isHold reports a movement measured as a static, loaded or not. A weighted
+// front lever is a front lever with a belt on: it spends from the same tissue
+// and belongs to the same skill, so every rule written about holds has to see
+// both measures or the belt becomes a way around the rule.
+func isHold(measure string) bool {
+	return measure == "static_hold" || measure == "weighted_hold"
 }
 
 // keepOnLine drops another skill's straight-arm work from a candidate list. It

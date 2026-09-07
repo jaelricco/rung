@@ -134,6 +134,8 @@ func promptFor(name, measureKind string) string {
 		return "Longest " + lowerFirst(name) + ", in seconds"
 	case "weighted_reps":
 		return "Heaviest " + lowerFirst(name) + ", in added kg"
+	case "weighted_hold":
+		return "Heaviest " + lowerFirst(name) + " you have held, in added kg"
 	case "skill_attempt":
 		return "Can you do a " + lowerFirst(name) + "?"
 	default:

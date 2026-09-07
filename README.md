@@ -418,6 +418,26 @@ rung's own gate is unmet, machinery that already existed and had nothing
 pointed at it until a hefesto ladder put a back lever one rung above somebody
 with no shoulder-extension tolerance at all.
 
+**A hold with weight on it is a measure of its own.** Every exercise declared
+one of four measures — reps, reps with load, a hold in seconds, an attempt made
+or missed — and a weighted front lever is none of them: it is held for seconds
+*and* carries kilos. The workaround was visible in the seed's own comment
+("Record added kg only"), and the consequence was that the rung asked for kilos
+while the exercise claimed seconds, so the planner, which prescribes from the
+measure and places from the rung, wrote out a hold and dropped the load. Every
+plan past a twenty-second front lever prescribed a bare four-to-eight-second
+hold with no mention of the belt that is the point of the rung.
+
+Nothing about the data was missing — a set row has always carried reps, weight
+and seconds independently — so the fix is a fifth measure, `weighted_hold`, and
+a prescription that says both numbers: seconds from a fraction of the athlete's
+best hold, kilos from what they have logged or half the rung's standard when
+they have not, with the block saying which. The belt only gets heavier once the
+seconds are there. A test now checks every rung, gate and entry standard in the
+catalogue against the measure of the exercise it names, because a metric and a
+measure disagreeing is silent: the block comes out in the wrong units and the
+number the rung is about simply vanishes.
+
 **Accessories are chosen at the athlete's level, not from a list.** The
 supporting work used to come from fixed chains, and a fixed chain keeps
 prescribing the movement that used to be hard: three of the twenty accessory

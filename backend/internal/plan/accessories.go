@@ -155,7 +155,8 @@ func (b *builder) scalesWithLoad(slug string) bool {
 	if !ok {
 		return true
 	}
-	return exercise.Measure == "weighted_reps" || exercise.Category == "mobility"
+	return exercise.Measure == "weighted_reps" || exercise.Measure == "weighted_hold" ||
+		exercise.Category == "mobility"
 }
 
 // keepAtLevel narrows a candidate list to the movements worth a set for this

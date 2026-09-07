@@ -1069,6 +1069,46 @@ being shown a back lever. The rung above now carries its own gate — twenty
 seconds of german hang — and the opener is simply not written when it is unmet,
 which is the machinery that already existed being pointed at the right rung.
 
+### A hold with weight on it is a thing, and the library could not say so
+
+Every exercise declares one of four measures, and the measure decides what a
+set of it looks like: reps, reps with added load, a hold in seconds, or an
+attempt that was made or missed. There is no fifth, and there needed to be. A
+weighted front lever — which §1's progression names as the honest way past a
+twenty-second lever — is held for seconds *and* carries kilos, and neither
+candidate says both.
+
+The workaround was in the seed's own comment: "Record added kg only". So the
+rung asked for kilos, the exercise claimed to be measured in seconds, and the
+planner — which prescribes from the measure and places from the rung — wrote
+out a hold and dropped the load on the floor. An athlete past a twenty-second
+front lever was handed three sets of a four-to-eight-second hold with no
+mention of the belt that is the entire point of the rung, and every plan that
+kept a front lever at maintenance under a SAT, a victorian or a one-arm front
+lever repeated it.
+
+Nothing about the data was missing. A set row has always had reps, weight and
+seconds columns, all nullable and independent; a record carries all three. It
+was only the two enumerations — what an exercise may be measured in, what a
+logged set may be — that could not spell the combination.
+
+So there is a fifth measure, `weighted_hold`, and the prescription for it says
+both numbers. The seconds come from a fraction of the athlete's own best hold,
+as every static does; the kilos come from what they have logged on the belt, or
+from half the rung's standard when nothing is logged, and the block says which.
+Progression is stated in the order that keeps it safe: **one more second at the
+same load, and the belt only gets heavier once the seconds are there** — a
+weighted hold that breaks early is a heavy hold you cannot do. The test week is
+passed on both numbers or not at all.
+
+**The invariant that would have caught it.** A metric and a measure are two
+descriptions of the same set written in different files, and when they disagree
+nothing errors — the block is simply written in the wrong units and the number
+the rung is about disappears. Every rung, gate and entry standard in the
+catalogue is now checked against the exercise it names, with added load the one
+metric allowed two measures, because a weighted pull-up is reps with a belt and
+a weighted front lever is seconds with one.
+
 ---
 
 ## 13. What this means for an algorithm
@@ -1155,3 +1195,8 @@ Rules the generator implements directly, each traceable to a section above:
 33. **Step down the ladder when an injury takes a rung**, to the highest rung
     that survives the filters, and say which one it came from. Losing the skill
     is the answer only when every rung is gone (§12).
+34. **Prescribe a loaded static in both of its numbers**, seconds and kilos,
+    and progress the seconds before the load (§12).
+35. **Check every rung's metric against its exercise's measure.** They are one
+    set described in two files, and a disagreement is silent: the block comes
+    out in the wrong units and the number the rung is about vanishes (§12).

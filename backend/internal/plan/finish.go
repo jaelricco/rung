@@ -288,6 +288,14 @@ func (b *builder) test(step Step) string {
 				"that need a swing. Log it either way — the next plan is built from it.",
 			name, plural(int(step.Standard), "rep"))
 	case metricAdded:
+		// Added load means a rep for most movements and a hold for a few. The
+		// metric cannot tell them apart; the exercise's own measure can.
+		if isHold(b.lib.Exercises[step.Movement[0]].Measure) {
+			return fmt.Sprintf(
+				"Pass: %s with +%s kg held for five clean seconds, filmed from the side. Fail: anything "+
+					"shorter, or a hold that sags to get there. Log the seconds and the kilos — one without "+
+					"the other is not the set.", name, kilos(step.Standard))
+		}
 		return fmt.Sprintf(
 			"Pass: %s with +%s kg for one strict rep from a dead hang. Fail: anything less, or a rep that needs "+
 				"a kick. Log it either way — the next plan is built from it.", name, kilos(step.Standard))

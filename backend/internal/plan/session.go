@@ -132,6 +132,29 @@ func (s *sessionBuilder) prescribe(w work) {
 				"The hold is trained past %s, not extended by sagging into it.", secs(standard))
 		}
 
+	case "weighted_hold":
+		// The rung's standard here is a load, not a duration: a weighted front
+		// lever is cleared at ten kilos, not at ten seconds. So the seconds
+		// come from the athlete's own best hold on it and the kilos from the
+		// standard, and the block prints both — which is the whole reason this
+		// measure exists.
+		seconds, best, basis := s.holdWork(slug, weightedHoldSeconds)
+		kg, load := s.addedHold(slug, w.Standard)
+		sets = s.setCount(w.Base)
+		if w.Light {
+			sets, seconds, kg = max(2, sets-1), max(3, seconds*2/3), roundLoad(kg*0.7)
+		}
+		lo, hi := band(seconds, holdBands)
+		block.Prescription = fmt.Sprintf("%d-%ds hold with +%s kg", lo, hi, kilos(kg))
+		block.Intensity = fmt.Sprintf("about %d%% of your best hold (%s)%s %s", int(s.week.Fraction*100),
+			secs(best), basis, load)
+		block.Tempo = ""
+		if block.Progression == "" {
+			block.Progression = "Next week: one more second at the same load. The belt only gets heavier " +
+				"once the seconds are there, because a weighted hold that breaks early is a heavy hold " +
+				"you cannot do."
+		}
+
 	case "weighted_reps":
 		reps, kg, basis := s.addedWork(slug)
 		sets = s.setCount(w.Base)
@@ -519,6 +542,8 @@ func (s *sessionBuilder) test() {
 		prescription = fmt.Sprintf("3 attempts at a maximum hold — the target is %s", secs(step.Standard))
 	case "reps":
 		prescription = fmt.Sprintf("3 attempts at a maximum set — the target is %s", plural(int(step.Standard), "rep"))
+	case "weighted_hold":
+		prescription = fmt.Sprintf("3 attempts at a maximum hold with +%s kg on", kilos(step.Standard))
 	case "weighted_reps":
 		prescription = fmt.Sprintf("work up to a single — the target is +%s kg", kilos(step.Standard))
 	}
@@ -732,6 +757,43 @@ func repsWorthDoing(difficulty int) int {
 	default:
 		return 20
 	}
+}
+
+// weightedHoldSeconds is what a loaded static is held for when the athlete has
+// nothing logged on it. A weighted hold is short by design — the load is the
+// progression and the seconds are the quality check — so this is well under
+// what the same position unloaded would ask for.
+const weightedHoldSeconds = 12
+
+// addedHold sizes the belt for a hold rather than for a set of reps.
+//
+// None of addedWork's arithmetic applies here: Epley is a rep-max formula and
+// a hold has no reps to feed it. What is available is the athlete's own best
+// logged load on this movement, and the rung's standard when there is none —
+// which is honest, because the rung's standard is exactly the load the rung is
+// cleared at, and starting below it is the right direction to be wrong in.
+func (s *sessionBuilder) addedHold(slug string, standard float64) (kg float64, basis string) {
+	logged := s.rec.added(slug)
+	if logged <= 0 {
+		// Nothing on record. Half the rung's own standard, which is a load the
+		// athlete can hold for the seconds above rather than one that turns
+		// the block into a single.
+		return math.Max(roundLoad(standard*0.5), 2.5), fmt.Sprintf(
+			"The load is half of the %s kg this rung is cleared at, because nothing weighted is logged on it "+
+				"yet. Log one set with the belt on and the next plan works from your number instead.",
+			kilos(standard))
+	}
+	fraction := 0.8
+	switch s.week.Phase {
+	case phaseIntensifation:
+		fraction = 0.9
+	case phaseDeload:
+		fraction = 0.6
+	case phaseTest:
+		fraction = 1
+	}
+	return math.Max(roundLoad(logged*fraction), 2.5), fmt.Sprintf(
+		"The load is worked back from the %s kg you have logged on it.", kilos(logged))
 }
 
 // addedWork sizes the belt.
