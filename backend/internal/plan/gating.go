@@ -264,6 +264,17 @@ var neutralWrist = map[string]string{
 	// version, which the coaching material itself offers at the top of the
 	// floor ladder. Everything else on that ladder — the wide planche, the
 	// elevators, the presses — is floor-specific and simply comes out.
+	// The SAT's neutral-wrist form is the victorian: the same position on
+	// rings, where the ring turns with the forearm instead of the forearm
+	// being pressed against a bar. It is not an easier skill — it is harder —
+	// it simply asks nothing of the wrist.
+	"box_victorian": "tuck_victorian",
+	"tuck_sat":      "tuck_victorian",
+	"adv_tuck_sat":  "tuck_victorian",
+	"straddle_sat":  "victorian",
+	"sat":           "victorian",
+	"band_sat":      "tuck_victorian",
+
 	"lean_maltese":     "band_maltese",
 	"maltese":          "band_maltese",
 	"planche_kicks":    "ring_planche_lean",

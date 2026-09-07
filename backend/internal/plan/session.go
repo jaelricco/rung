@@ -157,12 +157,12 @@ func (s *sessionBuilder) prescribe(w work) {
 		}
 
 	default:
-		reps, best, basis := s.repWork(slug, w.Standard)
+		reps, most, best, basis := s.repWork(slug, w.Standard)
 		sets = s.setCount(w.Base)
 		if w.Light {
 			sets, reps = max(2, sets-1), max(2, reps*2/3)
 		}
-		lo, hi := bandUnder(reps, repBands, repsWorthDoing(s.lib.Exercises[slug].Difficulty))
+		lo, hi := bandUnder(reps, repBands, most)
 		block.Prescription = fmt.Sprintf("%d-%d reps", lo, hi)
 		block.Intensity = fmt.Sprintf("%s Your best set is %s%s.", s.week.Effort,
 			plural(int(best), "rep"), basis)
@@ -688,7 +688,7 @@ func (s *sessionBuilder) holdWork(slug string, standard float64) (seconds int, b
 // number to a one-arm negative and the block says "8-15 reps" of something
 // nobody does more than three of. Since accessories are now chosen at the
 // athlete's own level, that stopped being a hypothetical.
-func (s *sessionBuilder) repWork(slug string, standard float64) (reps int, best float64, basis string) {
+func (s *sessionBuilder) repWork(slug string, standard float64) (reps int, most int, best float64, basis string) {
 	fraction := 0.6
 	switch s.week.Phase {
 	case phaseIntensifation:
@@ -696,14 +696,21 @@ func (s *sessionBuilder) repWork(slug string, standard float64) (reps int, best 
 	case phaseDeload, phaseTest:
 		fraction = 0.5
 	}
-	most := repsWorthDoing(s.lib.Exercises[slug].Difficulty)
 
 	best = s.rec.reps(slug)
 	if best <= 0 {
+		// No record, so the number comes from the slot that asked — and the
+		// slot does not know what movement it got. This is where the cap
+		// belongs.
+		most = repsWorthDoing(s.lib.Exercises[slug].Difficulty)
 		best = math.Max(standard, 5)
-		return clampInt(int(math.Round(best*0.7)), 2, most), best, sourceNote("", false)
+		return clampInt(int(math.Round(best*0.7)), 2, most), most, best, sourceNote("", false)
 	}
-	return clampInt(int(math.Round(best*fraction)), 2, most), best, sourceNote(s.rec.source(slug), true)
+	// A record outranks the cap, here as everywhere else in this planner. Six
+	// front lever rows is six front lever rows whatever the library rates the
+	// movement at, and telling somebody who logged six that nobody does more
+	// than three is the app arguing with its own evidence.
+	return clampInt(int(math.Round(best*fraction)), 2, 20), 20, best, sourceNote(s.rec.source(slug), true)
 }
 
 // repsWorthDoing is the most reps a movement of this difficulty is prescribed

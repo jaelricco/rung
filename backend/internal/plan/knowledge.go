@@ -384,6 +384,124 @@ var Goals = []Goal{
 		Frequency: "Two sessions a week, low reps, always fresh.",
 	},
 	{
+		Key: "sat", Phrase: "the SAT", Name: "SAT", Pattern: patternPull, StraightArm: true, Wrists: true, Cost: 3,
+		Aliases: []string{"sat", "straight bar victorian", "bar victorian", "sat hold", "victorian bar"},
+		Timeline: "Years past a front lever that is owned rather than reached. A plan of any length buys you " +
+			"a rung; nobody arrives here in a block.",
+		// The SAT is to the front lever what the maltese is to the planche:
+		// the same skill with the hands travelling outward. So this ladder has
+		// the same shape as the floor maltese in §9, including the half-way
+		// rung that tradition runs through — a wide-grip front lever, which is
+		// the wide planche of the pulling side.
+		//
+		// There is no entry gate on the goal, and there does not need to be:
+		// the first rung *is* the front lever, so an athlete who does not have
+		// one is placed there and trains it. What is gated is opening the
+		// arms, which is where the biceps tendon and the front of the shoulder
+		// start paying.
+		Feeds: []string{"front_lever"},
+		Ladder: []Step{
+			{Name: "Held front lever", Movement: chain{"front_lever"}, Metric: metricHold, Standard: 15,
+				Assist: chain{"front_lever_row"}, Typical: "the base, and everything here waits on it"},
+			{Name: "Box victorian", Movement: chain{"box_victorian"}, Metric: metricHold, Standard: 15,
+				Assist: chain{"front_lever_raise", "front_lever_row"}, Typical: "8 to 16 weeks",
+				Gate: []Requirement{
+					{Slug: "front_lever", Metric: metricHold, Standard: 12,
+						Why: "The arms only open on a lever you can hold. Twelve seconds is the floor the coaching sources put under any victorian work."},
+				}},
+			{Name: "Wide-grip front lever", Movement: chain{"wide_front_lever"}, Metric: metricHold, Standard: 8,
+				Assist: chain{"box_victorian"}, Typical: "3 to 9 months — the rung between the lever and the SAT",
+				Gate: []Requirement{
+					{Slug: "front_lever", Metric: metricHold, Standard: 20,
+						Why: "Widening the grip only makes sense once the lever is owned. Twenty seconds is what the sources mean by a front lever you have mastered rather than achieved."},
+				}},
+			{Name: "Tuck SAT", Movement: chain{"tuck_sat"}, Metric: metricHold, Standard: 12,
+				Assist: chain{"band_sat", "box_victorian"}, Typical: "6 to 18 months, band coming down slowly",
+				Gate: []Requirement{
+					{Slug: "front_lever_touch", Metric: metricReps, Standard: 3,
+						Why: "A front lever touch is the other half of owning the lever: the sources ask for the long hold and the pull, not one of them."},
+				}},
+			{Name: "Advanced tuck SAT", Movement: chain{"adv_tuck_sat"}, Metric: metricHold, Standard: 10,
+				Assist: chain{"tuck_sat"}, Typical: "a year or more"},
+			{Name: "Straddle SAT", Movement: chain{"straddle_sat"}, Metric: metricHold, Standard: 6,
+				Assist: chain{"band_sat", "adv_tuck_sat"}, Typical: "a year or more past the advanced tuck",
+				Gate: []Requirement{
+					{Slug: "wide_front_lever", Metric: metricHold, Standard: 5,
+						Why: "The wide-grip lever is the half-way house. Straddling the full angle without it is skipping the rung that teaches the shoulder where it is going."},
+				}},
+			{Name: "SAT", Movement: chain{"sat"}, Metric: metricHold, Standard: 3,
+				Assist: chain{"straddle_sat", "band_sat"}, Typical: "the goal, and very few people arrive",
+				Gate: []Requirement{
+					{Slug: "straddle_sat", Metric: metricHold, Standard: 5,
+						Why: "You close the legs on a position you can already hold open, or you close them into a fall."},
+					{Slug: "front_lever", Metric: metricHold, Standard: 20,
+						Why: "The same floor, and it does not move: the front lever is what keeps driving this."},
+				}},
+		},
+		Drills:      chain{"front_lever_raise", "front_lever_row", "ice_cream_maker", "box_victorian"},
+		Accessories: chain{"weighted_pull_up", "front_lever_row", "german_hang", "band_face_pull"},
+		Risks: []string{
+			"The biceps tendon and the front of the shoulder take this skill, exactly as they take the maltese, and both fail slowly and then suddenly.",
+			"Reduce the band between blocks, never inside a session. If the hips drop early, the band comes back rather than the next attempt.",
+			"SAT work does not replace front lever work. The lever is what keeps driving it, so it stays in the week.",
+			"The forearms rest on the bar in this position, so the wrist takes load in extension. It is not a planche, but it is not nothing either.",
+		},
+		Frequency: "Two SAT sessions a week at the most, with a full recovery day either side.",
+	},
+	{
+		Key: "one_arm_front_lever", Phrase: "the one-arm front lever", Name: "One-arm front lever",
+		Pattern: patternPull, StraightArm: true, Cost: 3,
+		Aliases: []string{"one arm front lever", "one-arm front lever", "oafl", "einarmiger front lever",
+			"single arm front lever"},
+		Timeline: "Years past a front lever that is held rather than reached, and the grip is as often the " +
+			"limiter as the lat.",
+		// The other direction out of the front lever: the same hands, one of
+		// them. It follows the ordinary lever progression, because shortening
+		// a lever looks the same whichever arm is holding it — and, as with
+		// the SAT, the first rung is the front lever itself, so the ladder
+		// gates itself for anyone who has not got one.
+		Feeds: []string{"front_lever"},
+		Ladder: []Step{
+			{Name: "Held front lever", Movement: chain{"front_lever"}, Metric: metricHold, Standard: 20,
+				Assist: chain{"front_lever_row"}, Typical: "the base, and it has to be a long one"},
+			{Name: "Assisted one arm", Movement: chain{"assisted_one_arm_front_lever"}, Metric: metricHold, Standard: 15,
+				Assist: chain{"front_lever_raise", "one_arm_dead_hang"}, Typical: "8 to 16 weeks",
+				Gate: []Requirement{
+					{Slug: "front_lever", Metric: metricHold, Standard: 15,
+						Why: "Taking a hand off a lever you can only just hold is how a shoulder learns what rotation feels like the hard way."},
+				}},
+			{Name: "One-arm tuck", Movement: chain{"one_arm_tuck_front_lever"}, Metric: metricHold, Standard: 15,
+				Assist: chain{"assisted_one_arm_front_lever"}, Typical: "6 to 18 months",
+				Gate: []Requirement{
+					{Slug: "one_arm_dead_hang", Metric: metricHold, Standard: 20,
+						Why: "The grip gives out before the lat does on this ladder. Twenty seconds hanging on one arm is the cheapest test of whether it will."},
+				}},
+			{Name: "One-arm advanced tuck", Movement: chain{"one_arm_adv_tuck_front_lever"}, Metric: metricHold, Standard: 10,
+				Assist: chain{"one_arm_tuck_front_lever"}, Typical: "a year or more"},
+			{Name: "One-arm straddle", Movement: chain{"one_arm_straddle_front_lever"}, Metric: metricHold, Standard: 6,
+				Assist: chain{"one_arm_adv_tuck_front_lever"}, Typical: "a year or more past the advanced tuck",
+				Gate: []Requirement{
+					{Slug: "front_lever", Metric: metricHold, Standard: 25,
+						Why: "One arm carries what two were carrying. The two-arm lever is the only honest measure of whether there is enough to halve."},
+				}},
+			{Name: "One-arm front lever", Movement: chain{"one_arm_front_lever"}, Metric: metricHold, Standard: 3,
+				Assist: chain{"one_arm_straddle_front_lever"}, Typical: "the goal, and very few people arrive",
+				Gate: []Requirement{
+					{Slug: "one_arm_straddle_front_lever", Metric: metricHold, Standard: 5,
+						Why: "You close the legs on a position you can already hold open, or you close them into a fall."},
+				}},
+		},
+		Drills:      chain{"one_arm_negative", "front_lever_raise", "front_lever_row", "assisted_one_arm_front_lever"},
+		Accessories: chain{"weighted_pull_up", "one_arm_dead_hang", "front_lever_row", "band_face_pull"},
+		Risks: []string{
+			"This is the most asymmetric loading in the sport. The shoulder is resisting rotation as well as holding a lever, and the elbow of the working arm takes the difference.",
+			"Train both sides to the same standard even when one is obviously better. A side that is two rungs behind is the one that gets hurt.",
+			"Grip fails first for most people, and a hand that is slipping is a shoulder taking a jerk. Stop the set at the grip, not at the lat.",
+			"One-arm work does not replace front lever work. The two-arm lever is what keeps driving it, so it stays in the week.",
+		},
+		Frequency: "Two sessions a week at the most, both sides every session, and stopped the moment the line goes.",
+	},
+	{
 		Key: "front_lever_pull_up", Phrase: "the front lever pull-up", Name: "Front lever pull-up", Pattern: patternPull, StraightArm: true, Cost: 2,
 		Aliases:  []string{"front lever pull up", "front lever pullup", "fl pull up", "front lever pull-ups"},
 		Timeline: "Six to eighteen months past a held front lever.",
@@ -816,6 +934,14 @@ var wristLoaded = map[string]bool{
 	"planche_kicks": true, "negative_to_planche": true, "planche_hold_to_press": true,
 	"l_sit_to_planche": true, "half_rom_planche_push_up": true,
 	"maltese_lean": true, "tuck_maltese": true, "straddle_maltese": true,
+	// The SAT rests the forearms and wrists on a straight bar and then loads
+	// them with a horizontal body. It is not a planche — nothing is going
+	// through the palm — but the wrist is held in extension against the bar
+	// for the length of every set, which is the mechanism the wrist section of
+	// the research is about. The rings version is what an angry one trains
+	// instead, and it is not on this list for exactly that reason.
+	"box_victorian": true, "tuck_sat": true, "adv_tuck_sat": true,
+	"straddle_sat": true, "sat": true, "band_sat": true,
 }
 
 // extraRegions is everything else the category misses.

@@ -106,26 +106,61 @@ func TestNoAccessoryIsHarderThanTheAthleteHasShown(t *testing.T) {
 // asked for it. Twelve is what an accessory is worth; hand that number to a
 // one-arm negative and the block reads "8-15 reps" of something nobody does
 // more than three of.
-func TestNoBlockAsksForMoreRepsThanTheMovementIsWorth(t *testing.T) {
+//
+// The cap applies where the number was guessed. A movement the athlete has
+// logged is priced from their own set instead, and their number outranks the
+// cap — telling somebody who logged six front lever rows that nobody does more
+// than three is the app arguing with its own evidence.
+func TestNoGuessedRepCountExceedsWhatTheMovementIsWorth(t *testing.T) {
 	lib := seededLibrary(t)
 	for _, snap := range []training.Snapshot{snapshotOf(0, 75), advancedAthlete(), maltesePlacedAthlete()} {
+		logged := map[string]bool{}
+		for _, r := range snap.Records {
+			logged[r.Slug] = r.BestReps != nil
+		}
 		for _, goal := range allGoalKeys() {
 			p, _ := Generate(Request{Goal: goal, Weeks: 6, DaysPerWeek: 5}, snap, lib)
 			for _, session := range p.Sessions {
 				for _, block := range session.Blocks {
 					top, ok := topOfRepRange(block.Prescription)
-					if !ok {
+					if !ok || logged[block.ExerciseSlug] {
 						continue
 					}
 					most := repsWorthDoing(lib.Exercises[block.ExerciseSlug].Difficulty)
 					if top > most {
-						t.Errorf("%s: %q asks for %q, and nobody does more than %d of it",
+						t.Errorf("%s: %q asks for %q with nothing logged, and nobody does more than %d of it",
 							goal, block.ExerciseSlug, block.Prescription, most)
 					}
 				}
 			}
 		}
 	}
+}
+
+// And the other half of that rule: a logged set is what a block is priced
+// from, cap or no cap.
+func TestALoggedSetOutranksTheRepCap(t *testing.T) {
+	lib := seededLibrary(t)
+	// Six front lever rows, which the library rates a 9 and the cap would hold
+	// to three.
+	snap := snapshotOf(20, 70, rec("pull_up", 20, 0, 0), rec("front_lever", 0, 0, 22),
+		rec("front_lever_row", 6, 0, 0))
+	p, _ := Generate(Request{Goal: "front lever pull up", Weeks: 6, DaysPerWeek: 4}, snap, lib)
+
+	for _, session := range p.Sessions {
+		for _, block := range session.Blocks {
+			if block.ExerciseSlug != "front_lever_row" {
+				continue
+			}
+			top, ok := topOfRepRange(block.Prescription)
+			if ok && top <= repsWorthDoing(9) {
+				t.Errorf("a logged six-rep set was priced as %q, which is the cap overruling the log",
+					block.Prescription)
+			}
+			return
+		}
+	}
+	t.Fatal("the plan for a front lever pull-up never prescribed a front lever row")
 }
 
 // topOfRepRange reads "5-10 reps" and "3-8 reps with +20 kg", and ignores

@@ -890,7 +890,112 @@ a heavy push day as a band face pull.
 
 ---
 
-## 12. What this means for an algorithm
+## 12. The pull side of the same tier
+
+§7 opened the tier above the full planche and §9 rebuilt its maltese on the
+floor. Both were push. Counted afterwards, every skill the app rated as costing
+three units of the tendon budget — the group the baseline page draws as
+"Maximal" — was a pushing skill: maltese, iron cross, planche press. Nothing
+you hang from was in it.
+
+That was not a judgement about what counts as maximal. It was the extent of the
+catalogue, and it had two consequences worth naming. The tendon budget
+under-counted every athlete training a maximal pull, because the skill they
+were training was either absent or rated at one unit. And the focus dial of §10
+could not ration a week around a skill it did not know about.
+
+Two skills fill the gap, and they are the front lever's two directions out.
+
+### The SAT is to the front lever what the maltese is to the planche
+
+The **SAT** is the front lever with the arms opened to the maximum, held on a
+straight bar — the bar's answer to the rings **Victorian**
+([Calisteniapp's statics diagram](https://calisteniapp.com/articles/calisthenics-statics),
+[GorNation, straight bar victorian](https://www.gornation.com/blogs/calisthenics-exercises/straight-bar-victorian),
+[GorNation, victorian](https://www.gornation.com/blogs/calisthenics-exercises/victorian)).
+The relationship is exactly the one §9 described for the maltese: the same
+skill, with the hands travelling outward. So it gets the same shape of ladder,
+including the rung that tradition runs through — a **wide-grip front lever**,
+which is to the SAT what the wide planche is to the maltese, and which no
+published progression seems to name.
+
+The prerequisite the sources give is unusually emphatic, and it is not "a front
+lever". It is a front lever that is **owned**: a long clean hold, front lever
+pull-ups, and a front lever touch. That is the §7 pattern again — the
+prerequisite does not stop mattering once you are past it — so the front lever
+is what the first rung of this ladder *is*, the gates above it ask for twelve
+then twenty seconds, and the tuck SAT is gated on a front lever touch rather
+than on more seconds of the same hold.
+
+The ladder: held front lever → **box victorian** (forearms on a box or a low
+bar, the earliest honest loading) → **wide-grip front lever** → **tuck SAT** →
+**advanced tuck SAT** → **straddle SAT** → **SAT**, with a band-assisted SAT as
+the assist beside the top three and the assistance coming down between blocks
+rather than inside a session.
+
+There is deliberately no entry gate on the goal itself. §9 settled that
+question: gates belong on rungs. Here it falls out for free, because the first
+rung *is* the front lever — an athlete who does not have one is placed there
+and trains it, and nothing has to refuse them.
+
+**The wrist.** The SAT rests the forearms and wrists on a straight bar and then
+loads them with a horizontal body. It is not a planche and nothing goes through
+the palm, but the wrist is held in extension against the bar for the length of
+every set, which is the mechanism §8 is about. So the SAT rungs are on the
+wrist-loading list, and — unlike most of the maltese ladder — they have a real
+neutral-wrist substitution: the rings victorian, where the ring turns with the
+forearm instead of the forearm being pressed against a bar. It is a harder
+skill, not a consolation; it simply asks nothing of the wrist.
+
+### The one-arm front lever is the other direction out
+
+The **one-arm front lever** is the same hands, one of them. The sources agree
+on the shape — a strong full front lever first, then assisted work, then the
+one-arm progressions, with bending the working elbow as the regression inside a
+rung rather than a rung of its own
+([Street Workout wiki](https://street-workout.fandom.com/wiki/One_arm_front_lever),
+[GorNation tutorial](https://www.gornation.com/blogs/calisthenics-exercises/one-arm-front-lever),
+[Calisthenics 101](https://www.calisthenics-101.co.uk/how-to-front-lever)) — and
+on the failure mode: rushing it from a lever that is reached rather than held.
+
+The ladder follows the ordinary lever progression, because shortening a lever
+looks the same whichever arm is holding it: held front lever → **assisted one
+arm** (second hand on a band, a strap or a lower grip) → **one-arm tuck** →
+**one-arm advanced tuck** → **one-arm straddle** → **one-arm front lever**.
+
+Two things are specific to it and are gates rather than advice. **Grip fails
+first** for most people on this ladder, and a hand that is slipping is a
+shoulder taking a jerk — so the one-arm tuck is gated on a twenty-second
+one-arm dead hang, which is the cheapest available test of whether the grip
+will hold. And **one arm carries what two were carrying**, so the straddle is
+gated on a twenty-five-second two-arm lever: the two-arm hold is the only
+honest measure of whether there is enough there to halve.
+
+The other risk has no gate because no number expresses it: this is the most
+asymmetric loading in the sport, the shoulder is resisting rotation as well as
+holding a lever, and a side left two rungs behind is the side that gets hurt.
+That one is in the plan's own risk list, in those words.
+
+### Both of them keep the front lever in the week
+
+Both declare the front lever as what feeds them, so it holds its maintenance
+slot for the length of the plan rather than being dropped for the new skill —
+§7's rule, and the reason the maltese ladder keeps the planche. At three units
+each they also mean what they say to the budget of §7: two of these at once is
+six units against a ceiling of five, and the planner will name one to park.
+
+### A gate nobody is asked about is a gate nobody can pass
+
+Adding these exposed a fault that was already there. The baseline form derives
+its questions from the ladder's *rungs*, so a rung gated on something off the
+ladder — the maltese on a full planche, the SAT on a front lever touch — asked
+the athlete for nothing, read "nothing logged or declared" for ever, and held
+them a rung below where they actually were. The form now asks for every gate
+and every entry standard as well, and a test holds it there.
+
+---
+
+## 13. What this means for an algorithm
 
 Rules the generator implements directly, each traceable to a section above:
 
@@ -965,3 +1070,9 @@ Rules the generator implements directly, each traceable to a section above:
 30. **The antagonist is one step easier than the athlete's ceiling and never
     the goal's own work**, because a block that trains the same thing balances
     nothing (§11).
+31. **Ask the athlete for every gate and entry standard**, not only for the
+    rungs: a gate nobody is asked about is a gate nobody can pass (§12).
+32. **Keep both sides of the sport at the top of the catalogue.** A "maximal"
+    tier made only of pushing skills under-counts the tendon budget of every
+    athlete training a maximal pull, and gives the focus dial nothing to
+    ration (§12).

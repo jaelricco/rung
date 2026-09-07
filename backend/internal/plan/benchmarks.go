@@ -94,6 +94,37 @@ func Benchmarks(goalText string, lib Library) []Benchmark {
 			break
 		}
 	}
+
+	// And what the rungs are gated on, which is not always something on this
+	// ladder — the maltese gates on a full planche, the SAT on a front lever
+	// touch. A gate nobody is asked about is a gate nobody can pass: it reads
+	// "nothing logged or declared" for ever and holds the athlete a rung below
+	// where they are, which is exactly the failure the gates exist to avoid.
+	for _, step := range goal.Ladder {
+		for _, req := range step.Gate {
+			exercise, ok := lib.Exercises[req.Slug]
+			if !ok {
+				continue
+			}
+			add(Benchmark{
+				ExerciseSlug: req.Slug,
+				Prompt:       promptFor(exercise.Name, exercise.Measure),
+				Why: fmt.Sprintf("What the %q rung is gated on. It opens at %s.",
+					step.Name, measure(req.Standard, req.Metric)),
+			}, goal.Key)
+		}
+	}
+	for _, req := range goal.Entry {
+		exercise, ok := lib.Exercises[req.Slug]
+		if !ok {
+			continue
+		}
+		add(Benchmark{
+			ExerciseSlug: req.Slug,
+			Prompt:       promptFor(exercise.Name, exercise.Measure),
+			Why:          fmt.Sprintf("What opens this ladder at all: %s.", measure(req.Standard, req.Metric)),
+		}, goal.Key)
+	}
 	return out
 }
 

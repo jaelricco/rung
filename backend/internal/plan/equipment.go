@@ -86,6 +86,27 @@ var requires = map[string][][]string{
 	"adv_tuck_back_lever":  {{EquipBar, EquipRings}},
 	"straddle_back_lever":  {{EquipBar, EquipRings}},
 	"back_lever":           {{EquipBar, EquipRings}},
+	"front_lever_touch":    {{EquipBar, EquipRings}},
+	"wide_front_lever":     {{EquipBar, EquipRings}},
+
+	// The SAT is a straight-bar skill by definition — the hips rest on the bar
+	// — so unlike the levers above it, rings are not an alternative. They are
+	// the other skill: the victorian, which is why that has its own row.
+	"box_victorian":  {{EquipBar, EquipDipBars}},
+	"tuck_sat":       {{EquipBar}},
+	"adv_tuck_sat":   {{EquipBar}},
+	"straddle_sat":   {{EquipBar}},
+	"sat":            {{EquipBar}},
+	"band_sat":       {{EquipBar}, {EquipBands}},
+	"tuck_victorian": {{EquipRings}},
+	"victorian":      {{EquipRings}},
+
+	// One arm, on whatever the other levers hang from.
+	"assisted_one_arm_front_lever": {{EquipBar, EquipRings}},
+	"one_arm_tuck_front_lever":     {{EquipBar, EquipRings}},
+	"one_arm_adv_tuck_front_lever": {{EquipBar, EquipRings}},
+	"one_arm_straddle_front_lever": {{EquipBar, EquipRings}},
+	"one_arm_front_lever":          {{EquipBar, EquipRings}},
 
 	// Dynamics.
 	"muscle_up":          {{EquipBar}},

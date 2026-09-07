@@ -357,6 +357,41 @@ a row whichever ladder also happens to list it. §10 of
 `docs/training-research.md` has the sources, and says plainly which of them
 could not be read directly.
 
+**The top of the catalogue has both sides of the sport in it.** The elite tier
+was added push-first — maltese, iron cross, planche press — and the pull side
+was never added at all, so every skill the app rated at three units of the
+tendon budget, the group the baseline page draws as "Maximal", was something
+you push. That was not a judgement about what counts as maximal; it was the
+extent of the catalogue, and it meant the budget under-counted anyone training
+a maximal pull and the focus dial could not ration a week around a skill it did
+not know about.
+
+Two skills fill it, both of them a direction out of the front lever. The **SAT**
+is the front lever with the arms opened to the maximum on a straight bar — the
+bar's answer to the rings victorian, and to the front lever exactly what the
+maltese is to the planche, so it gets the same shape of ladder including the
+half-way rung tradition runs through: a wide-grip front lever. The **one-arm
+front lever** is the same hands, one of them, and follows the ordinary
+tuck-to-straddle progression because shortening a lever looks the same
+whichever arm holds it. Neither carries an entry gate on the goal, because the
+first rung of both *is* the front lever: an athlete who does not have one is
+placed there and trains it, and nothing has to refuse them. The gates sit on
+the rungs above — twelve then twenty seconds of front lever for the SAT plus a
+front lever touch, a twenty-second one-arm dead hang for the one-arm tuck
+because grip fails first on that ladder, a twenty-five-second two-arm lever
+before the one-arm straddle because one arm carries what two were carrying.
+Both feed on the front lever, so it keeps its maintenance slot; both cost three
+units, so two at once is six against a ceiling of five and the planner names
+one to park. The SAT's wrists rest on the bar in extension, so its rungs are
+wrist-loading and substitute onto the rings victorian, where the ring turns
+with the forearm.
+
+Adding them exposed a fault that was already there: the baseline form derived
+its questions from a ladder's rungs, so a rung gated on something off the
+ladder — the maltese on a full planche, the SAT on a front lever touch — asked
+for nothing, read "nothing logged or declared" for ever and held the athlete a
+rung below where they were. It now asks for every gate and entry standard too.
+
 **Accessories are chosen at the athlete's level, not from a list.** The
 supporting work used to come from fixed chains, and a fixed chain keeps
 prescribing the movement that used to be hard: three of the twenty accessory
