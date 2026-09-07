@@ -20,6 +20,25 @@ type rubric struct {
 	Cuts [5]float64
 }
 
+// Rubric is one threshold row as the reference table records it.
+type Rubric struct {
+	Slug   string
+	Metric string
+	Cuts   []float64
+}
+
+// Rubrics exposes the tier table for projection into the database. The
+// thresholds stay computed in Go — two athletes with the same log always get
+// the same level, and that is not a thing to make a query away from being
+// true — but they are worth being able to read.
+func Rubrics() []Rubric {
+	out := make([]Rubric, 0, len(rubrics))
+	for _, r := range rubrics {
+		out = append(out, Rubric{Slug: r.Slug, Metric: r.Metric, Cuts: r.Cuts[:]})
+	}
+	return out
+}
+
 var rubrics = []rubric{
 	// Reps
 	{"pull_up", "reps", [5]float64{1, 5, 10, 15, 22}},

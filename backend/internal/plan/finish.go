@@ -3,6 +3,7 @@ package plan
 import (
 	"fmt"
 	"math"
+	"sort"
 	"strings"
 
 	"calisthenics/api/internal/training"
@@ -418,6 +419,17 @@ func humanList(items []string) string {
 	default:
 		return strings.Join(items[:len(items)-1], ", ") + " and " + items[len(items)-1]
 	}
+}
+
+// sortedKeys gives a map's keys in a fixed order, so a projection of the
+// catalogue writes the same rows in the same sequence every time.
+func sortedKeys[V any](m map[string]V) []string {
+	out := make([]string, 0, len(m))
+	for k := range m {
+		out = append(out, k)
+	}
+	sort.Strings(out)
+	return out
 }
 
 func appendUnique(list []string, value string) []string {

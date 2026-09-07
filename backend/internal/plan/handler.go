@@ -1,6 +1,7 @@
 package plan
 
 import (
+	"encoding/json"
 	"net/http"
 	"time"
 
@@ -48,6 +49,62 @@ func (h *Handler) Benchmarks(w http.ResponseWriter, r *http.Request) {
 		"goal":         matched.Name,
 		"goal_matched": recognised,
 	})
+}
+
+// Skills answers with the catalogue as the reference tables hold it: every
+// skill, its ladder, and what each rung is cleared at. It is what a goal
+// picker is built from, and it reads from the database rather than from the Go
+// values so that the tables are load-bearing rather than decorative — if the
+// projection has not run, this says so instead of quietly serving something
+// else.
+func (h *Handler) Skills(w http.ResponseWriter, r *http.Request) {
+	rows, err := h.pool.Query(r.Context(), `
+		select s.key, s.name, s.phrase, s.pattern, s.straight_arm, s.wrists,
+		       s.cost, s.timeline, s.frequency, s.aliases,
+		       coalesce(json_agg(json_build_object(
+		           'name', t.name, 'metric', t.metric, 'standard', t.standard,
+		           'typical', t.typical, 'exercise_slugs', t.movements
+		       ) order by t.position) filter (where t.skill_key is not null), '[]') as ladder
+		from skills s
+		left join skill_steps t on t.skill_key = s.key
+		group by s.key, s.position, s.name, s.phrase, s.pattern, s.straight_arm,
+		         s.wrists, s.cost, s.timeline, s.frequency, s.aliases
+		order by s.position`)
+	if err != nil {
+		httpx.Fail(w, http.StatusInternalServerError, "Couldn't read the skill catalogue.")
+		return
+	}
+	defer rows.Close()
+
+	type skill struct {
+		Key         string          `json:"key"`
+		Name        string          `json:"name"`
+		Phrase      string          `json:"phrase"`
+		Pattern     string          `json:"pattern"`
+		StraightArm bool            `json:"straight_arm"`
+		Wrists      bool            `json:"wrists"`
+		Cost        int             `json:"cost"`
+		Timeline    string          `json:"timeline"`
+		Frequency   string          `json:"frequency"`
+		Aliases     []string        `json:"aliases"`
+		Ladder      json.RawMessage `json:"ladder"`
+	}
+
+	out := []skill{}
+	for rows.Next() {
+		var s skill
+		if err := rows.Scan(&s.Key, &s.Name, &s.Phrase, &s.Pattern, &s.StraightArm,
+			&s.Wrists, &s.Cost, &s.Timeline, &s.Frequency, &s.Aliases, &s.Ladder); err != nil {
+			httpx.Fail(w, http.StatusInternalServerError, "Couldn't read the skill catalogue.")
+			return
+		}
+		out = append(out, s)
+	}
+	if err := rows.Err(); err != nil {
+		httpx.Fail(w, http.StatusInternalServerError, "Couldn't read the skill catalogue.")
+		return
+	}
+	httpx.JSON(w, http.StatusOK, out)
 }
 
 type generateRequest struct {
