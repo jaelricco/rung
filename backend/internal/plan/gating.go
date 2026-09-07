@@ -124,10 +124,7 @@ const tendonCeiling = 5
 // asking for. Over the ceiling, the plan does not refuse — it names what to
 // park, cheapest-to-park first, and keeps the goal that everything else feeds.
 func (b *builder) weighLoad() {
-	load := &Load{Ceiling: tendonCeiling, Spent: b.goal.Cost}
-	if load.Spent == 0 {
-		load.Spent = 1
-	}
+	load := &Load{Ceiling: tendonCeiling, Spent: b.goal.Units()}
 
 	type other struct {
 		goal Goal
@@ -139,10 +136,7 @@ func (b *builder) weighLoad() {
 		if !ok || g.Key == b.goal.Key {
 			continue
 		}
-		cost := g.Cost
-		if cost == 0 {
-			cost = 1
-		}
+		cost := g.Units()
 		others = append(others, other{g, cost})
 		load.Spent += cost
 		load.Learning = append(load.Learning, g.Name)

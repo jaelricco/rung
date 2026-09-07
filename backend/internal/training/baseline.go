@@ -121,9 +121,13 @@ func (s *Service) mergeBaseline(ctx context.Context, userID string, snap *Snapsh
 		return snap.Records[i].Name < snap.Records[j].Name
 	})
 
+	// learning belongs here with the rest of what the athlete told us about
+	// themselves. Without it the tendon budget has nothing to weigh: the picker
+	// stores the skills, and the planner counts them, but the snapshot in
+	// between was leaving them behind.
 	return s.pool.QueryRow(ctx, `
-		select trains_per_week, sleep_hours, equipment from users where id = $1`, userID,
-	).Scan(&snap.TrainsPerWeek, &snap.SleepHours, &snap.Equipment)
+		select trains_per_week, sleep_hours, equipment, learning from users where id = $1`, userID,
+	).Scan(&snap.TrainsPerWeek, &snap.SleepHours, &snap.Equipment, &snap.Learning)
 }
 
 // higherInt raises the target to the candidate and reports whether it did.

@@ -103,6 +103,17 @@ type Goal struct {
 	Cost int
 }
 
+// Units is what one week of this skill spends from the tendon budget. Cost is
+// left unset for every goal below the elite tier, and unset means one unit
+// rather than none: no skill is free to the tissue, and a zero would both
+// under-count the budget and read as "0 units" wherever it is shown.
+func (g Goal) Units() int {
+	if g.Cost < 1 {
+		return 1
+	}
+	return g.Cost
+}
+
 // Requirement is one thing that has to be demonstrated before a ladder opens.
 type Requirement struct {
 	Slug     string
