@@ -84,8 +84,14 @@ const researchTTL = 60 * 24 * time.Hour
 // The research turn is one non-streamed call that reads pages, so its ceiling
 // has to cover the pages as well as the reasoning and the answer.
 const (
-	researchTokens   = 14000
-	researchSearches = 7
+	researchTokens = 14000
+	// researchSearches is the default cap, lowered from seven after a real
+	// turn was measured: seven searches pulled 87,000 input tokens in, which
+	// was roughly half the price of the whole plan. Five keeps the ladder,
+	// the standards and the injury notes while dropping the tail of searches
+	// that mostly restate the earlier ones. AI_RESEARCH_SEARCHES overrides it
+	// without a rebuild.
+	researchSearches = 5
 )
 
 // research returns findings for the skill, from cache when they are fresh.
@@ -132,7 +138,9 @@ Return JSON:
 
 	var found SkillResearch
 	searchResult, err := client.SearchJSON(ctx, userID, "skill_research", researchSystem, prompt,
-		researchTokens, SearchOptions{MaxSearches: researchSearches, Schema: researchSchema}, &found)
+		researchTokens,
+		SearchOptions{MaxSearches: clampSearches(h.store.settings.ResearchSearches, researchSearches),
+			Schema: researchSchema}, &found)
 	if err != nil {
 		// A plan without research is the old behaviour, which is still a plan.
 		log.Printf("skill research for %q failed, writing the plan without it: %v", skill, err)

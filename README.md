@@ -382,6 +382,18 @@ URI registered with the provider has to be exactly
 self-service registration, so whether you can register this app for it is a
 question for OpenAI, not for this code — the code is ready either way.
 
+Worth being explicit, because it is asked often: signing in with either
+provider buys **no model access**. Sign in with ChatGPT is an identity
+provider — a third-party app receives name, email address and profile picture,
+and nothing else. Anthropic goes further and prohibits routing third-party
+traffic through Claude.ai credentials at all. The tools that appear to spend a
+subscription from outside reuse a first-party CLI's OAuth client and shape
+their requests to pass its checks, which is impersonation, and OpenAI's own
+issue tracker has that returning 429. The supported route to "the athlete's
+subscription pays" is to run inside the provider's own surface — an app in
+ChatGPT — which is a different product, not a connector setting. Here, model
+access comes from the athlete's own API key and nothing else.
+
 Three rules decide which account a sign-in lands on, and they are what
 `internal/auth/oauth.go`'s tests hold it to: an identity already linked signs
 into its own account; a *verified* address that matches an existing account
@@ -447,6 +459,72 @@ And `planTokens` is now `12000 + 3000` a session, with the server's write
 deadline raised to match — that deadline is absolute rather than idle, so at
 the measured hundred tokens a second the old 180s could not have carried the
 new ceiling, and a truncated plan would have become a severed connection.
+
+**An account you connect, not a secret you paste.** The connector asks for a
+*connection code*, and the walkthrough is open by default for anyone who
+arrives without a connection — because that is exactly who has never done this.
+The naming rule is worth stating, since getting it wrong in either direction
+costs someone their afternoon: here it is a connection code, on the provider's
+own pages it is an API key, and the field's own help text bridges the two. A
+test holds both halves, so a later tidy-up cannot rename the provider's button
+and send people hunting for a control that does not exist there. Nothing an
+athlete reads asks them to connect a key — they connect an account, and the
+code is how.
+
+**Getting a key, for someone who has never made one.** The account an athlete
+already has is the wrong one: a ChatGPT or Claude subscription is a consumer
+product, the key comes from a separate developer account with its own balance,
+and neither company's pages say so. Left to work it out, people top up the
+subscription and still cannot connect. So each provider in the catalogue
+carries `Steps` — open the console, add credit, make the key, paste it — shown
+only to whoever asks for them, so the field stays a field for anyone who has
+done this before. A test asserts the order rather than the wording: credit
+before key, because a key made against an empty account looks valid and
+refuses every request.
+
+The same gap shows up again in the provider's own refusal. "You exceeded your
+current quota" is accurate and useless to a first-time user, so `guide` appends
+the next move to the failures that have one and leaves everything else exactly
+as the provider wrote it — guessing at an unfamiliar error sends someone to fix
+what is not broken. It matches on sets of words rather than one phrase, which
+is not fussiness: the first version looked for "invalid api key" and missed
+Anthropic's actual "API key is invalid.", the same words in the other order and
+the commonest refusal there is.
+
+**The two cost levers, and which one is worth having.** Measured on a real
+plan, the research turn dominates the bill: seven web searches pulled 87,000
+tokens of retrieved pages in as input, roughly half the price of the whole
+plan. So the search count is the sharp lever and it is now a setting —
+`AI_RESEARCH_SEARCHES`, default five, clamped at both ends so an unset value
+falls back rather than turning the limit into "no searches" and a mistyped one
+cannot spend a fortune.
+
+Prompt caching is the blunt one, and worth being honest about. The exercise
+catalogue is about 3,700 tokens, identical for every athlete on every request,
+and it sits in front of a cache breakpoint together with the standing brief —
+which is why `buildContext` hands back the stable half and the volatile half
+separately rather than one string. Prefix matching is unforgiving: a single
+changing byte in front of the catalogue would make the entry unreadable, so a
+test asserts the order and that only the stable block is marked.
+
+Which turns actually share that prefix was measured rather than assumed, and
+the first answer was wrong. A schema is part of what the cache is keyed on, so
+the plan turn — which carries one — has a prefix of its own: a measured plan
+wrote 8,501 tokens of cache and the review right after it read none of them,
+writing 7,332 of its own. A second review then read all 7,332 back. So the
+breakpoint is on the prose turns, review and recovery, which share a prefix
+and hit each other; the plan turn sends its prompt whole, because a second
+plan inside the five-minute window is unlikely when a plan takes four minutes
+to write. The research turn does not cache either: its own system prompt, and
+findings already cached per skill for sixty days. A write costs 1.25x and a
+read 0.1x, so a breakpoint only earns its place where a hit is likely — which
+here means two prose turns in one sitting, and nothing else.
+
+Caching also changes the accounting, because the API counts cached tokens
+apart from `input_tokens`: recording only the latter would have quietly
+undercounted every cached call. `ai_calls` therefore carries
+`cache_read_tokens` and `cache_write_tokens`, and `estimate` prices them at
+their own multiples of the input rate.
 
 **Two switches on a connection.** Neither needs the key pasted again, and
 neither calls the provider, so both answer immediately. *Switch the connector

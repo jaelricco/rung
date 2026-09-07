@@ -17,7 +17,7 @@ import (
 // Claude or ChatGPT account, the key is sealed into the database, and every
 // call they make afterwards is billed to them by their own provider.
 var (
-	ErrNoCredentials = errors.New("connect your own Claude or ChatGPT key before using the coaching features")
+	ErrNoCredentials = errors.New("connect your own Claude or ChatGPT account before using the coaching features")
 	ErrNoKeystore    = errors.New("this server cannot seal provider keys right now, so none can be stored")
 	// ErrPaused is the athlete's own doing, and reads differently from the
 	// other two because of it: the key is here and it works, they have simply
@@ -40,6 +40,25 @@ type Provider struct {
 	// KeyPrefix is a shape check, not a secret check: it catches a pasted
 	// password or a key from the other provider before a request is spent.
 	KeyPrefix string `json:"key_prefix"`
+	// Steps is how someone who has never seen an API key gets one.
+	//
+	// This exists because the account an athlete already has is the wrong one.
+	// A ChatGPT or Claude subscription is a consumer product; the key comes
+	// from a separate developer account with its own balance, and nothing on
+	// either company's marketing pages says so. Left to work it out, most
+	// people either give up or top up the wrong thing.
+	Steps []Step `json:"steps"`
+}
+
+// Step is one instruction on the way to a working key, with the page it is
+// done on. Short enough to follow without leaving the settings page open in
+// another tab and losing your place.
+type Step struct {
+	Do string `json:"do"`
+	// URL is the page this step happens on, empty for a step done here.
+	URL string `json:"url,omitempty"`
+	// Note is the thing that trips people up, said before it does.
+	Note string `json:"note,omitempty"`
 }
 
 // Providers is the catalogue, in the order the settings page offers them.
@@ -56,6 +75,27 @@ var Providers = []Provider{
 		Models:    []string{"claude-sonnet-5", "claude-haiku-4-5-20251001", "claude-opus-5"},
 		KeysURL:   "https://console.anthropic.com/settings/keys",
 		KeyPrefix: "sk-ant-",
+		Steps: []Step{
+			{
+				Do:   "Open the Anthropic Console and sign in",
+				URL:  "https://console.anthropic.com/",
+				Note: "Use the same email as your Claude account if you have one. It is a separate account from Claude itself, even with the same email.",
+			},
+			{
+				Do:   "Add a little credit",
+				URL:  "https://console.anthropic.com/settings/billing",
+				Note: "This is the part a Claude subscription does not cover. The smallest top-up is far more than a season of coaching here.",
+			},
+			{
+				Do:   "Create a key and copy it",
+				URL:  "https://console.anthropic.com/settings/keys",
+				Note: "It is shown once. Paste it below straight away; if you lose it, make another.",
+			},
+			{
+				Do:   "Paste it below as your connection code",
+				Note: "That code is the key. It is what connects your account here; nothing else about your Claude account is touched.",
+			},
+		},
 	},
 	{
 		ID:           ProviderOpenAI,
@@ -65,6 +105,27 @@ var Providers = []Provider{
 		Models:       []string{"gpt-5-mini", "gpt-5", "gpt-4.1"},
 		KeysURL:      "https://platform.openai.com/api-keys",
 		KeyPrefix:    "sk-",
+		Steps: []Step{
+			{
+				Do:   "Open the OpenAI platform and sign in",
+				URL:  "https://platform.openai.com/",
+				Note: "Signing in with ChatGPT works here. It is still a separate account from ChatGPT, with its own balance.",
+			},
+			{
+				Do:   "Add a little credit",
+				URL:  "https://platform.openai.com/settings/organization/billing/overview",
+				Note: "This is the part ChatGPT Plus does not cover. Without a balance the key exists but every request is refused.",
+			},
+			{
+				Do:   "Create a key and copy it",
+				URL:  "https://platform.openai.com/api-keys",
+				Note: "It is shown once. Paste it below straight away; if you lose it, make another.",
+			},
+			{
+				Do:   "Paste it below as your connection code",
+				Note: "That code is the key. It is what connects your account here; nothing else about your ChatGPT account is touched.",
+			},
+		},
 	},
 }
 

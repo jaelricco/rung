@@ -12,6 +12,10 @@
 	let busy = $state(false);
 	let saved = $state('');
 	let open = $state(true);
+	// The walkthrough starts closed for anyone who already has a connection —
+	// they have plainly done it before — and open for anyone who has not.
+	let showSteps = $state(false);
+	let steppedIn = false;
 
 	let provider = $state('anthropic');
 	let apiKey = $state('');
@@ -43,6 +47,13 @@
 				model = next.providers[0].default_model;
 			}
 			account = next;
+			// The walkthrough is for whoever has never done this, which is
+			// exactly who arrives without a connection. Once only: reopening it
+			// after someone closed it would be arguing with them.
+			if (!steppedIn) {
+				showSteps = !next.connected;
+				steppedIn = true;
+			}
 			// What it has actually cost so far, which is the question anyone
 			// asks before pasting a key. Only worth asking once connected.
 			if (next.connected) {
@@ -91,7 +102,7 @@
 		try {
 			account = await api.put('/me/ai', { provider, api_key: apiKey, model });
 			apiKey = '';
-			saved = 'Connected. Your key was checked with the provider before it was stored.';
+			saved = `Connected. Your code was checked with ${chosen?.vendor ?? 'the provider'} before it was stored.`;
 		} catch (e) {
 			error = e;
 		} finally {
@@ -188,7 +199,7 @@
 							flip(
 								{ paused: e.currentTarget.checked },
 								e.currentTarget.checked
-									? 'Connector switched off. Your key stays here; nothing is sent to a model.'
+									? 'Connector switched off. Your connection stays here; nothing is sent to a model.'
 									: 'Connector switched back on.'
 							)}
 					/>
@@ -250,7 +261,9 @@
 			{/if}
 		{/if}
 
-		<p class="eyebrow step">{connection ? 'Replace the connection' : 'Choose a provider'}</p>
+		<p class="eyebrow step">
+			{connection ? 'Replace the connection' : 'Connect your ChatGPT or Claude account'}
+		</p>
 
 		<div class="tiles">
 			{#each providers as p (p.id)}
@@ -275,7 +288,7 @@
 		{/if}
 
 		<div class="field">
-			<label for="key">API key</label>
+			<label for="key">Connection code</label>
 			<input
 				id="key"
 				type="password"
@@ -285,10 +298,28 @@
 			/>
 			{#if chosen}
 				<p class="note hint">
-					Make one at <a class="mono" href={chosen.keys_url} target="_blank" rel="noreferrer noopener"
-						>{chosen.keys_url}</a
-					>. Stored encrypted, and never shown back to you.
+					The code is the API key your {chosen.vendor} account issues — the steps below are where
+					it comes from. Stored encrypted here, and never shown back to you.
+					{#if chosen.steps?.length}
+						<button class="link" onclick={() => (showSteps = !showSteps)} aria-expanded={showSteps}>
+							{showSteps ? 'Hide the steps' : 'Show me where'}
+						</button>
+					{/if}
 				</p>
+				{#if showSteps && chosen.steps?.length}
+					<ol class="steps">
+						{#each chosen.steps as step (step.do)}
+							<li>
+								{#if step.url}
+									<a href={step.url} target="_blank" rel="noreferrer noopener">{step.do}</a>
+								{:else}
+									{step.do}
+								{/if}
+								{#if step.note}<span class="mono muted note">{step.note}</span>{/if}
+							</li>
+						{/each}
+					</ol>
+				{/if}
 			{/if}
 		</div>
 
@@ -324,22 +355,22 @@
 				: ''}
 		>
 			{busy
-				? 'Checking with the provider'
+				? `Checking with ${chosen?.vendor ?? 'the provider'}`
 				: account && !account.keystore_ready
 					? 'Unavailable'
 					: connection
 						? 'Save'
-						: 'Connect'}
+						: `Connect ${chosen?.label ?? 'an account'}`}
 		</button>
 
 		{#if saved}<p class="notice ok">{saved}</p>{/if}
 		<Failure {error} style="margin-top:0.9rem" />
 
 		<p class="foot muted">
-			You do not have to connect anything. Without a key the app still writes your training plans
-			itself, from your own records, and logging, the calendar, your routines and the baseline all
-			work unchanged. A key buys four things on top: the model's pass over the plan, the four-week
-			review, the recovery guidance, and the event search.
+			You do not have to connect anything. Without a connection the app still writes your training
+			plans itself, from your own records, and logging, the calendar, your routines and the
+			baseline all work unchanged. Connecting an account buys four things on top: the model's pass
+			over the plan, the four-week review, the recovery guidance, and the event search.
 		</p>
 	{/if}
 </section>
@@ -512,6 +543,31 @@
 	.hint {
 		font-size: 0.85rem;
 		margin: 0.4rem 0 0;
+	}
+
+	/* The walkthrough for someone who has never connected an account. Numbered,
+	   because the order is the part people get wrong: a key made before there is
+	   any credit behind it looks valid and refuses every request. */
+	.steps {
+		margin: 0.8rem 0 0;
+		padding-left: 1.3rem;
+		display: grid;
+		gap: 0.7rem;
+	}
+	.steps li {
+		font-size: 0.9rem;
+		line-height: 1.5;
+	}
+	.steps li::marker {
+		color: var(--muted);
+		font-family: var(--mono);
+		font-size: 0.8rem;
+	}
+	.steps .note {
+		display: block;
+		font-size: 0.78rem;
+		margin: 0.2rem 0 0;
+		line-height: 1.55;
 	}
 	.usage {
 		display: grid;

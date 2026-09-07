@@ -72,6 +72,7 @@ func main() {
 	aiStore := ai.NewStore(pool, keystore, ai.Settings{
 		SearchToolVersion: cfg.SearchToolVersion,
 		Thinking:          cfg.AIThinking,
+		ResearchSearches:  cfg.ResearchSearches,
 	})
 	aiHandler := ai.NewHandler(aiStore, pool, trainingSvc)
 	// An athlete can ask for their key to go when they do. Auth owns signing

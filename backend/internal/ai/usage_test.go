@@ -13,7 +13,7 @@ import (
 
 func TestEstimateUsesEachModelsOwnRate(t *testing.T) {
 	// A million in and a million out, so the arithmetic is the rate itself.
-	cost, ok := estimate("claude-sonnet-5", 1_000_000, 1_000_000)
+	cost, ok := estimate("claude-sonnet-5", 1_000_000, 1_000_000, 0, 0)
 	if !ok {
 		t.Fatal("a model in the picker should have a price")
 	}
@@ -23,8 +23,34 @@ func TestEstimateUsesEachModelsOwnRate(t *testing.T) {
 
 	// A model this build has never heard of must produce no estimate rather
 	// than a wrong one.
-	if _, ok := estimate("some-model-from-2028", 1_000_000, 1_000_000); ok {
+	if _, ok := estimate("some-model-from-2028", 1_000_000, 1_000_000, 0, 0); ok {
 		t.Fatal("an unlisted model was given a price")
+	}
+}
+
+// Cached tokens are not input tokens at the input price. Charging them as if
+// they were would hide the whole point of caching from the athlete paying for
+// it — and charging them as nothing would understate their bill.
+func TestCachedTokensArePricedAtTheirOwnRates(t *testing.T) {
+	// A million cache reads on Sonnet: a tenth of $2.
+	read, ok := estimate("claude-sonnet-5", 0, 0, 1_000_000, 0)
+	if !ok || read != 0.2 {
+		t.Fatalf("a million cache reads = %v, want 0.20", read)
+	}
+	// A million cache writes: a quarter more than $2.
+	write, _ := estimate("claude-sonnet-5", 0, 0, 0, 1_000_000)
+	if write != 2.5 {
+		t.Fatalf("a million cache writes = %v, want 2.50", write)
+	}
+	// Reading is the cheaper half by an order of magnitude, which is the
+	// arrangement the caching exists for.
+	if read >= write/10 {
+		t.Errorf("a read (%v) should be a tenth of a plain input token, "+
+			"and far below a write (%v)", read, write)
+	}
+	// And a cached call must not be free: the tokens were still read.
+	if plain, _ := estimate("claude-sonnet-5", 1_000_000, 0, 0, 0); read >= plain {
+		t.Errorf("a cache read (%v) is not cheaper than plain input (%v)", read, plain)
 	}
 }
 

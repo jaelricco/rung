@@ -69,6 +69,13 @@ type turn struct {
 	// repair turn in CompleteJSONStream and SearchJSON is what catches the
 	// difference.
 	Schema json.RawMessage
+	// CachedPrefix is the leading part of the prompt that is identical
+	// between requests — the exercise library, which every coaching turn
+	// carries and which changes only when the catalogue does. A transport
+	// whose provider bills a cheaper rate for repeated prefixes marks it;
+	// one that does not simply sends it as the start of the prompt, which is
+	// what it is.
+	CachedPrefix string
 }
 
 // outcome is a finished turn, normalised across providers.
@@ -80,8 +87,12 @@ type outcome struct {
 	StopReason    string
 	StopNote      string
 	ThinkingChars int
-	Searches      int
-	Sources       []Source
+	// CacheReadTokens and CacheWriteTokens are the cached prefix, which the
+	// API counts apart from InputTokens and bills at its own rates.
+	CacheReadTokens  int
+	CacheWriteTokens int
+	Searches         int
+	Sources          []Source
 }
 
 // Settings are the server-wide knobs that are not anyone's account: which web
@@ -91,6 +102,11 @@ type Settings struct {
 	// Thinking is "adaptive" (every current model) or "off" for a model old
 	// enough to reject the parameter.
 	Thinking string
+	// ResearchSearches caps how many web searches one research turn may run.
+	// It is the sharpest cost control this app has: every page the tool
+	// retrieves is billed as input, and a measured research turn spent 87,000
+	// input tokens against roughly 12,000 a search. Zero means the default.
+	ResearchSearches int
 }
 
 // NewClient builds a client for one athlete's credentials.
@@ -165,12 +181,23 @@ func (c *Client) Complete(ctx context.Context, userID, purpose, system, prompt s
 func (c *Client) CompleteStream(ctx context.Context, userID, purpose, system, prompt string,
 	maxTokens int, onDelta func(Delta)) (string, error) {
 
-	return c.completeStream(ctx, userID, purpose, system, prompt, maxTokens, nil, onDelta)
+	return c.completeStream(ctx, userID, purpose, system,
+		prompt, "", maxTokens, nil, onDelta)
 }
 
-// completeStream is CompleteStream with the shape the answer must satisfy.
-func (c *Client) completeStream(ctx context.Context, userID, purpose, system, prompt string,
-	maxTokens int, schema json.RawMessage, onDelta func(Delta)) (string, error) {
+// CompleteCachedStream is CompleteStream with a leading stretch of prompt that
+// recurs between requests and is therefore worth caching.
+func (c *Client) CompleteCachedStream(ctx context.Context, userID, purpose, system, cachedPrefix,
+	prompt string, maxTokens int, onDelta func(Delta)) (string, error) {
+
+	return c.completeStream(ctx, userID, purpose, system,
+		prompt, cachedPrefix, maxTokens, nil, onDelta)
+}
+
+// completeStream is CompleteStream with the shape the answer must satisfy and
+// the part of the prompt worth caching.
+func (c *Client) completeStream(ctx context.Context, userID, purpose, system, prompt,
+	cachedPrefix string, maxTokens int, schema json.RawMessage, onDelta func(Delta)) (string, error) {
 
 	if !c.Configured() {
 		return "", ErrNotConfigured
@@ -180,15 +207,16 @@ func (c *Client) completeStream(ctx context.Context, userID, purpose, system, pr
 	}
 
 	started := time.Now()
-	res, err := c.api.Stream(ctx,
-		turn{System: system, Prompt: prompt, MaxTokens: maxTokens, Schema: schema}, onDelta)
+	res, err := c.api.Stream(ctx, turn{System: system, Prompt: prompt,
+		CachedPrefix: cachedPrefix, MaxTokens: maxTokens, Schema: schema}, onDelta)
 	if err != nil {
 		c.record(ctx, userID, purpose, prompt, err.Error(), res.InputTokens, res.OutputTokens, time.Since(started), false)
 		return res.Text, err
 	}
 
 	ok := strings.TrimSpace(res.Text) != ""
-	c.record(ctx, userID, purpose, prompt, res.Text, res.InputTokens, res.OutputTokens, time.Since(started), ok)
+	c.record(ctx, userID, purpose, prompt, res.Text, res.InputTokens, res.OutputTokens,
+		time.Since(started), ok, res.CacheReadTokens, res.CacheWriteTokens)
 
 	// A turn that ended at the ceiling is not an answer even when some of it
 	// arrived: half a plan is not half usable.
@@ -205,15 +233,16 @@ func (c *Client) completeStream(ctx context.Context, userID, purpose, system, pr
 // wraps its answer in a code fence or adds a sentence around it.
 func (c *Client) CompleteJSON(ctx context.Context, userID, purpose, system, prompt string,
 	maxTokens int, schema json.RawMessage, dst any) error {
-	return c.CompleteJSONStream(ctx, userID, purpose, system, prompt, maxTokens, schema, nil, dst)
+	return c.CompleteJSONStream(ctx, userID, purpose, system, "", prompt, maxTokens, schema, nil, dst)
 }
 
 // CompleteJSONStream is CompleteJSON with progress reporting. schema may be
 // empty, in which case the answer is only asked for in the prompt.
-func (c *Client) CompleteJSONStream(ctx context.Context, userID, purpose, system, prompt string,
-	maxTokens int, schema json.RawMessage, onDelta func(Delta), dst any) error {
+func (c *Client) CompleteJSONStream(ctx context.Context, userID, purpose, system, cachedPrefix,
+	prompt string, maxTokens int, schema json.RawMessage, onDelta func(Delta), dst any) error {
 
-	out, err := c.completeStream(ctx, userID, purpose, system, prompt, maxTokens, schema, onDelta)
+	out, err := c.completeStream(ctx, userID, purpose, system,
+		prompt, cachedPrefix, maxTokens, schema, onDelta)
 	if err != nil {
 		return err
 	}
@@ -288,7 +317,14 @@ func orUnknown(s string) string {
 }
 
 func (c *Client) record(ctx context.Context, userID, purpose, prompt, completion string,
-	in, out int, took time.Duration, ok bool) {
+	in, out int, took time.Duration, ok bool, cache ...int) {
+	var cacheRead, cacheWrite int
+	if len(cache) > 0 {
+		cacheRead = cache[0]
+	}
+	if len(cache) > 1 {
+		cacheWrite = cache[1]
+	}
 	if c.pool == nil {
 		return
 	}
@@ -302,8 +338,9 @@ func (c *Client) record(ctx context.Context, userID, purpose, prompt, completion
 	}
 	_, _ = c.pool.Exec(logCtx, `
 		insert into ai_calls
-			(user_id, purpose, provider, model, input_tokens, output_tokens, duration_ms, ok, prompt, completion)
-		values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+			(user_id, purpose, provider, model, input_tokens, output_tokens, duration_ms, ok,
+			 prompt, completion, cache_read_tokens, cache_write_tokens)
+		values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
 		user, purpose, c.provider, c.model, in, out, int(took.Milliseconds()), ok,
-		truncate(prompt, 20000), truncate(completion, 20000))
+		truncate(prompt, 20000), truncate(completion, 20000), cacheRead, cacheWrite)
 }

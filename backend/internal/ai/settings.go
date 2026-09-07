@@ -90,8 +90,9 @@ func (h *Handler) Connect(w http.ResponseWriter, r *http.Request) {
 	}
 	if err != nil {
 		// Everything reachable here is either the athlete's typo or their
-		// provider's own refusal, and both are worth reading verbatim.
-		httpx.Fail(w, http.StatusBadRequest, capitalise(err.Error()))
+		// provider's own refusal. Both are worth reading verbatim, and the
+		// ones that have a known next move say what it is.
+		httpx.Fail(w, http.StatusBadRequest, guide(capitalise(err.Error())))
 		return
 	}
 

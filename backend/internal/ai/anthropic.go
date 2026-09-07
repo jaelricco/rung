@@ -107,8 +107,41 @@ func anthropicErrorMessage(raw []byte, fallback string) string {
 // ---------- streaming ----------
 
 type message struct {
-	Role    string `json:"role"`
-	Content string `json:"content"`
+	Role string `json:"role"`
+	// Content is a plain string for an ordinary turn, and a list of blocks
+	// when part of it is worth caching.
+	Content any `json:"content"`
+}
+
+// Prompt caching. The API matches on prefix, so a breakpoint caches everything
+// before it — the tools, the system prompt, and any earlier block. One
+// breakpoint placed after the stable half of a prompt therefore covers the
+// standing brief and the exercise library in a single entry.
+//
+// It is not free either way: a write costs 1.25x the base input price and a
+// hit costs 0.1x, so the arrangement pays only where the same prefix comes
+// back. That is why the caller decides what goes in front of the breakpoint
+// rather than this file guessing.
+type cacheControl struct {
+	Type string `json:"type"`
+}
+
+type textBlock struct {
+	Type         string        `json:"type"`
+	Text         string        `json:"text"`
+	CacheControl *cacheControl `json:"cache_control,omitempty"`
+}
+
+// userContent is the prompt, split in two when the leading half is worth
+// caching and left as a plain string when it is not.
+func userContent(t turn) any {
+	if strings.TrimSpace(t.CachedPrefix) == "" {
+		return t.Prompt
+	}
+	return []textBlock{
+		{Type: "text", Text: t.CachedPrefix, CacheControl: &cacheControl{Type: "ephemeral"}},
+		{Type: "text", Text: t.Prompt},
+	}
 }
 
 type thinkingConfig struct {
@@ -166,8 +199,10 @@ type streamEvent struct {
 	Type    string `json:"type"`
 	Message struct {
 		Usage struct {
-			InputTokens  int `json:"input_tokens"`
-			OutputTokens int `json:"output_tokens"`
+			InputTokens              int `json:"input_tokens"`
+			OutputTokens             int `json:"output_tokens"`
+			CacheReadInputTokens     int `json:"cache_read_input_tokens"`
+			CacheCreationInputTokens int `json:"cache_creation_input_tokens"`
 		} `json:"usage"`
 	} `json:"message"`
 	ContentBlock struct {
@@ -200,7 +235,7 @@ func (a *anthropicAPI) Stream(ctx context.Context, t turn, onDelta func(Delta)) 
 		Model:        a.model,
 		MaxTokens:    t.MaxTokens,
 		System:       t.System,
-		Messages:     []message{{Role: "user", Content: t.Prompt}},
+		Messages:     []message{{Role: "user", Content: userContent(t)}},
 		Stream:       true,
 		Thinking:     a.thinkingConfig(),
 		OutputConfig: outputConfigFor(t),
@@ -241,6 +276,8 @@ func (a *anthropicAPI) Stream(ctx context.Context, t turn, onDelta func(Delta)) 
 				switch ev.Type {
 				case "message_start":
 					res.InputTokens = ev.Message.Usage.InputTokens
+					res.CacheReadTokens = ev.Message.Usage.CacheReadInputTokens
+					res.CacheWriteTokens = ev.Message.Usage.CacheCreationInputTokens
 				case "content_block_delta":
 					switch ev.Delta.Type {
 					case "text_delta":
@@ -332,9 +369,11 @@ type searchResponse struct {
 	Content    []json.RawMessage `json:"content"`
 	StopReason string            `json:"stop_reason"`
 	Usage      struct {
-		InputTokens   int `json:"input_tokens"`
-		OutputTokens  int `json:"output_tokens"`
-		ServerToolUse struct {
+		InputTokens              int `json:"input_tokens"`
+		OutputTokens             int `json:"output_tokens"`
+		CacheReadInputTokens     int `json:"cache_read_input_tokens"`
+		CacheCreationInputTokens int `json:"cache_creation_input_tokens"`
+		ServerToolUse            struct {
 			WebSearchRequests int `json:"web_search_requests"`
 		} `json:"server_tool_use"`
 	} `json:"usage"`
@@ -384,6 +423,8 @@ func (a *anthropicAPI) Search(ctx context.Context, t turn, opts SearchOptions) (
 		res.Searches += parsed.Usage.ServerToolUse.WebSearchRequests
 		res.InputTokens = parsed.Usage.InputTokens
 		res.OutputTokens = parsed.Usage.OutputTokens
+		res.CacheReadTokens = parsed.Usage.CacheReadInputTokens
+		res.CacheWriteTokens = parsed.Usage.CacheCreationInputTokens
 		blockText, sources := parseBlocks(parsed.Content)
 		text.WriteString(blockText)
 		for _, s := range sources {

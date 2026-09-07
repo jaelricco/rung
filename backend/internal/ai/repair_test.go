@@ -60,7 +60,7 @@ func TestAnUnescapedQuoteIsRepairedRatherThanLost(t *testing.T) {
 	c, seen := scripted(t, textFrames(broken), textFrames(fixed))
 
 	var out SkillResearch
-	if err := c.CompleteJSONStream(context.Background(), "", "skill_research", "sys", "prompt",
+	if err := c.CompleteJSONStream(context.Background(), "", "skill_research", "sys", "", "prompt",
 		4000, researchSchema, nil, &out); err != nil {
 		t.Fatalf("CompleteJSONStream: %v", err)
 	}
@@ -93,7 +93,7 @@ func TestAFailedRepairReportsTheOriginalComplaint(t *testing.T) {
 	c, seen := scripted(t, textFrames(broken), textFrames(`still not json`))
 
 	var out SkillResearch
-	err := c.CompleteJSONStream(context.Background(), "", "skill_research", "sys", "prompt",
+	err := c.CompleteJSONStream(context.Background(), "", "skill_research", "sys", "", "prompt",
 		4000, researchSchema, nil, &out)
 	if err == nil {
 		t.Fatal("a document that never parsed was accepted")
@@ -111,7 +111,7 @@ func TestGoodJSONCostsOnlyOneTurn(t *testing.T) {
 	c, seen := scripted(t, textFrames(`{"skill":"pull-up","summary":"fine"}`))
 
 	var out SkillResearch
-	if err := c.CompleteJSONStream(context.Background(), "", "skill_research", "sys", "prompt",
+	if err := c.CompleteJSONStream(context.Background(), "", "skill_research", "sys", "", "prompt",
 		4000, researchSchema, nil, &out); err != nil {
 		t.Fatalf("CompleteJSONStream: %v", err)
 	}
@@ -126,7 +126,7 @@ func TestTheSchemaReachesTheProviderOnAStreamedTurn(t *testing.T) {
 	c, seen := scripted(t, textFrames(`{"skill":"pull-up","summary":"fine"}`))
 
 	var out SkillResearch
-	if err := c.CompleteJSONStream(context.Background(), "", "skill_research", "sys", "prompt",
+	if err := c.CompleteJSONStream(context.Background(), "", "skill_research", "sys", "", "prompt",
 		4000, researchSchema, nil, &out); err != nil {
 		t.Fatalf("CompleteJSONStream: %v", err)
 	}
