@@ -511,7 +511,94 @@ heavy slow resistance as tolerance returns (§3).
 
 ---
 
-## 9. What this means for an algorithm
+## 9. Two traditions build a maltese, and they are not the same ladder
+
+§7 built the maltese out of rings, from ring support and band-assisted crosses,
+because that is what the freely available sources describe. A structured
+calisthenics programme for planche and maltese — Cali-Aesthetics, paid, so the
+tables are not reproduced here — builds it entirely differently, and the
+difference is not cosmetic.
+
+In the **rings-gymnastics** lineage a maltese is a cross derivative: ring
+support, iron cross, L-cross, maltese. In the **floor-and-parallel-bars**
+lineage it is a planche whose hands keep travelling outward, and the ladder runs
+
+> lean maltese → **wide planche hold** → wide planche press → zanetti →
+> maltese elevator → maltese hold → maltese press
+
+The **wide planche** — hands wider than a planche, narrower than a maltese — is
+the rung §7 had no equivalent for at all, and it is the one that teaches the
+shoulder the angle. Across five documents of that programme, "back lever",
+"iron cross", "ring support" and "front lever" appear **zero** times; "rings"
+appears three times, as an implement variant at the very top. The prerequisites
+§7 took from the rings sources were being applied to a skill from the other
+tradition.
+
+This app follows the floor ladder, because that is the sport its athletes are
+in. The rings ladder survives as the iron cross, which is genuinely its own
+goal.
+
+### Gates belong on rungs, not on goals
+
+The same programme prescribes **lean maltese, banded, as an accessory block in
+its beginner workouts** — two sets of 5–10 seconds, at the end of the session.
+So "may I train toward a maltese" is the wrong question. Leaning into the
+position with a band is available early; *holding* and *pressing* it are not.
+
+A gate on the goal gets the first half wrong, so the prerequisites moved onto
+individual rungs. An athlete is then placed by their records and capped by the
+gate of the rung above — held one rung below what they have logged, with the
+number that would release them.
+
+### What the programme's own parameters are
+
+Counted across its beginner, intermediate, advanced and personal workouts:
+
+| | Values used |
+| --- | --- |
+| **Rest** | 5 min (64×), 3 min (32×), 2 min (29×), 4 min (18×), 7 min (6×) |
+| **Sets** | 5 (66×), 2 (60×), 3 (27×) |
+| **Holds** | 2–4s, 3–6s, 3–8s, 4–8s, 5–10s, 8–15s, 10–20s |
+| **Reps** | 1–3, 2–4, 3–5, 3–8, 5–10, 8–15 |
+
+Three things fall out of that, and all three contradicted what this app was
+doing:
+
+**Rest is 4 to 7 minutes for maximal work, at every level.** The beginner
+holding a tuck planche rests as long as the athlete pressing a maltese, because
+the rest is for the maximality of the position, not for the experience of the
+athlete. This app had been prescribing 2.5 to 3 minutes.
+
+**Everything is a range, never a point.** `5–10s`, `3–8r`. A range is met at the
+top on a good day and the bottom on a bad one without the plan being wrong
+either time. Computed targets are now snapped onto the nearest band from the
+lists above rather than printed as a single number.
+
+**Volume is held constant and difficulty is moved.** Five sets is the workhorse
+at every level; what changes between beginner and advanced is the variant and
+the assistance — band, neck band, elevated, parallel bars versus floor versus
+supinated grip, +2 kg ankle, +4 kg hips, +10 kg vest. That is the reverse of
+scaling sets by readiness, and for skill work it is the better way round.
+
+### The session is a span of the ladder
+
+Every workout in the programme has the same four-block shape:
+
+```
+2–3 sets   the hardest variant       5–7 min rest
+5 sets     the main rung             5 min
+5 sets     the rung below it         3–4 min
+2–3 sets   the easiest variant       2 min
+```
+
+Read against a ladder, that is not four arbitrary exercises — it is a span of
+rungs, hardest first while the athlete is completely fresh. The opener is two
+or three sets of the *next rung up*, attempted before anything has tired. A
+skill attempted at the end of a session is a skill rehearsed badly.
+
+---
+
+## 10. What this means for an algorithm
 
 Rules the generator implements directly, each traceable to a section above:
 
@@ -548,5 +635,11 @@ Rules the generator implements directly, each traceable to a section above:
 17. For a **mild wrist**, change the position rather than the volume: swap onto
     the neutral-wrist version where one exists, and remove only what has none
     (§8).
-18. Anything it cannot do — diagnose, prescribe a diet, promise a full planche
+18. **Rest maximal straight-arm work for 4 to 7 minutes**, at every level, and
+    the accessories for two (§9).
+19. **Prescribe ranges, not point values**, snapped onto the bands the coaching
+    material actually uses (§9).
+20. **Open a straight-arm session with the rung above**, two or three sets,
+    before anything has tired (§9).
+21. Anything it cannot do — diagnose, prescribe a diet, promise a full planche
     in eight weeks — it declines to do, in writing (§1, §3, §5).

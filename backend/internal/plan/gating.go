@@ -247,6 +247,15 @@ var neutralWrist = map[string]string{
 	"wall_handstand":         "fingertip_hold",
 	"crow_pose":              "knuckle_plank",
 	"frog_stand":             "knuckle_plank",
+
+	// The maltese has one neutral-wrist form and it is the banded rings
+	// version, which the coaching material itself offers at the top of the
+	// floor ladder. Everything else on that ladder — the wide planche, the
+	// elevators, the presses — is floor-specific and simply comes out.
+	"lean_maltese":     "band_maltese",
+	"maltese":          "band_maltese",
+	"planche_kicks":    "ring_planche_lean",
+	"l_sit_to_planche": "ring_tuck_planche",
 }
 
 // spareTheWrist swaps what it can and bans what it cannot. It runs only for a
@@ -267,6 +276,7 @@ func (b *builder) spareTheWrist(severity int) {
 		removed++
 	}
 
+	b.spared[regionWrist] = true
 	b.rehab = appendUnique(b.rehab, "wrist_rehab_light")
 	b.restrictions = append(b.restrictions, fmt.Sprintf(
 		"Wrist (severity %d): the work moves off the palm rather than off the plan. %s with a neutral-wrist "+

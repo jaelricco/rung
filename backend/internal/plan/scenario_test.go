@@ -30,80 +30,120 @@ func eliteAthlete() training.Snapshot {
 	return snap
 }
 
-func TestTheMalteseIsGatedOnWhatIsActuallyMissing(t *testing.T) {
+// The same athlete with a wrist that does not hurt, for the assertions that
+// are about the ladder rather than about training around an injury.
+func healthyElite() training.Snapshot {
+	snap := eliteAthlete()
+	snap.OpenInjuries = nil
+	return snap
+}
+
+func TestTheMalteseLadderOpensAtTheBottomForThisAthlete(t *testing.T) {
 	lib := seededLibrary(t)
-	p, warnings := Generate(Request{Goal: "maltese", Weeks: 12, DaysPerWeek: 5}, eliteAthlete(), lib)
+	p, warnings := Generate(Request{Goal: "maltese", Weeks: 12, DaysPerWeek: 5}, healthyElite(), lib)
 
 	if len(warnings) > 0 {
 		t.Errorf("the plan warned about its own output: %v", warnings)
 	}
-	if p.Method.EntryMet {
-		t.Fatal("this athlete has no back lever and no ring support on record; the ladder should not be open")
-	}
 
-	// The full planche is met at 12s, so it must not be reported as a gap.
-	// The back lever and ring support are not on record, so they must be.
-	gapped := map[string]Gap{}
-	for _, g := range p.Method.Gaps {
-		gapped[g.Name] = g
+	// The floor tradition asks for none of the rings-gymnastics entry: leaning
+	// into a maltese with a band is accessory work that appears in beginner
+	// programmes, so an athlete with a twelve-second planche is not turned away
+	// for want of a back lever he has never needed.
+	if !p.Method.EntryMet {
+		t.Fatalf("the maltese ladder has no goal-level gate any more; gaps were %+v", p.Method.Gaps)
 	}
-	if _, ok := gapped["Full planche"]; ok {
-		t.Error("a 12-second full planche clears the 10-second entry standard and is not a gap")
+	if p.Method.Rung != "Lean maltese" {
+		t.Errorf("placed on %q, want the bottom of the ladder — he has never trained the position", p.Method.Rung)
 	}
-	for _, want := range []string{"Back lever", "Ring support hold"} {
-		if _, ok := gapped[want]; !ok {
-			t.Errorf("%q is an unmet entry standard and should be listed; got %v", want, keysOf(gapped))
-		}
+	if findBlock(p, "lean_maltese") == nil {
+		t.Error("the rung he is on should be in the sessions")
 	}
-	for _, g := range p.Method.Gaps {
-		if g.Why == "" || g.Standard == "" || g.Have == "" {
-			t.Errorf("a gap has to say what it wants, what you have and why: %+v", g)
+	for _, unwanted := range []string{"back_lever", "ring_support_hold", "band_iron_cross"} {
+		if findBlock(p, unwanted) != nil {
+			t.Errorf("%q belongs to the rings ladder, not this one", unwanted)
 		}
 	}
 
-	// And the plan trains the gaps rather than the skill.
-	if findBlock(p, "maltese") != nil || findBlock(p, "straddle_maltese") != nil {
-		t.Error("a gated maltese should not appear in the sessions")
+	// The opener is the rung above, because its own gate is met: a 25-second
+	// straddle planche clears the wide planche's ten.
+	opener := findBlock(p, "wide_planche_hold")
+	if opener == nil {
+		t.Fatal("the wide planche is the rung above and should open the session")
 	}
-	if findBlock(p, "back_lever") == nil && findBlock(p, "ring_support_hold") == nil {
-		t.Error("the plan should train the gaps it named")
+	if opener.Sets > 3 {
+		t.Errorf("the opener is %d sets; it is a look at the next position, not the work", opener.Sets)
 	}
-	if !containsAny(p.Notes, "not open yet") {
-		t.Errorf("the athlete should be told plainly: %v", p.Notes)
+	if opener.RestSeconds < restMaximal {
+		t.Errorf("the opener rests %ds; maximal straight-arm work rests minutes", opener.RestSeconds)
+	}
+
+	// And the prescriptions are ranges, the way the coaching material writes
+	// them, rather than a single number that is wrong on two days out of three.
+	for _, session := range p.Sessions {
+		// The test week prescribes a maximum, not a dosage, so it has no range.
+		if strings.HasPrefix(session.Title, "Test:") {
+			continue
+		}
+		for _, block := range session.Blocks {
+			if block.Intent != "skill" {
+				continue
+			}
+			if !strings.Contains(block.Prescription, "-") {
+				t.Errorf("skill work should be prescribed as a range: %q", block.Prescription)
+			}
+		}
 	}
 }
 
-func TestTheMalteseOpensOnceTheStandardsAreThere(t *testing.T) {
+// With a wrist that has hurt for months, the floor maltese ladder is not
+// available at all — every rung on it is bodyweight through an open palm. The
+// one form that survives is the banded rings version, which is what the
+// coaching material itself reaches for at the top of the floor ladder.
+func TestASoreWristMovesTheMalteseOntoRings(t *testing.T) {
 	lib := seededLibrary(t)
-	snap := eliteAthlete()
-	snap.Records = append(snap.Records,
-		declared("back_lever", 0, 0, 15),
-		declared("ring_support_hold", 0, 0, 45))
+	p, _ := Generate(Request{Goal: "maltese", Weeks: 12, DaysPerWeek: 5}, eliteAthlete(), lib)
 
-	p, _ := Generate(Request{Goal: "maltese", Weeks: 12, DaysPerWeek: 5}, snap, lib)
-	if !p.Method.EntryMet {
-		t.Fatalf("every entry standard is met now; gaps were %+v", p.Method.Gaps)
+	if findBlock(p, "band_maltese") == nil {
+		t.Error("the maltese should move to its banded rings form rather than disappearing")
 	}
-	if p.Method.Rung != "Rings, and shoulders that tolerate them" && p.Method.Rung != "Maltese lean" {
-		t.Errorf("placed on %q, want the bottom of the maltese ladder", p.Method.Rung)
+	for _, floor := range []string{"lean_maltese", "wide_planche_hold", "maltese", "zanetti", "maltese_press"} {
+		if findBlock(p, floor) != nil {
+			t.Errorf("%q is floor work on an open palm and should be out while the wrist hurts", floor)
+		}
 	}
+}
 
-	// A movement with nothing behind it starts small, however strong he is.
-	first := findBlock(p, "ring_support_hold")
-	if first == nil {
-		first = findBlock(p, "maltese_lean")
+func TestARungGateHoldsAnAthleteOneRungBelowTheirRecords(t *testing.T) {
+	lib := seededLibrary(t)
+
+	// Records that reach the wide planche press, on a planche that does not
+	// support it. The gate caps the placement without closing the ladder.
+	snap := snapshotOf(16, 71,
+		declared("full_planche", 0, 0, 4),
+		declared("straddle_planche", 0, 0, 14),
+		declared("lean_maltese", 0, 0, 18),
+		declared("wide_planche_hold", 0, 0, 8),
+		declared("wide_planche_press", 3, 0, 0))
+
+	p, _ := Generate(Request{Goal: "maltese", Weeks: 8, DaysPerWeek: 4}, snap, lib)
+	if p.Method.Rung != "Wide planche hold" {
+		t.Errorf("placed on %q, want to be held at the wide planche hold by the press's own gate", p.Method.Rung)
 	}
-	if first == nil {
-		t.Fatal("the maltese ladder should be trained")
+	if len(p.Method.Gaps) == 0 {
+		t.Fatal("being held back has to come with the number that would release it")
 	}
-	if first.Sets > 3 {
-		t.Errorf("a brand-new movement got %d sets; a first exposure is capped", first.Sets)
+	found := false
+	for _, gap := range p.Method.Gaps {
+		if gap.Name == "Full planche" && gap.Standard == "5s" && gap.Have == "4s" {
+			found = true
+		}
 	}
-	if !strings.Contains(first.Notes, "Nothing logged on this movement yet") {
-		t.Errorf("and it should say why it is small: %q", first.Notes)
+	if !found {
+		t.Errorf("the gap should name the planche, the standard and his own figure: %+v", p.Method.Gaps)
 	}
-	if !strings.Contains(first.Notes, "finding out") {
-		t.Errorf("a movement with no number behind it should ask for one: %q", first.Notes)
+	if findBlock(p, "wide_planche_press") != nil {
+		t.Error("the gated rung should not be trained")
 	}
 }
 

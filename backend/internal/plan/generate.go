@@ -114,10 +114,15 @@ type builder struct {
 	// around an injury and stopping.
 	substitute map[string]string
 	injured    map[string]bool
-	owned      map[string]bool
-	answered   bool
-	rehab      []string
-	volume     float64
+	// spared is a region being trained around rather than cleared. It does not
+	// ban anything — that is what the substitutions are for — but its warm-up
+	// still gives way to its rehab protocol, because preparing a joint for
+	// load it is not going to take is theatre.
+	spared   map[string]bool
+	owned    map[string]bool
+	answered bool
+	rehab    []string
+	volume   float64
 	// bonusCap limits how fast the weeks climb. Volume is a multiplier on set
 	// counts of three to six, where a ten percent correction rounds away to
 	// nothing — so a readiness problem that deserves less than a whole step
@@ -129,6 +134,10 @@ type builder struct {
 	// missing if not, and what the week costs the tendons.
 	entryMet bool
 	gaps     []Gap
+	// heldBack is the rung the athlete's records reach but whose own gate they
+	// have not cleared. It is a different answer from "not ready for this
+	// skill": they are on the ladder, one rung below where they could be.
+	heldBack string
 	load     *Load
 
 	restrictions []string
@@ -147,6 +156,7 @@ func newBuilder(req Request, snap training.Snapshot, lib Library) *builder {
 		req: req, lib: lib, snap: snap,
 		rec: recordsOf(snap), goal: goal, matched: matched,
 		banned: map[string]bool{}, substitute: map[string]string{}, injured: map[string]bool{},
+		spared:       map[string]bool{},
 		volume:       1,
 		bonusCap:     2,
 		restrictions: []string{},
@@ -375,6 +385,43 @@ func (b *builder) applyEquipment() {
 // unlogged athlete is a beginner, which is the safe direction to be wrong in.
 func (b *builder) place() {
 	b.rung = b.placeOn(b.ladder)
+
+	// A rung can carry its own prerequisites, and where it does they cap the
+	// placement rather than the ladder. This is the difference the coaching
+	// material insists on: leaning into a maltese with a band is beginner
+	// accessory work, holding one is not, and a planner that gates the whole
+	// skill gets the first half wrong.
+	for i := 0; i <= b.rung && i < len(b.ladder); i++ {
+		if unmet := b.unmetGate(b.ladder[i]); len(unmet) > 0 {
+			if i == 0 {
+				b.rung = 0
+			} else {
+				b.rung = i - 1
+			}
+			b.gaps = append(b.gaps, unmet...)
+			b.heldBack = b.ladder[i].Name
+			break
+		}
+	}
+}
+
+// unmetGate reports the rung's own prerequisites that this athlete has not
+// demonstrated, with their figures beside the standards.
+func (b *builder) unmetGate(step Step) []Gap {
+	var out []Gap
+	for _, req := range step.Gate {
+		have := b.rec.best(req.Slug, req.Metric)
+		if have >= req.Standard {
+			continue
+		}
+		out = append(out, Gap{
+			Name:     b.exerciseName(req.Slug),
+			Standard: measure(req.Standard, req.Metric),
+			Have:     b.haveText(req.Slug, req.Metric, have),
+			Why:      req.Why,
+		})
+	}
+	return out
 }
 
 // placeOn is the placement rule on its own, so the same reasoning can locate

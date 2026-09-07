@@ -38,6 +38,12 @@ type Step struct {
 	Standard float64
 	// Assist is the drill that builds this rung, trained beside it.
 	Assist chain
+	// Gate is what has to be demonstrated before this *rung* is trained, as
+	// opposed to before the ladder is entered. It is the difference between
+	// "you may not train toward a maltese" and "you may lean into one with a
+	// band, but you may not hold one yet" — and the second is what the
+	// coaching material actually says.
+	Gate []Requirement
 	// Typical is how long this rung usually takes, in the sources" words.
 	Typical string
 }
@@ -242,45 +248,74 @@ var Goals = []Goal{
 		Frequency: "Two heavy sessions a week, with pulling volume to match, or the shoulder pays for it.",
 	},
 	{
-		Key: "maltese", Phrase: "the maltese", Name: "Maltese", Pattern: patternPush, StraightArm: true, Cost: 3,
+		Key: "maltese", Phrase: "the maltese", Name: "Maltese", Pattern: patternPush, StraightArm: true, Wrists: true, Cost: 3,
 		Aliases:  []string{"maltese", "malteser", "maltese cross", "maltese planche"},
 		Timeline: "Years, and only from a planche that is already held rather than achieved. A plan of any length buys you a rung on the way; nobody gets a maltese in a block.",
-		// The sources agree on the sequencing even where they disagree on the
-		// numbers: the planche builds the maltese, and the athlete who parks
-		// their planche to chase a maltese loses hold of both.
-		Entry: []Requirement{
-			{Slug: "full_planche", Metric: metricHold, Standard: 10,
-				Why: "A maltese is a planche with the arms opened out. Ten seconds of full planche is the lower end of what the sources ask for before any of that starts."},
-			{Slug: "straddle_planche", Metric: metricHold, Standard: 15,
-				Why: "The straddle is where the shoulder learns to hold the line; the maltese only widens it."},
-			{Slug: "back_lever", Metric: metricHold, Standard: 10,
-				Why: "The back lever is what tells you the biceps tendon tolerates a long open-shoulder lever. Maltese work finds out either way."},
-			{Slug: "ring_support_hold", Metric: metricHold, Standard: 30,
-				Why: "Every honest maltese progression is on rings, and rings are their own skill before they are a harder one."},
-		},
+		// Two traditions build this skill and they are not the same ladder. In
+		// rings gymnastics the maltese is a cross derivative, entered from ring
+		// support and band-assisted crosses. In calisthenics it is a planche
+		// whose hands keep travelling outward, entered on the floor and the
+		// parallel bars — and the rung that tradition runs through, the wide
+		// planche, has no equivalent in the rings version at all. This is the
+		// second one, because it is the one this app's athletes train.
+		//
+		// Note what is *not* gated: leaning into the position with a band is
+		// accessory work that appears in beginner programmes. What is gated is
+		// holding and pressing it, which is why the requirements sit on the
+		// rungs rather than on the goal.
 		Feeds: []string{"planche"},
 		Ladder: []Step{
-			{Name: "Rings, and shoulders that tolerate them", Movement: chain{"ring_support_hold"}, Metric: metricHold, Standard: 30,
-				Assist: chain{"ring_planche_lean"}, Typical: "4 to 8 weeks if the rings are new, and they usually are"},
-			{Name: "Maltese lean", Movement: chain{"maltese_lean"}, Metric: metricHold, Standard: 15,
-				Assist: chain{"planche_lean"}, Typical: "8 to 16 weeks"},
-			{Name: "Band-assisted maltese", Movement: chain{"band_maltese"}, Metric: metricHold, Standard: 10,
-				Assist: chain{"band_iron_cross"}, Typical: "3 to 9 months, and the band comes down in small steps"},
-			{Name: "Tuck maltese", Movement: chain{"tuck_maltese"}, Metric: metricHold, Standard: 8,
-				Assist: chain{"band_maltese"}, Typical: "6 to 18 months"},
-			{Name: "Straddle maltese", Movement: chain{"straddle_maltese"}, Metric: metricHold, Standard: 5,
-				Assist: chain{"tuck_maltese"}, Typical: "a year or more"},
-			{Name: "Maltese", Movement: chain{"maltese"}, Metric: metricHold, Standard: 3,
-				Assist: chain{"straddle_maltese"}, Typical: "the goal, and very few people arrive"},
+			{Name: "Lean maltese", Movement: chain{"lean_maltese"}, Metric: metricHold, Standard: 15,
+				Assist:  chain{"lean_maltese_elevator", "planche_lean"},
+				Typical: "8 to 16 weeks, banded at first; this rung is open to anyone with a straddle planche"},
+			{Name: "Wide planche hold", Movement: chain{"wide_planche_hold"}, Metric: metricHold, Standard: 6,
+				Assist: chain{"lean_maltese"}, Typical: "3 to 9 months — the rung between planche and maltese",
+				Gate: []Requirement{
+					{Slug: "straddle_planche", Metric: metricHold, Standard: 10,
+						Why: "Widening the hands only makes sense once the straddle position is held. Before that you are widening a shape you do not have."},
+				}},
+			{Name: "Wide planche press", Movement: chain{"wide_planche_press"}, Metric: metricReps, Standard: 3,
+				Assist: chain{"wide_planche_hold"}, Typical: "6 to 18 months",
+				Gate: []Requirement{
+					{Slug: "full_planche", Metric: metricHold, Standard: 5,
+						Why: "Pressing at a wider lever than a planche you cannot yet hold is the load arriving before the position does."},
+				}},
+			{Name: "Zanetti", Movement: chain{"zanetti"}, Metric: metricReps, Standard: 5,
+				Assist: chain{"wide_planche_press"}, Typical: "6 to 18 months",
+				Gate: []Requirement{
+					{Slug: "full_planche", Metric: metricHold, Standard: 8,
+						Why: "This is maltese loading with a return. Eight seconds of full planche is the floor under it."},
+				}},
+			{Name: "Maltese elevator", Movement: chain{"maltese_elevator"}, Metric: metricReps, Standard: 4,
+				Assist: chain{"zanetti", "lean_maltese_elevator"}, Typical: "a year or more, band coming down slowly",
+				Gate: []Requirement{
+					{Slug: "full_planche", Metric: metricHold, Standard: 10,
+						Why: "Moving through the maltese line asks more of the biceps tendon than holding a planche does. Ten seconds is the entry the sources converge on."},
+				}},
+			{Name: "Maltese hold", Movement: chain{"maltese"}, Metric: metricHold, Standard: 3,
+				Assist: chain{"maltese_elevator"}, Typical: "a year or more past the elevator",
+				Gate: []Requirement{
+					{Slug: "full_planche", Metric: metricHold, Standard: 10,
+						Why: "The same floor, and it does not move: the planche is what keeps driving this."},
+					{Slug: "wide_planche_hold", Metric: metricHold, Standard: 5,
+						Why: "The wide planche is the half-way house. Holding the maltese without it is skipping the rung that teaches the shoulder the angle."},
+				}},
+			{Name: "Maltese press", Movement: chain{"maltese_press"}, Metric: metricReps, Standard: 1,
+				Assist: chain{"maltese_elevator"}, Typical: "the goal, and very few people arrive",
+				Gate: []Requirement{
+					{Slug: "maltese", Metric: metricHold, Standard: 3,
+						Why: "You press out of a position you can hold, or you press into a fall."},
+				}},
 		},
-		Drills:      chain{"ring_planche_lean", "band_iron_cross", "planche_lean", "ring_support_hold"},
-		Accessories: chain{"pseudo_planche_push_up", "band_face_pull", "german_hang", "hollow_body_hold"},
+		Drills:      chain{"lean_maltese", "wide_planche_hold", "planche_lean", "pseudo_planche_push_up"},
+		Accessories: chain{"band_face_pull", "german_hang", "hollow_body_hold", "wrist_extensor_curl"},
 		Risks: []string{
-			"The biceps tendon and the front of the shoulder take this skill, and both fail slowly and then suddenly. A band that is too thin is the usual cause.",
-			"Reduce assistance in small steps and never inside a session. If a hold breaks early, the band comes back, not the next attempt.",
+			"The biceps tendon and the front of the shoulder take this skill, and both fail slowly and then suddenly. A band that is thinned too fast is the usual cause.",
+			"Reduce assistance between blocks, never inside a session. If a hold breaks early, the band comes back rather than the next attempt.",
 			"Maltese work does not replace planche work. The planche is what keeps driving it, so it stays in the week.",
+			"This is the most wrist-loaded position in the sport: full bodyweight, arms wide, on the palms. Parallettes are not a comfort here.",
 		},
-		Frequency: "Two maltese sessions a week at the absolute most, and only on days with a full recovery either side.",
+		Frequency: "Two maltese sessions a week at the most, with a full recovery day either side.",
 	},
 	{
 		Key: "iron_cross", Phrase: "the iron cross", Name: "Iron cross", Pattern: patternPush, StraightArm: true, Cost: 3,
@@ -762,6 +797,14 @@ var wristLoaded = map[string]bool{
 	"clutch_flag": true, "tuck_human_flag": true, "straddle_human_flag": true,
 	"human_flag": true, "flag_negative": true, "l_sit": true, "tuck_l_sit": true,
 	"one_leg_l_sit": true, "v_sit": true, "russian_dip": true,
+	// The floor maltese ladder, which is the most wrist-loaded work in the
+	// sport: full bodyweight, arms wide, straight through the palm.
+	"lean_maltese": true, "lean_maltese_elevator": true, "zanetti": true,
+	"maltese_elevator": true, "maltese_press": true, "maltese": true,
+	"wide_planche_hold": true, "wide_planche_press": true, "dead_planche_hold": true,
+	"planche_kicks": true, "negative_to_planche": true, "planche_hold_to_press": true,
+	"l_sit_to_planche": true, "half_rom_planche_push_up": true,
+	"maltese_lean": true, "tuck_maltese": true, "straddle_maltese": true,
 }
 
 // extraRegions is everything else the category misses.
