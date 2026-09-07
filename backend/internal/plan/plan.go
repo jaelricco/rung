@@ -89,8 +89,25 @@ type Method struct {
 	Gaps     []Gap `json:"gaps,omitempty"`
 	// Load is what this week costs against the athlete's tolerance for maximal
 	// straight-arm work, and what else is spending from the same account.
-	Load           *Load  `json:"load,omitempty"`
+	Load *Load `json:"load,omitempty"`
+	// Focus is how much of the week the athlete asked the goal to take, and
+	// how much it actually took.
+	Focus          *Focus `json:"focus,omitempty"`
 	FallbackReason string `json:"fallback_reason,omitempty"`
+}
+
+// Focus is the answer to the question the planner used to answer silently:
+// how much of the week does this skill get. Share and Ceiling are fractions
+// of the week's working sets, warm-ups excluded.
+type Focus struct {
+	Level   string  `json:"level"`
+	Name    string  `json:"name"`
+	Share   float64 `json:"share"`
+	Ceiling float64 `json:"ceiling"`
+	// Sessions is how many of the week's sessions carry the skill at all,
+	// counting a light technique day.
+	Sessions int    `json:"sessions"`
+	Note     string `json:"note,omitempty"`
 }
 
 // Gap is one unmet entry requirement, with the athlete's own number beside it.

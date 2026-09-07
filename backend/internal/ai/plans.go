@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"net/http"
 	"strings"
 	"time"
@@ -74,6 +75,10 @@ type skillPlanRequest struct {
 	StartsOn    string `json:"starts_on"`
 	Notes       string `json:"notes"`
 	Save        bool   `json:"save"`
+	// Focus is how much of the week the skill may take: light, standard or
+	// high. The algorithm applies it; the model is told what it means so it
+	// cannot improve the plan by quietly ignoring it.
+	Focus string `json:"focus"`
 	// NoResearch skips the web-search pass. The plan is written from the
 	// snapshot and the library alone, which is faster and cheaper.
 	NoResearch bool `json:"no_research"`
@@ -176,7 +181,8 @@ func (h *Handler) SkillPlan(w http.ResponseWriter, r *http.Request) {
 
 	// The algorithm always goes first, whatever happens next.
 	out.report(Progress{Stage: "planning", Label: "Building your plan from your records", Percent: 4})
-	request := plan.Request{Goal: in.Skill, Weeks: in.Weeks, DaysPerWeek: in.DaysPerWeek, Notes: in.Notes}
+	request := plan.Request{Goal: in.Skill, Weeks: in.Weeks, DaysPerWeek: in.DaysPerWeek,
+		Notes: in.Notes, Focus: in.Focus}
 	baseline, baseWarnings := plan.Generate(request, snapshot, lib)
 
 	deliver := func(final Plan, source string, warnings []string) {
@@ -408,6 +414,7 @@ but generic. Improve on it rather than replacing it:
   when a session goes badly.
 - If the baseline is already the right call for a block, keep it. Changing it to look different
   is not an improvement.
+%s
 
 Return JSON in exactly this shape:
 {
@@ -449,7 +456,28 @@ day_of_week is 1 for Monday through 7 for Sunday. Order the blocks inside each s
 they are to be performed. Write every session for all %d weeks: %d sessions, none summarised,
 none written as "repeat week 2".`,
 		promptContext, found.brief(), baselineBrief(baseline), in.Weeks, in.Skill, in.DaysPerWeek, expected,
-		orNone(in.Notes), deload, in.Weeks, in.Weeks, expected)
+		orNone(in.Notes), deload, focusRule(baseline), in.Weeks, in.Weeks, expected)
+}
+
+// focusRule tells the model what the athlete asked for on the focus dial and
+// what it costs them to ignore it. Without this the model has every incentive
+// to improve a plan by adding skill work — that is what "better" looks like to
+// a reader — and the one number the athlete actually set would be the first
+// thing an improvement removed.
+func focusRule(baseline Plan) string {
+	if baseline.Method == nil || baseline.Method.Focus == nil {
+		return ""
+	}
+	f := baseline.Method.Focus
+	return fmt.Sprintf(`- The athlete set the focus for this skill to %q (%s). Hold to it: the skill's own
+  ladder work may take at most %d%% of the week's working sets, warm-ups excluded, and it appears
+  on at most %d of the week's sessions. This is a ceiling, not a target, and no plan crosses 40%%
+  whatever was asked for — tendon adaptation saturates after roughly ten minutes of loading, so
+  more sets on the same day buy wear rather than progress.
+- A session built around this skill carries one line. The work beside the main hold is the rung
+  above it, the rung below it, or a drill for it — a lean, a press, an elevator. It is never
+  another skill's rung: no L-sit and no back lever on a maltese day. Another skill belongs on
+  another day.`, f.Level, f.Name, int(math.Round(f.Ceiling*100)), f.Sessions)
 }
 
 // baselineBrief renders the algorithm's plan compactly: everything at plan

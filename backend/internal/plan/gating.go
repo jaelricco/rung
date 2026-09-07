@@ -124,7 +124,14 @@ const tendonCeiling = 5
 // asking for. Over the ceiling, the plan does not refuse — it names what to
 // park, cheapest-to-park first, and keeps the goal that everything else feeds.
 func (b *builder) weighLoad() {
-	load := &Load{Ceiling: tendonCeiling, Spent: b.goal.Units()}
+	// The focus is part of the bill. A week built around a maximal static
+	// spends more of the same tendon account than a week that merely contains
+	// one — the sets are on the same tissue and the tissue does not know which
+	// dial produced them — so the top level of the dial claims a unit more and
+	// the other skills give way sooner. That is not a side effect of asking
+	// for focus; it is what asking for focus means.
+	claim := b.goal.Units() + b.focus.Claim
+	load := &Load{Ceiling: tendonCeiling, Spent: claim}
 
 	type other struct {
 		goal Goal
@@ -145,8 +152,8 @@ func (b *builder) weighLoad() {
 	if load.Spent <= load.Ceiling {
 		if len(others) > 0 {
 			load.Note = fmt.Sprintf(
-				"%d of %d units of maximal straight-arm work, counting what you are already learning. "+
-					"That is inside what one athlete recovers from.", load.Spent, load.Ceiling)
+				"%d of %d units of maximal straight-arm work, counting what you are already learning%s. "+
+					"That is inside what one athlete recovers from.", load.Spent, load.Ceiling, b.focusCost())
 		}
 		b.load = load
 		return
@@ -171,8 +178,8 @@ func (b *builder) weighLoad() {
 	}
 
 	load.Note = fmt.Sprintf(
-		"%d units of maximal straight-arm work against a ceiling of %d. Every one of these loads the same "+
-			"tendons, and they do not know which goal a set belonged to.", load.Spent, load.Ceiling)
+		"%d units of maximal straight-arm work against a ceiling of %d%s. Every one of these loads the same "+
+			"tendons, and they do not know which goal a set belonged to.", load.Spent, load.Ceiling, b.focusCost())
 	b.load = load
 
 	if len(load.Parked) > 0 {
@@ -188,6 +195,17 @@ func (b *builder) weighLoad() {
 			b.volume = minFloat(b.volume, 0.85)
 		}
 	}
+}
+
+// focusCost names the unit the focus level added, where it added one, so a
+// budget the athlete can see does not silently gain a unit they did not ask
+// for.
+func (b *builder) focusCost() string {
+	if b.focus.Claim <= 0 {
+		return ""
+	}
+	return fmt.Sprintf(" (%d of them the extra cost of building the week around %s rather than fitting it in)",
+		b.focus.Claim, b.goal.phrase())
 }
 
 // feeds reports whether the goal being planned is built on this other skill,

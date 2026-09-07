@@ -401,7 +401,11 @@ func (s *sessionBuilder) skill(light bool) {
 	// then the main work below it. It is not extra volume; it is where the
 	// hardest thing gets attempted while the athlete can still hold a shape.
 	// A skill attempted at the end of a session is a skill rehearsed badly.
-	if !light && s.goal.StraightArm && s.rung+1 < len(s.ladder) {
+	//
+	// It is the second rung of the session's span, so it appears from the
+	// middle focus level up. At the lowest, the session is the rung and its
+	// drill and nothing else, which is the whole point of asking.
+	if !light && s.focus.Span >= 2 && s.goal.StraightArm && s.rung+1 < len(s.ladder) {
 		next := s.ladder[s.rung+1]
 		if len(s.unmetGate(next)) == 0 {
 			s.prescribe(work{
@@ -423,7 +427,7 @@ func (s *sessionBuilder) skill(light bool) {
 	before := len(s.blocks)
 	s.prescribe(work{
 		Intent: intent, Candidates: append(chain{}, step.Movement...),
-		Standard: step.Standard, Light: light, Base: 4, Rest: restForSkill(s.week, s.goal.StraightArm),
+		Standard: step.Standard, Light: light, Base: s.focus.Base, Rest: restForSkill(s.week, s.goal.StraightArm),
 		Notes: "Stop the set the moment the shape breaks, not when the arms give out. " +
 			"Several clean efforts beat one taken to collapse — a position held to failure rehearses the failure.",
 	})
@@ -433,6 +437,26 @@ func (s *sessionBuilder) skill(light bool) {
 		s.skillGone = true
 		s.noteSkillRemoved()
 		return
+	}
+
+	// The rung below, as volume. This is the third rung of the span and the
+	// block that answers the question this planner was getting wrong: what
+	// goes beside a maltese hold on a maltese day. The answer the elite
+	// programmes give is the rung under it — a maltese lean, a planche lean,
+	// a wide planche — held for more sets at a shorter hold, not an L-sit and
+	// not a back lever. Those are somebody else's skill, and a maximal skill
+	// day has room for exactly one.
+	if !light && s.focus.Span >= 3 && s.rung > 0 {
+		below := s.ladder[s.rung-1]
+		s.prescribe(work{
+			Intent: intent, Candidates: append(chain{}, below.Movement...),
+			Standard: below.Standard * 0.7, HoldStandard: below.Standard * 0.7,
+			Base: 4, MaxSets: 5, Rest: restSecondary,
+			Progression: "Volume at a position you already own. It moves up when the rung above it does, " +
+				"and it is the block to cut first if the session is running long.",
+			Notes: "The rung below the one you are training, for the sets the hard rung cannot carry. " +
+				"This is where the position gets normal rather than heroic, which is what actually makes it yours.",
+		})
 	}
 
 	// The drill that builds the rung, trained beside it rather than instead
@@ -546,24 +570,28 @@ func (s *sessionBuilder) accessories() {
 	// shoulder in this sport ends up hurt, and it is entirely avoidable.
 	if s.day.Hard {
 		s.prescribe(work{
-			Intent: "accessory", Candidates: s.balanceChain(), Standard: 12, HoldStandard: 30,
+			Intent: "accessory", Candidates: s.keepOnLine(s.balanceChain()), Standard: 12, HoldStandard: 30,
 			MaxSets: 3, Rest: restAccessory,
 			Notes: "The counterweight to the hard work above it. This is the block that keeps the shoulder even.",
 		})
 	}
 
 	// The second is the goal's own supporting work, rotated by the day so a
-	// five-day week does not do the same accessory five times.
+	// five-day week does not do the same accessory five times. On a skill day
+	// it is filtered through the one-line rule: another skill's rung is not
+	// accessory work here, it is a second skill.
 	s.prescribe(work{
-		Intent:     "accessory",
-		Candidates: rotate(append(append(chain{}, s.goal.Accessories...), "band_face_pull", "australian_row", "bulgarian_split"), s.day.Day-1),
-		Standard:   12, HoldStandard: 30, MaxSets: 3, Rest: restAccessory,
+		Intent: "accessory",
+		Candidates: s.keepOnLine(rotate(append(append(chain{}, s.goal.Accessories...),
+			"band_face_pull", "australian_row", "bulgarian_split"), s.day.Day-1)),
+		Standard: 12, HoldStandard: 30, MaxSets: 3, Rest: restAccessory,
 		Notes: "Volume, not a fight. Drop this before you drop a warm-up, and never before a main block.",
 	})
 
 	if s.day.Role != roleRecovery {
 		s.prescribe(work{
-			Intent: "accessory", Candidates: rotate(s.coreChain(), s.day.Day-1), Standard: 10, HoldStandard: 45,
+			Intent: "accessory", Candidates: s.keepOnLine(rotate(s.coreChain(), s.day.Day-1)),
+			Standard: 10, HoldStandard: 45,
 			MaxSets: 3, Rest: 90,
 			Notes: "The moment the lower back lifts off the floor or the hips sag, the set is finished.",
 		})
@@ -577,7 +605,8 @@ func (s *sessionBuilder) conditioning() {
 	if s.day.Hard || s.isTest || s.week.Phase == phaseDeload {
 		return
 	}
-	candidates := chain{"australian_row", "push_up", "bodyweight_squat", "hanging_knee_raise", "jump_squat"}
+	candidates := s.keepOnLine(chain{"australian_row", "push_up", "bodyweight_squat",
+		"hanging_knee_raise", "jump_squat"})
 
 	if s.day.Role == roleRecovery {
 		s.literal("conditioning", candidates, 1, "AMRAP 8 minutes: 8 reps a round, resting whenever you need to", Block{

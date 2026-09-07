@@ -1,5 +1,6 @@
 <script>
 	import { api } from '$lib/api.js';
+	import { onMount } from 'svelte';
 	import { page } from '$app/state';
 	import AiProgress from '$lib/AiProgress.svelte';
 	import Failure from '$lib/Failure.svelte';
@@ -11,6 +12,12 @@
 	let weeks = $state(8);
 	let daysPerWeek = $state(3);
 	let notes = $state('');
+	// How much of the week the skill is allowed to take. The three positions
+	// and the numbers behind them come from the planner rather than from here,
+	// so the option you read is the rule that gets applied.
+	let focus = $state('standard');
+	let focusLevels = $state([]);
+	let focusCeiling = $state(0.4);
 	// The algorithm is the default, and the model is the upgrade. Ticking this
 	// box spends the athlete's own API budget, so it is never the thing that
 	// happens because they did not read the form.
@@ -44,6 +51,7 @@
 			goal: skill,
 			weeks: Number(weeks),
 			days_per_week: Number(daysPerWeek),
+			focus,
 			starts_on: startsOn,
 			notes,
 			no_research: !research,
@@ -67,6 +75,21 @@
 			progress = null;
 		}
 	}
+
+	// The dial is served with the catalogue, so a level that changes in the
+	// planner changes here without anyone remembering to edit two files. If
+	// the call fails the three keys still work; only the prose is missing.
+	onMount(async () => {
+		try {
+			const catalogue = await api.get('/skills');
+			focusLevels = catalogue.focus_levels ?? [];
+			focusCeiling = catalogue.focus_ceiling ?? 0.4;
+		} catch {
+			focusLevels = [];
+		}
+	});
+
+	const percent = (fraction) => `${Math.round((Number(fraction) || 0) * 100)}%`;
 
 	// What the athlete is actually reading, said plainly.
 	const SOURCE_LABEL = {
@@ -178,6 +201,42 @@
 	</div>
 </div>
 
+{#if focusLevels.length}
+	<div class="field form-width" style="margin-top:0.9rem">
+		<p class="eyebrow" style="margin:0">How much of the week this skill gets</p>
+		<p class="lede" style="margin:0.3rem 0 0.5rem">
+			The third question, and the one that decides whether the week is any good. Nothing here goes
+			past {percent(focusCeiling)} of your working sets: about ten minutes of loading gives a tendon
+			its full adaptation signal, so past that you are buying wear rather than progress. More of a
+			skill is another session on another day, never a longer one.
+		</p>
+		{#each focusLevels as level (level.key)}
+			<label
+				class="choice"
+				style="display:flex;gap:0.55rem;align-items:flex-start;margin-top:0.5rem"
+			>
+				<input
+					type="radio"
+					name="focus"
+					value={level.key}
+					bind:group={focus}
+					style="width:auto;margin-top:0.25rem"
+				/>
+				<span>
+					<strong>{level.name}</strong>
+					<span class="note"
+						>· up to {percent(level.share)} of the week, on {level.sessions === 1
+							? 'one session'
+							: `up to ${level.sessions} sessions`}</span
+					>
+					<br />
+					<span class="lede">{level.sentence}</span>
+				</span>
+			</label>
+		{/each}
+	</div>
+{/if}
+
 <div class="field form-width" style="margin-top:0.6rem">
 	<label for="notes">Anything else the plan should account for</label>
 	<textarea id="notes" rows="2" bind:value={notes} placeholder="Equipment, schedule, past problems"></textarea>
@@ -287,6 +346,31 @@
 					<li>{warning}</li>
 				{/each}
 			</ul>
+		</div>
+	{/if}
+
+	{#if plan.method?.focus || plan.method?.load?.note}
+		<div class="grid roomy" style="margin-top:1rem">
+			{#if plan.method?.focus}
+				<div class="panel">
+					<p class="eyebrow">Focus · {plan.method.focus.name}</p>
+					<p class="item-title" style="margin:0.2rem 0 0.2rem">
+						{percent(plan.method.focus.share)} of the week, ceiling {percent(
+							plan.method.focus.ceiling
+						)}
+					</p>
+					<p class="lede" style="margin:0">{plan.method.focus.note}</p>
+				</div>
+			{/if}
+			{#if plan.method?.load?.note}
+				<div class="panel">
+					<p class="eyebrow">Tendon budget</p>
+					<p class="item-title" style="margin:0.2rem 0 0.2rem">
+						{plan.method.load.spent} of {plan.method.load.ceiling} units
+					</p>
+					<p class="lede" style="margin:0">{plan.method.load.note}</p>
+				</div>
+			{/if}
 		</div>
 	{/if}
 

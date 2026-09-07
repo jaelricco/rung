@@ -36,6 +36,7 @@ func (b *builder) finish(p *Plan, weeks []weekSpec) {
 		EntryMet:    b.entryMet,
 		Gaps:        b.gaps,
 		Load:        b.load,
+		Focus:       b.share,
 	}
 }
 
@@ -82,6 +83,9 @@ func (b *builder) summary(weeks []weekSpec, step Step) string {
 			"than twice, and the days between carry the opposite pattern so nothing hard repeats inside 48 hours.",
 		b.weekSentence()))
 
+	if b.share != nil && b.share.Note != "" {
+		parts = append(parts, b.share.Note)
+	}
 	if n := countPhase(weeks, phaseDeload); n > 0 {
 		parts = append(parts, fmt.Sprintf(
 			"%s at roughly half the sets with the movements and the quality unchanged, because fatigue is "+
@@ -137,18 +141,29 @@ func (b *builder) evidence(step Step) string {
 }
 
 func (b *builder) weekSentence() string {
-	shape := weekShape(b.req.DaysPerWeek)
-	hard := 0
+	shape := weekShape(b.req.DaysPerWeek, b.focus.Exposures)
+	hard, skill := 0, 0
 	for _, d := range shape {
 		if d.Hard {
 			hard++
 		}
+		if d.Role == roleSkill || d.Role == roleLightSkill {
+			skill++
+		}
 	}
-	if hard == len(shape) {
-		return fmt.Sprintf("%s, all of them working sessions", plural(len(shape), "session"))
+	sentence := fmt.Sprintf("%s, all of them working sessions", plural(len(shape), "session"))
+	if hard != len(shape) {
+		sentence = fmt.Sprintf("%s — %d hard and %d light",
+			plural(len(shape), "session"), hard, len(shape)-hard)
 	}
-	return fmt.Sprintf("%s — %d hard and %d light",
-		plural(len(shape), "session"), hard, len(shape)-hard)
+	if b.goal.Foundation || skill == 0 {
+		return sentence
+	}
+	on := fmt.Sprintf("%d of them", skill)
+	if skill == 1 {
+		on = "one of them"
+	}
+	return fmt.Sprintf("%s, %s on %s", sentence, b.goal.phrase(), on)
 }
 
 // phases name the blocks of weeks so the shape of the plan is legible without
@@ -228,6 +243,18 @@ func (b *builder) rules(weeks []weekSpec) []string {
 			"neighbour, not toward it.",
 		"Two missed targets in a row on the same block means repeat the week rather than progressing it. " +
 			"The plan is a hypothesis; your log is the evidence.",
+	}
+	if !b.goal.Foundation {
+		rules = append(rules, fmt.Sprintf(
+			"A session built around %s carries one line. The work beside the main hold is the rung above it, "+
+				"the rung below it, or a drill for it — a lean, a press, an elevator. Another skill's rung is "+
+				"not accessory work here: it is a second skill, and it belongs on another day.", b.goal.phrase()))
+		rules = append(rules, fmt.Sprintf(
+			"If a session feels short, that is the ceiling doing its job. %s gets at most %d%% of the week "+
+				"here, and the way past that is another exposure on another day rather than more sets on this "+
+				"one: about ten minutes of loading gives a tendon its full adaptation signal, and everything "+
+				"after it is wear you still have to recover from.",
+			capitalise(b.goal.phrase()), int(math.Round(b.focus.Share*100))))
 	}
 	if countPhase(weeks, phaseDeload) > 0 {
 		rules = append(rules, "On a lighter week the movements and the quality do not change — only the number of "+

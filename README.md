@@ -324,6 +324,39 @@ front of every straight-arm session. The two files are meant to be edited
 together; the tests parse the seed migrations, so a renamed exercise fails the
 build rather than quietly thinning out every plan that used it.
 
+**The athlete says how much of the week the skill gets, and 40% is the ceiling.**
+The planner used to answer that question silently — as much as the session
+order allowed — which is wrong in both directions: a maltese fitted into a week
+somebody otherwise likes should not eat the week, and a week cleared for one
+should not produce two sets and an apology. So `focus` is a third input with
+three positions, served from `/skills` so the option text and the rule are one
+thing rather than two that drift. It decides how many sessions carry the skill,
+how many rungs of the ladder each of those sessions spans, and what the skill
+costs the tendon budget — and none of the three goes past **40% of a week's
+working sets**, warm-ups excluded.
+
+That number is not a preference. The specialists' own programmes put one
+maximal skill at one training day in six; a tendon's adaptation signal
+saturates after roughly ten minutes of loading, so sets past that are bought at
+full tissue cost and no adaptation; and the useful frequency for a maximal
+static is two to three sessions a week, 48 hours apart. More of a skill is
+another session on another day, never a longer one. The ceiling is enforced on
+the finished week rather than assumed: sets come off the largest skill block
+first down to a floor of two, then a session gives up a rung of its span — the
+drill, the rung below, the opener, in that order — and the rung the session is
+named after is never removed.
+
+The same research settled the other half of a skill day. **A session built
+around one skill carries one line**: the work beside a maltese hold is a
+maltese lean, a wide planche or a planche lean — the rung above it and the rung
+below it — and never an L-sit or a back lever, which are a second skill wearing
+an accessory's clothes and spend from the same tendon budget while adding
+nothing to the position. Another skill's rung is filtered out of the supporting
+slots of a skill day; ordinary strength and core work is not, because a row is
+a row whichever ladder also happens to list it. §10 of
+`docs/training-research.md` has the sources, and says plainly which of them
+could not be read directly.
+
 **A new athlete can say where they are instead of proving it.** The planner
 reads records, so someone who has trained for years and joined yesterday would
 start at the bottom of every ladder. `/baseline` is the eight benchmarks that
@@ -790,8 +823,9 @@ GET    /api/v1/auth/oauth/{p}/start  browser redirect; signed in, it links inste
 GET    /api/v1/auth/oauth/{p}/callback
 GET    /api/v1/exercises
 GET    /api/v1/skills
-       ^ every skill, its ladder, what each rung is cleared at, and what one
-         week of it costs against the tendon budget the baseline weighs
+       ^ every skill, its ladder, what each rung is cleared at, what one week
+         of it costs against the tendon budget the baseline weighs, and the
+         three focus levels with the share of the week each one allows
 GET    /api/v1/protocols?region=wrist
 GET    /api/v1/parks?lat=&lng=&radius_km=
 ```
@@ -837,11 +871,13 @@ DELETE /api/v1/routines/{id}
 POST   /api/v1/routines/{id}/apply    {week_of}
 GET    /api/v1/plans
 POST   /api/v1/plans            {plan, goal, starts_on}
-POST   /api/v1/plans/generate    {goal, weeks, days_per_week, starts_on?, notes?, save}
+POST   /api/v1/plans/generate    {goal, weeks, days_per_week, focus?, starts_on?, notes?, save}
+                                 focus is light | standard | high — how much of the
+                                 week the skill may take. Absent is standard.
        ^ the algorithm on its own: no model account, no streaming, always a plan
 DELETE /api/v1/plans/{id}
-POST   /api/v1/ai/skill-plan     {skill, weeks, days_per_week, starts_on?, notes?,
-                                  save, no_research?}
+POST   /api/v1/ai/skill-plan     {skill, weeks, days_per_week, focus?, starts_on?,
+                                  notes?, save, no_research?}
        ^ runs the algorithm first, then asks the model to improve it. Falls back
          to the algorithm's plan on any failure, so it never answers 428 or 502
 POST   /api/v1/ai/review

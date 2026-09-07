@@ -97,7 +97,13 @@ func (h *Handler) Skills(w http.ResponseWriter, r *http.Request) {
 		// sees what a fourth maximal skill costs at the moment they pick it
 		// rather than in the plan afterwards.
 		TendonCeiling int `json:"tendon_ceiling"`
-	}{Skills: []skill{}, TendonCeiling: tendonCeiling}
+		// The focus dial, with the numbers behind each position, so the option
+		// text the athlete reads and the rule the planner applies have one
+		// source rather than two that drift.
+		Focus []FocusLevel `json:"focus_levels"`
+		// FocusCeiling is the share no level crosses, whatever is picked.
+		FocusCeiling float64 `json:"focus_ceiling"`
+	}{Skills: []skill{}, TendonCeiling: tendonCeiling, Focus: FocusLevels(), FocusCeiling: hardShareCeiling}
 
 	for rows.Next() {
 		var s skill
@@ -126,6 +132,10 @@ type generateRequest struct {
 	StartsOn    string `json:"starts_on"`
 	Notes       string `json:"notes"`
 	Save        bool   `json:"save"`
+	// Focus is how much of the week the goal may take: light, standard or
+	// high. An empty field is the middle one, so a client that predates the
+	// dial gets the plan it always got.
+	Focus string `json:"focus"`
 	// NoResearch is the AI endpoint's switch, accepted and ignored here so
 	// that the two endpoints keep taking the same body. This planner reads
 	// nothing but the athlete's own records, so there is no research to skip
@@ -181,7 +191,7 @@ func (h *Handler) Generate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	built, warnings := Generate(Request{
-		Goal: in.goal(), Weeks: in.Weeks, DaysPerWeek: in.DaysPerWeek, Notes: in.Notes,
+		Goal: in.goal(), Weeks: in.Weeks, DaysPerWeek: in.DaysPerWeek, Notes: in.Notes, Focus: in.Focus,
 	}, snapshot, lib)
 
 	out := Response{Plan: built, Source: SourceAlgorithm, Warnings: warnings}

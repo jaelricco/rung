@@ -609,7 +609,179 @@ skill attempted at the end of a session is a skill rehearsed badly.
 
 ---
 
-## 10. What this means for an algorithm
+## 10. How much of a week one skill may have
+
+§7 asked what a week costs the tendons and §9 asked what one session looks
+like. Neither asked the question in between, which is the one an athlete
+actually has an opinion about: *how much of my week does this new skill get?*
+The planner answered it silently — as much as the session order allowed — and
+that answer is wrong in both directions. Someone fitting a maltese into a week
+they otherwise like does not want it eating the week. Someone who has cleared
+the calendar for it does not want two sets and an apology.
+
+### A note on these sources, and on what could not be read
+
+The material below was gathered from three coaches whose channels were named
+as the sources for this pass — [Doctor Yaad](https://www.youtube.com/@DoctorYaad)
+(Yaad Mohammad, MD, calisthenics coach and athlete),
+[King Dailong](https://www.youtube.com/@kingdailong) (Daï-Long Huynh, whose
+maltese programme is the floor ladder §9 is built on) and
+[Nicky Lyan](https://www.youtube.com/@NICKYLYAN) — plus the tendon literature
+one of them interviewed.
+
+The transcripts themselves could not be read. The environment this pass ran in
+has an egress policy that blocks youtube.com along with the coaches' own sites,
+so what follows comes from search over that material — the podcast pages,
+programme documents, article versions and interviews — rather than from a
+verbatim transcript. Several of the numbers below therefore carry a confidence
+one step below the papers cited in §2 to §5, and every one of them is
+attributed so it can be replaced by a better reading. Where a claim rests on a
+single search summary rather than a source read end to end, it says so.
+
+### Tendon adaptation saturates, and it saturates fast
+
+This is the finding that changes the arithmetic, and unlike the rest of this
+section it comes from a named researcher rather than from coaching consensus:
+Keith Baar (UC Davis), interviewed on the Doctor Yaad podcast and in several
+other places
+([Doctor Yaad](https://doctoryaad.com/articles/how-to-get-bulletproof-tendons-ft-professor-keith-baar-doctor-yaad-podcast),
+[Tim Ferriss #797](https://tim.blog/2025/02/26/dr-keith-baar/),
+[Just-Fly Sports](https://www.just-fly-sports.com/podcast-392/),
+[summary of the protocol](https://boxlifemagazine.com/secret-static-holds-build-stronger-tendons/)):
+
+- **About ten minutes of loading gives a tendon its maximum anabolic signal.**
+  Past that the growth signal does not rise; the wear does.
+- **Ten minutes of load, then six to eight hours of rest, then ten minutes
+  again, roughly doubles the collagen response** of one continuous bout. Two
+  short exposures beat one long one, and the gap between them is the active
+  ingredient.
+- **Isometrics build a stiffer tendon than the same time under tension spent
+  on reps.** Four 30-second holds across an eight-minute window produced a
+  bigger *and* stronger tendon; the same total time as dynamic repetitions
+  produced a bigger tendon with no strength gain and slightly *lower*
+  stiffness.
+- **Hold length depends on whether the tendon is healthy.** Short holds
+  (1–10 s) for a healthy tendon; 30 s for an injured one, because a damaged
+  region is stress-shielded by the tissue around it and needs longer to see
+  the load. Ramp on over 3–5 s, hold, ramp off over 3–5 s — "low-jerk".
+- **Three days immobilised costs 15–20% of a tendon's collagen.** Tendon is not
+  slow to lose, only slow to build.
+
+Read against the rest of this document, that says something blunt: **a maximal
+skill day has a ceiling on useful volume, and it is low.** Sets past it are
+bought at full tissue cost and no adaptation. It also retrospectively explains
+why §1's grease-the-groove prescription works, and why the deload evidence in
+§2 does not contradict it — frequency is the lever, duration is not.
+
+### The frequency that actually moves a static
+
+Doctor Yaad's planche material puts it at **two to three sessions a week per
+maximal static, at least 48 hours apart** — more often and the wrists and
+shoulders start reporting it, less often and the stimulus does not land — with
+**4 to 6 sets of 5 to 15 seconds** per session at a fraction of the best hold,
+and technique ahead of duration: *a 5-second hold with a correct posterior
+pelvic tilt is worth more than a 15-second hold with a banana back*. He also
+prescribes keeping the full variant in the week alongside the easier one —
+negatives or band-assisted attempts at least weekly — so the nervous system
+keeps seeing the goal pattern while the strength is built on the sub-variant
+([summary of his planche guidance](https://doctoryaad.com/articles/should-you-skip-the-straddle-planche-i-asked-the-experts),
+[FitnessFAQs #65, on programme design](https://creators.spotify.com/pod/profile/fitnessfaqs/episodes/65---How-To-Design-The-Perfect-Calisthenics-Program---Dr-Yaad-Mohammad-e30kaja)).
+
+That is the same 2–3 the elite-split source in §7 gives for high-strain statics,
+arrived at from a different direction, and it is the number the focus dial's
+top position is capped at.
+
+### The maltese, in its own programme's proportions
+
+The programme this app's floor ladder comes from
+([Daï-Long Huynh](https://street-workout.fandom.com/wiki/Da%C3%AF-Long_Huynh);
+the programme documents themselves are paid, and are described rather than
+reproduced) runs **six training days and one rest day around three skill
+sessions: one planche, one maltese, and one mixed**. Work is in short sets —
+1 to 8 reps — with **4 to 8 minutes of rest**, and at least 5 minutes between
+sets of anything maximal. The progression order is straddle planche → full
+planche → maltese on parallel bars → maltese on the floor.
+
+The proportion is the point. **For the athlete whose entire sport is the
+maltese, the maltese is one day in six, and a shared day makes two.** That is
+where this app's ceiling of 40% comes from: it is a little above what the
+sport's own specialists do, so it is a genuine ceiling rather than a
+restatement of the average, and nothing in the app is allowed past it.
+
+### A skill day belongs to one line
+
+Across the coaching material the session has the same shape, and it is not four
+arbitrary exercises: **the most specific thing first — the isometric itself —
+then a dynamic version of the same line (a pseudo planche push-up, a planche
+raise, a lean), and only then isolation accessories**
+([worked example](https://www.thebodyweighttribe.com/blog/how-to-train-for-the-planche)).
+The rest of the week carries the *other* skills, handstands, mobility and
+ordinary bent-arm work — separately.
+
+The consequence is the rule this planner was missing. What goes beside a
+maltese hold on a maltese day is a **maltese lean, a wide planche, a planche
+lean** — the rung above it and the rung below it. It is not an L-sit and not a
+back lever. Those are not accessories, they are a second skill in an
+accessory's clothes, and they spend from the budget §7 is about while adding
+nothing to the position being trained. A skill day has room for exactly one
+line.
+
+### Nicky Lyan's frame: specificity, volume, normalisation
+
+Nicky Lyan's material organises the same ideas as principles rather than
+protocols — *specificity*, *volume work*, and **normalisation**, the idea that
+a skill is owned when the position stops being an event and becomes ordinary
+([his channel](https://www.youtube.com/@NICKYLYAN),
+[the written version](https://nickylyan.com/products/how-to-actually-get-better-at-calisthenics)).
+The detail behind the framework is in paid material and is not reproduced here;
+what is taken is the framing, and it maps onto exactly one block: the rung
+*below* the one being trained, run for more sets at a comfortable hold. That is
+what normalisation costs, and it is the block a plan built only from maximal
+work does not have.
+
+### Maintenance is cheap, which is what makes a focused week affordable
+
+Trained adults hold strength and muscle on a fraction of the volume that built
+them — around **one third**, and for younger trained lifters as little as
+**one ninth**, with roughly **2–5 sets per muscle group per week** and a single
+weekly exposure generally enough to hold neuromuscular adaptation
+([Bret Contreras' review of the maintenance literature](https://bretcontreras.com/how-much-training-is-necessary-to-maintain-strength-and-muscle/),
+[maintenance volume summary](https://bonytobeastly.com/maintenance-training-volume/)).
+
+That is the number that makes §7's rule affordable. Keeping the planche in the
+week while chasing a maltese does not cost a second planche programme; it costs
+two or three sets. So the fed skill stays, at maintenance, at every level of
+the dial — and it is not charged to the new skill's share, because it is not
+the new skill's work.
+
+### What the dial does
+
+Three positions, and a ceiling none of them crosses. The share is measured as
+the goal's own ladder work against the week's working sets, warm-ups excluded,
+on ordinary training weeks — a deload deliberately cuts accessories and keeps
+the skill, so measuring it there would trim the one block that week exists to
+protect.
+
+| | Share of the week | Skill sessions | Rungs per session | Tendon budget |
+| --- | --- | --- | --- | --- |
+| **Keep it in the week** | ≤ 20% | 1 | the rung and its drill | its own cost |
+| **Train it properly** | ≤ 30% | 2 | + the rung above, as the opener | its own cost |
+| **Build the week around it** | ≤ 40% | 3 | + the rung below, as volume | one unit more |
+
+The ceiling is enforced on the finished week rather than assumed from the way
+it was built: sets come off the largest skill block first, down to a floor of
+two, and only then does a session give up a rung of its span — the drill, then
+the rung below, then the opener, in the order they add value. The rung the
+session is named after is never removed. A week that still cannot be brought
+under says so rather than pretending.
+
+The 48-hour rule outranks the dial. A three-day week gets two skill sessions at
+every level above the lowest, because a third would land inside the recovery of
+the second, and the top of the dial is a cap rather than a target.
+
+---
+
+## 11. What this means for an algorithm
 
 Rules the generator implements directly, each traceable to a section above:
 
@@ -654,3 +826,25 @@ Rules the generator implements directly, each traceable to a section above:
     before anything has tired (§9).
 21. Anything it cannot do — diagnose, prescribe a diet, promise a full planche
     in eight weeks — it declines to do, in writing (§1, §3, §5).
+22. **Ask how much of the week the skill gets**, in three steps, and hold the
+    week to the answer — measured as the goal's own ladder work against the
+    week's working sets, warm-ups excluded (§10).
+23. **No skill takes more than 40% of a training week**, whatever was asked
+    for. The specialists' own programmes put one maximal skill at one day in
+    six, and a tendon's adaptation signal saturates after about ten minutes of
+    loading, so the way past the ceiling is another session on another day and
+    never a longer one (§10).
+24. **A skill day carries one line.** The work beside the main hold is the rung
+    above it, the rung below it, or a drill for it. Another skill's rung is not
+    accessory work there, and is filtered out of the supporting slots (§10).
+25. **The session is a span of the ladder, and the focus decides how wide.**
+    One rung at the bottom of the dial; the rung above as the opener at the
+    middle; the rung below as the volume block at the top — which is where
+    normalisation happens and the block a plan of maximal work alone lacks
+    (§9, §10).
+26. **Focus costs tendon budget.** A week built around a maximal static claims
+    a unit more than one that merely contains it, so the other skills give way
+    sooner — the sets land on the same tissue either way (§7, §10).
+27. **Maintenance of the skills a goal is built on is not charged to the goal.**
+    Holding a planche while chasing a maltese costs two or three sets a week,
+    not a second programme (§7, §10).
