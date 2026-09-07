@@ -31,6 +31,26 @@ jobs:
     permissions:
       contents: read
       issues: write
+    # The database tests skip themselves without TEST_DATABASE_URL, which meant
+    # that for as long as this job had no Postgres they never ran anywhere. What
+    # got through that gap was a projection that failed on its first row and
+    # left eleven reference tables empty on a healthy-looking server. The image
+    # is the one compose runs, because the first migration needs PostGIS and a
+    # plain postgres image would fail at 0001 rather than at the thing being
+    # tested.
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: rung_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -39,6 +59,12 @@ jobs:
           cache-dependency-path: backend/go.sum
       - name: Build, vet and test
         working-directory: backend
+        env:
+          # Postgres is on the runner's localhost through the mapped port, not
+          # on a compose network. The tests that read this migrate the database
+          # themselves, and one of them makes and drops a database of its own,
+          # which is why this connects as the superuser the image creates.
+          TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/rung_test?sslmode=disable
         # One step, teed to a file. The failure report below reads that file:
         # a sandbox with no route to the log storage host cannot read an
         # Actions log, so the transcript has to travel through the API.
@@ -49,6 +75,11 @@ jobs:
         run: |
           set -o pipefail
           {
+            # A database test with nothing to connect to skips itself and the
+            # job still passes, which is the failure this service exists to
+            # end. If the variable is not set, stop rather than go green.
+            : "${TEST_DATABASE_URL:?must be set, or the database tests skip and CI proves nothing}"
+            echo "== database";                  echo "$TEST_DATABASE_URL"
             echo "== go mod download && verify"; go mod download && go mod verify
             echo "== go build";                  go build -v ./...
             echo "== go vet";                    go vet ./...

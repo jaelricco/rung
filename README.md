@@ -273,15 +273,36 @@ query or serve any of it. Migration `0015` adds the tables and
 `plan.SyncCatalogue` rewrites them on every boot.
 
 The direction is deliberate and worth stating, because the obvious move is the
-other one. CI runs `go test ./...` against no database, and the tests that hold
-the ladders together — that a rung is never easier than the one below it, that
-every slug exists, that an athlete lands where their records put them — are
-this app's main quality mechanism. Authoring the catalogue in SQL would mean
-standing up Postgres in CI or parsing SQL in the tests. So Go stays where it is
-written, where the compiler and the tests can see it, and the tables are where
-it is read from. They also carry foreign keys onto `exercises`, which is a
-stronger guarantee than the test that used to be the only thing checking those
-slugs were real: a bad slug now stops the app at boot.
+other one. The tests that hold the ladders together — that a rung is never
+easier than the one below it, that every slug exists, that an athlete lands
+where their records put them — are this app's main quality mechanism, and they
+want the catalogue somewhere the compiler can see it. So Go stays where it is
+written and the tables are where it is read from. They also carry foreign keys
+onto `exercises`, which is a stronger guarantee than the test that used to be
+the only thing checking those slugs were real: a bad slug now stops the app at
+boot.
+
+The projection between the two is the part no compiler checks, and it shipped
+broken: every array column is `not null`, a nil Go slice encodes as SQL `NULL`,
+and the first goal with nothing to maintain aborted the transaction — so all
+eleven tables stayed empty behind a server that reported healthy. CI now runs a
+`postgis/postgis:16-3.4` service, so the tests that need a database run instead
+of skipping. They are marked by reading `TEST_DATABASE_URL` and skipping
+without it; the Go job refuses to start if that variable is missing, because a
+database test that quietly skips is how this gap stayed open. Locally, the
+compose database publishes no port — only Caddy does — so run one of its own,
+the same image CI uses:
+
+```
+docker run --rm -d -p 5432:5432 -e POSTGRES_PASSWORD=postgres \
+  -e POSTGRES_DB=rung_test --name rung-test-db postgis/postgis:16-3.4
+cd backend && TEST_DATABASE_URL='postgres://postgres:postgres@localhost:5432/rung_test?sslmode=disable' \
+  go test ./...
+```
+
+Migrations are serialised behind a Postgres advisory lock, so the packages can
+migrate the same database at once — which is what `go test ./...` does, and what
+two API containers starting together would do.
 
 **The plan is computed first, and a model only ever improves it.**
 `internal/plan` writes a complete, checked, athlete-specific plan from the
