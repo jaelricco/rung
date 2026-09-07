@@ -48,13 +48,48 @@ func Connect(ctx context.Context, url string) (*pgxpool.Pool, error) {
 	return nil, fmt.Errorf("database unreachable after 30s: %w", lastErr)
 }
 
+// migrationLock is the advisory lock every migrator queues behind. The number
+// is arbitrary and only has to be the same one everywhere.
+const migrationLock = 8613427
+
 // Migrate applies any embedded .sql file that has not run yet, in filename
 // order, each inside its own transaction.
+//
+// Only one process migrates at a time. Two that start together both read
+// schema_migrations before either writes to it, so both decide the same file
+// still needs applying and the second one fails on whatever the first created —
+// a duplicate type, a duplicate extension, a column that already exists. That
+// is not only a test-suite problem: it is what two API containers starting at
+// once would do to each other. An advisory lock is the right shape for it,
+// because the work being serialised is a whole sequence of transactions rather
+// than one, and the lock is released whatever happens to the connection.
 //
 // Note: pgx sends statements without bind parameters over the simple protocol,
 // which is what lets a migration file contain several statements at once.
 func Migrate(ctx context.Context, pool *pgxpool.Pool) error {
-	_, err := pool.Exec(ctx, `create table if not exists schema_migrations (
+	conn, err := pool.Acquire(ctx)
+	if err != nil {
+		return fmt.Errorf("acquire a connection to migrate on: %w", err)
+	}
+	defer conn.Release()
+
+	if _, err := conn.Exec(ctx, `select pg_advisory_lock($1)`, migrationLock); err != nil {
+		return fmt.Errorf("take the migration lock: %w", err)
+	}
+	defer func() {
+		// A fresh context: ctx may already be cancelled by the time this runs,
+		// and an unreleased lock would hold up the next process to start.
+		unlock, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+		defer cancel()
+		if _, err := conn.Exec(unlock, `select pg_advisory_unlock($1)`, migrationLock); err != nil {
+			log.Printf("warning: could not release the migration lock: %v", err)
+		}
+	}()
+
+	// Everything below runs on the pool rather than the locked connection: the
+	// lock is held by that session for as long as it is checked out, and the
+	// work itself does not care which connection it travels on.
+	_, err = pool.Exec(ctx, `create table if not exists schema_migrations (
 		version    text primary key,
 		applied_at timestamptz not null default now()
 	)`)
