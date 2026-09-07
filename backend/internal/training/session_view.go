@@ -3,6 +3,7 @@ package training
 import (
 	"encoding/json"
 	"net/http"
+	"sort"
 
 	"calisthenics/api/internal/auth"
 	"calisthenics/api/internal/httpx"
@@ -29,14 +30,7 @@ func (s *Service) Session(w http.ResponseWriter, r *http.Request) {
 	me := auth.MustUser(r.Context())
 	id := r.PathValue("id")
 
-	var entry CalendarEntry
-	err := s.pool.QueryRow(r.Context(), `
-		select id, plan_id, routine_id, source, to_char(scheduled_on, 'YYYY-MM-DD'),
-		       title, focus, body, completed_at, workout_id
-		from planned_sessions
-		where id = $1 and user_id = $2`, id, me.ID,
-	).Scan(&entry.ID, &entry.PlanID, &entry.RoutineID, &entry.Source, &entry.ScheduledOn,
-		&entry.Title, &entry.Focus, &entry.Body, &entry.CompletedAt, &entry.WorkoutID)
+	entry, err := s.loadSession(r.Context(), me.ID, id)
 	if err != nil {
 		// Not found and not yours are the same answer on purpose: whether a
 		// session id exists is not something to confirm to someone else.
@@ -95,4 +89,69 @@ func (s *Service) Session(w http.ResponseWriter, r *http.Request) {
 	}
 
 	httpx.JSON(w, http.StatusOK, out)
+}
+
+// progressUpdate replaces what has been ticked off in a session. Wholesale
+// rather than one tick at a time: the page sends the state it is showing, so a
+// request that arrives late cannot leave a box ticked that has since been
+// cleared, and a lost request costs one tap rather than a wrong session.
+type progressUpdate struct {
+	DoneProtocols []string `json:"done_protocols"`
+	DoneBlocks    []int    `json:"done_blocks"`
+}
+
+// Progress records how far through a session the athlete has got.
+func (s *Service) Progress(w http.ResponseWriter, r *http.Request) {
+	var in progressUpdate
+	if !httpx.Decode(w, r, &in) {
+		return
+	}
+	me := auth.MustUser(r.Context())
+	ctx := r.Context()
+
+	entry, err := s.loadSession(ctx, me.ID, r.PathValue("id"))
+	if err != nil {
+		httpx.Fail(w, http.StatusNotFound, "That session isn't there.")
+		return
+	}
+	var body SessionBody
+	if err := json.Unmarshal(entry.Body, &body); err != nil {
+		httpx.Fail(w, http.StatusInternalServerError, "That session couldn't be read.")
+		return
+	}
+
+	// Only what this session actually contains. A tick on a block that is not
+	// there would survive an edit that removed it and reappear as a box
+	// against whatever took its place.
+	named := map[string]bool{}
+	for _, slug := range body.WarmupProtocols {
+		named[slug] = true
+	}
+	protocols := []string{}
+	seen := map[string]bool{}
+	for _, slug := range in.DoneProtocols {
+		if named[slug] && !seen[slug] {
+			seen[slug] = true
+			protocols = append(protocols, slug)
+		}
+	}
+	blocks := []int{}
+	ticked := map[int]bool{}
+	for _, i := range in.DoneBlocks {
+		if i >= 0 && i < len(body.Blocks) && !ticked[i] {
+			ticked[i] = true
+			blocks = append(blocks, i)
+		}
+	}
+	sort.Ints(blocks)
+
+	if _, err := s.pool.Exec(ctx, `
+		update planned_sessions set done_protocols = $3, done_blocks = $4
+		where id = $1 and user_id = $2`, entry.ID, me.ID, protocols, blocks); err != nil {
+		httpx.Fail(w, http.StatusInternalServerError, "Couldn't save your progress.")
+		return
+	}
+
+	entry.DoneProtocols, entry.DoneBlocks = protocols, blocks
+	httpx.JSON(w, http.StatusOK, entry)
 }

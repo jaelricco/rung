@@ -141,6 +141,7 @@ func main() {
 		"GET /api/v1/calendar":                  trainingSvc.Calendar,
 		"GET /api/v1/calendar.ics":              trainingSvc.CalendarICS,
 		"GET /api/v1/sessions/{id}":             trainingSvc.Session,
+		"PUT /api/v1/sessions/{id}/progress":    trainingSvc.Progress,
 		"POST /api/v1/sessions":                 trainingSvc.CreateSession,
 		"PATCH /api/v1/sessions/{id}":           trainingSvc.UpdateSession,
 		"DELETE /api/v1/sessions/{id}":          trainingSvc.DeleteSession,

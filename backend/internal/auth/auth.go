@@ -73,6 +73,13 @@ func UserFrom(ctx context.Context) (User, bool) {
 	return u, ok
 }
 
+// WithUser puts a user on a context the way Required does. It is here for
+// tests that exercise a handler directly rather than standing up the
+// middleware and a signed cookie to reach it.
+func WithUser(ctx context.Context, u User) context.Context {
+	return context.WithValue(ctx, ctxKey{}, u)
+}
+
 // MustUser is for handlers mounted behind Required.
 func MustUser(ctx context.Context) User {
 	u, _ := UserFrom(ctx)

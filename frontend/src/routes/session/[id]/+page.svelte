@@ -23,6 +23,15 @@
 	let error = $state(null);
 	let busy = $state(false);
 
+	// What has been ticked off. Held here and written through to the server,
+	// because this page is read on a phone in a gym: the box has to fill the
+	// moment it is tapped, and it has to still be filled after the screen
+	// sleeps, the tab is dropped, or the session is opened again on the way
+	// home. Sets are the working copy; the server is the record.
+	let doneProtocols = $state(new Set());
+	let doneBlocks = $state(new Set());
+	let saveFailed = $state(false);
+
 	$effect(() => {
 		const id = page.params.id;
 		let cancelled = false;
@@ -31,6 +40,8 @@
 				const loaded = await api.get(`/sessions/${id}`);
 				if (!cancelled) {
 					view = loaded;
+					doneProtocols = new Set(loaded.session?.done_protocols ?? []);
+					doneBlocks = new Set(loaded.session?.done_blocks ?? []);
 					error = null;
 				}
 			} catch (e) {
@@ -53,8 +64,6 @@
 	// Prep blocks are the specific warm-up performed as sets: ramp-ups and
 	// joint work for the movement this session is built on. Everything else is
 	// the training.
-	let prepBlocks = $derived(blocks.filter((b) => b.intent === 'prep'));
-	let workBlocks = $derived(blocks.filter((b) => b.intent !== 'prep'));
 
 	function protocolsFor(key) {
 		return protocols.filter((p) => p.purpose !== 'rehab' && p.phase === key);
@@ -63,7 +72,7 @@
 	let phases = $derived(
 		(view?.phases ?? []).map((phase) => {
 			const items = protocolsFor(phase.key);
-			const sets = phase.key === 'specific' ? prepBlocks : phase.key === 'training' ? workBlocks : [];
+			const sets = phase.key === 'specific' ? prepItems : phase.key === 'training' ? workItems : [];
 			const text = phase.key === 'cooldown' ? (body?.cooldown ?? '') : '';
 			return { ...phase, items, sets, text, empty: !items.length && !sets.length && !text };
 		})
@@ -72,6 +81,54 @@
 	function nameOf(slug) {
 		return view?.exercises?.[slug]?.name ?? slug;
 	}
+
+	// The tick lands first and the request follows. A failed write says so
+	// rather than silently un-ticking a box the athlete watched fill in — they
+	// know what they did, and the page arguing with them about it is worse
+	// than a line explaining the tick has not been saved yet.
+	let pending = null;
+	function save() {
+		const id = view?.session?.id;
+		if (!id) return;
+		clearTimeout(pending);
+		pending = setTimeout(async () => {
+			try {
+				await api.put(`/sessions/${id}/progress`, {
+					done_protocols: [...doneProtocols],
+					done_blocks: [...doneBlocks]
+				});
+				saveFailed = false;
+			} catch {
+				saveFailed = true;
+			}
+		}, 400);
+	}
+
+	function toggleProtocol(slug) {
+		const next = new Set(doneProtocols);
+		next.has(slug) ? next.delete(slug) : next.add(slug);
+		doneProtocols = next;
+		save();
+	}
+
+	function toggleBlock(index) {
+		const next = new Set(doneBlocks);
+		next.has(index) ? next.delete(index) : next.add(index);
+		doneBlocks = next;
+		save();
+	}
+
+	// A block is ticked by its position in the body, not by where it sits in a
+	// phase, so the index travels with it.
+	let indexed = $derived(blocks.map((block, index) => ({ block, index })));
+	let prepItems = $derived(indexed.filter(({ block }) => block.intent === 'prep'));
+	let workItems = $derived(indexed.filter(({ block }) => block.intent !== 'prep'));
+
+	let tickable = $derived(
+		protocols.filter((p) => p.purpose !== 'rehab').length + blocks.length
+	);
+	let ticked = $derived(doneProtocols.size + doneBlocks.size);
+	let allDone = $derived(tickable > 0 && ticked === tickable);
 
 	async function toggleDone() {
 		if (!entry) return;
@@ -117,8 +174,27 @@
 			{#if body?.duration_minutes}<span>· about {body.duration_minutes} min</span>{/if}
 			<span>· {blocks.length} block{blocks.length === 1 ? '' : 's'}</span>
 		</p>
+		{#if tickable}
+			<p class="progress" class:complete={allDone}>
+				<strong>{ticked} of {tickable}</strong> done
+				{#if allDone && !entry.completed_at}
+					· everything is ticked off — mark the session done below
+				{/if}
+			</p>
+		{/if}
+		{#if saveFailed}
+			<p class="notice error" style="margin:0.6rem 0 0">
+				Your last tick hasn't reached the server. It is still shown here; it will be sent
+				again with the next one.
+			</p>
+		{/if}
+
 		<div class="actions">
-			<button class="ghost" onclick={toggleDone} disabled={busy}>
+			<button
+				class:ghost={!allDone || entry.completed_at}
+				onclick={toggleDone}
+				disabled={busy}
+			>
 				{entry.completed_at ? 'Done — undo' : 'Mark done'}
 			</button>
 			<a class="ghost button-like" href={`/calendar?edit=${entry.id}&on=${entry.scheduled_on}`}>
@@ -157,8 +233,15 @@
 			</div>
 
 			{#each phase.items as protocol (protocol.slug)}
-				<div class="protocol">
-					<strong class="protocol-title">{protocol.title}</strong>
+				<div class="protocol" class:ticked={doneProtocols.has(protocol.slug)}>
+					<label class="choice tick">
+						<input
+							type="checkbox"
+							checked={doneProtocols.has(protocol.slug)}
+							onchange={() => toggleProtocol(protocol.slug)}
+						/>
+						<strong class="protocol-title">{protocol.title}</strong>
+					</label>
 					<ol class="steps">
 						{#each protocol.steps as step, i (i)}
 							<li>{step}</li>
@@ -170,10 +253,17 @@
 			{#if phase.sets.length}
 				<table>
 					<tbody>
-						{#each phase.sets as block, i (i)}
-							<tr>
+						{#each phase.sets as { block, index } (index)}
+							<tr class:ticked={doneBlocks.has(index)}>
 								<td class="movement">
-									{nameOf(block.exercise_slug)}
+									<label class="choice tick">
+										<input
+											type="checkbox"
+											checked={doneBlocks.has(index)}
+											onchange={() => toggleBlock(index)}
+										/>
+										<span>{nameOf(block.exercise_slug)}</span>
+									</label>
 									{#if block.intent && phase.key === 'training'}
 										<span class="chip">{INTENTS[block.intent] ?? block.intent}</span>
 									{/if}
@@ -184,7 +274,7 @@
 								</td>
 							</tr>
 							{#if block.intensity || block.tempo || block.notes || block.progression}
-								<tr>
+								<tr class:ticked={doneBlocks.has(index)}>
 									<td colspan="3" class="detail muted">
 										{#if block.intensity}<span class="mono">{block.intensity}</span>{/if}
 										{#if block.tempo}<span class="mono">tempo {block.tempo}</span>{/if}
@@ -247,6 +337,46 @@
 	.phase.empty {
 		opacity: 0.65;
 	}
+	.progress {
+		margin: 0.7rem 0 0;
+		font-size: 0.88rem;
+	}
+	.progress.complete {
+		color: var(--good);
+	}
+	/* The tap target is the whole line, not the twelve pixels of the box: this
+	   is used with one hand, mid-session, and often with chalk on it. The
+	   typography comes from label.choice — this is prose with a box beside it,
+	   which is what that class is for. */
+	.tick {
+		/* inline-flex, not flex: a block-level label filled the cell and put
+		   the intent chip on a line of its own. */
+		display: inline-flex;
+		align-items: baseline;
+		gap: 0.55rem;
+		font-size: inherit;
+		margin: 0;
+		vertical-align: baseline;
+	}
+	.tick input {
+		width: auto;
+		min-width: 1.05rem;
+		min-height: 1.05rem;
+		margin: 0;
+		flex: 0 0 auto;
+		accent-color: var(--good);
+	}
+	/* Ticked work stays legible — it is what you did, and it is what the next
+	   block's rest is measured from. It just stops competing for attention. */
+	.protocol.ticked,
+	tr.ticked {
+		opacity: 0.5;
+	}
+	.protocol.ticked .protocol-title,
+	tr.ticked .movement span {
+		text-decoration: line-through;
+		text-decoration-color: var(--line);
+	}
 	.phase-head {
 		display: flex;
 		gap: 0.75rem;
@@ -281,6 +411,13 @@
 	}
 	.movement {
 		padding: 0.35rem 0.6rem 0.35rem 0;
+	}
+	/* What the block is for, beside what it is. Set back, because the movement
+	   is the thing being read and "Skill" is a note about it. */
+	.chip {
+		margin-left: 0.4rem;
+		color: var(--muted);
+		font-size: 0.82rem;
 	}
 	.prescription {
 		white-space: nowrap;

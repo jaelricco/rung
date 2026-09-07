@@ -26,7 +26,17 @@ type CalendarEntry struct {
 	Body        json.RawMessage `json:"body"`
 	CompletedAt *time.Time      `json:"completed_at"`
 	WorkoutID   *string         `json:"workout_id"`
+	// What has been ticked off inside this session: protocols by slug, blocks
+	// by their position in the body. Both are meaningless against a different
+	// body, which is why editing one clears them.
+	DoneProtocols []string `json:"done_protocols"`
+	DoneBlocks    []int    `json:"done_blocks"`
 }
+
+// sessionColumns is the select list every read of a planned session uses, so a
+// column added here cannot reach one caller and miss another.
+const sessionColumns = `id, plan_id, routine_id, source, to_char(scheduled_on, 'YYYY-MM-DD'),
+	       title, focus, body, completed_at, workout_id, done_protocols, done_blocks`
 
 type CalendarEvent struct {
 	ID         string  `json:"id"`
@@ -92,8 +102,7 @@ func (s *Service) Calendar(w http.ResponseWriter, r *http.Request) {
 	}
 
 	rows, err := s.pool.Query(r.Context(), `
-		select id, plan_id, routine_id, source, to_char(scheduled_on, 'YYYY-MM-DD'),
-		       title, focus, body, completed_at, workout_id
+		select `+sessionColumns+`
 		from planned_sessions
 		where user_id = $1 and scheduled_on between $2 and $3
 		order by scheduled_on`, me.ID, from, to)
@@ -104,7 +113,8 @@ func (s *Service) Calendar(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var e CalendarEntry
 		if err := rows.Scan(&e.ID, &e.PlanID, &e.RoutineID, &e.Source, &e.ScheduledOn,
-			&e.Title, &e.Focus, &e.Body, &e.CompletedAt, &e.WorkoutID); err != nil {
+			&e.Title, &e.Focus, &e.Body, &e.CompletedAt, &e.WorkoutID,
+			&e.DoneProtocols, &e.DoneBlocks); err != nil {
 			rows.Close()
 			httpx.Fail(w, http.StatusInternalServerError, "Couldn't read your calendar.")
 			return
@@ -391,7 +401,10 @@ func (s *Service) UpdateSession(w http.ResponseWriter, r *http.Request) {
 		set scheduled_on = coalesce($3, scheduled_on),
 		    title        = coalesce($4, title),
 		    focus        = coalesce($5, focus),
-		    body         = coalesce($6, body)
+		    body         = coalesce($6, body),
+		    -- A tick names a block by its position, so a new body voids them.
+		    done_protocols = case when $6::jsonb is null then done_protocols else '{}' end,
+		    done_blocks    = case when $6::jsonb is null then done_blocks    else '{}' end
 		where id = $1 and user_id = $2`,
 		r.PathValue("id"), me.ID, date, title, focus, body)
 	if err != nil {
@@ -432,10 +445,10 @@ func (s *Service) DeleteSession(w http.ResponseWriter, r *http.Request) {
 func (s *Service) loadSession(ctx context.Context, userID, id string) (CalendarEntry, error) {
 	var e CalendarEntry
 	err := s.pool.QueryRow(ctx, `
-		select id, plan_id, routine_id, source, to_char(scheduled_on, 'YYYY-MM-DD'),
-		       title, focus, body, completed_at, workout_id
+		select `+sessionColumns+`
 		from planned_sessions where id = $1 and user_id = $2`, id, userID).
 		Scan(&e.ID, &e.PlanID, &e.RoutineID, &e.Source, &e.ScheduledOn,
-			&e.Title, &e.Focus, &e.Body, &e.CompletedAt, &e.WorkoutID)
+			&e.Title, &e.Focus, &e.Body, &e.CompletedAt, &e.WorkoutID,
+			&e.DoneProtocols, &e.DoneBlocks)
 	return e, err
 }
