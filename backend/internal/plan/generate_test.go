@@ -83,12 +83,20 @@ func TestPlacementFollowsTheLogAndNeverGoesBackwards(t *testing.T) {
 		t.Errorf("with an empty log the plan should start at the bottom of the ladder, started at %q", got)
 	}
 
-	// The goal rung is never "cleared": you maintain a skill, you do not
-	// outgrow it.
+	// A hold past one rung moves up to the next, which is what the rungs above
+	// the old ceiling are for: a 25-second lever is not a full-lever problem.
 	strong := snapshotOf(20, 72, rec("front_lever", 0, 0, 25))
 	held, _ := Generate(Request{Goal: "front lever", Weeks: 8, DaysPerWeek: 3}, strong, lib)
-	if got := currentRung(held); got != "Full front lever" {
-		t.Errorf("an athlete past the last standard should stay on it, got %q", got)
+	if got := currentRung(held); got != "Weighted front lever" {
+		t.Errorf("a 25-second lever should be past the held-lever rung, got %q", got)
+	}
+
+	// But the last rung is never outgrown: you maintain a skill, you do not
+	// clear it and walk away.
+	elite := snapshotOf(20, 72, rec("front_lever", 0, 0, 40), rec("weighted_front_lever", 0, 30, 20))
+	top, _ := Generate(Request{Goal: "front lever", Weeks: 8, DaysPerWeek: 3}, elite, lib)
+	if got := currentRung(top); got != "Weighted front lever" {
+		t.Errorf("an athlete past every standard should stay on the last rung, got %q", got)
 	}
 }
 

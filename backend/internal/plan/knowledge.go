@@ -74,6 +74,36 @@ type Goal struct {
 	// ladder *is* the strength work, so its sessions read as strength rather
 	// than as skill practice with strength behind it.
 	Foundation bool
+
+	// Entry is what has to be true before the ladder is worth starting at all.
+	// Below the top of the catalogue this is empty: a first pull-up needs no
+	// permission. At the elite end it is the difference between a plan and an
+	// injury, because the skills up there load tissue that the skills below
+	// them are what prepares.
+	Entry []Requirement
+
+	// Feeds names the skills that keep driving this one after it is entered,
+	// and which therefore keep their place in the week rather than being
+	// dropped for the new toy. The planche feeds the maltese far more than the
+	// maltese feeds itself, and an athlete who parks their planche to chase a
+	// maltese loses both.
+	Feeds []string
+
+	// Cost is what one week of this skill spends from the athlete's tolerance
+	// for maximal straight-arm work: 1 for a skill the tissue barely notices,
+	// 3 for one that is most of a training week on its own. The planner adds
+	// these up across everything being learned at once, because the tendon
+	// does not know which goal a set belonged to.
+	Cost int
+}
+
+// Requirement is one thing that has to be demonstrated before a ladder opens.
+type Requirement struct {
+	Slug     string
+	Metric   string
+	Standard float64
+	// Why says what the requirement is protecting, in the athlete's terms.
+	Why string
 }
 
 // Patterns a session can work.
@@ -212,6 +242,158 @@ var Goals = []Goal{
 		Frequency: "Two heavy sessions a week, with pulling volume to match, or the shoulder pays for it.",
 	},
 	{
+		Key: "maltese", Phrase: "the maltese", Name: "Maltese", Pattern: patternPush, StraightArm: true, Cost: 3,
+		Aliases:  []string{"maltese", "malteser", "maltese cross", "maltese planche"},
+		Timeline: "Years, and only from a planche that is already held rather than achieved. A plan of any length buys you a rung on the way; nobody gets a maltese in a block.",
+		// The sources agree on the sequencing even where they disagree on the
+		// numbers: the planche builds the maltese, and the athlete who parks
+		// their planche to chase a maltese loses hold of both.
+		Entry: []Requirement{
+			{Slug: "full_planche", Metric: metricHold, Standard: 10,
+				Why: "A maltese is a planche with the arms opened out. Ten seconds of full planche is the lower end of what the sources ask for before any of that starts."},
+			{Slug: "straddle_planche", Metric: metricHold, Standard: 15,
+				Why: "The straddle is where the shoulder learns to hold the line; the maltese only widens it."},
+			{Slug: "back_lever", Metric: metricHold, Standard: 10,
+				Why: "The back lever is what tells you the biceps tendon tolerates a long open-shoulder lever. Maltese work finds out either way."},
+			{Slug: "ring_support_hold", Metric: metricHold, Standard: 30,
+				Why: "Every honest maltese progression is on rings, and rings are their own skill before they are a harder one."},
+		},
+		Feeds: []string{"planche"},
+		Ladder: []Step{
+			{Name: "Rings, and shoulders that tolerate them", Movement: chain{"ring_support_hold"}, Metric: metricHold, Standard: 30,
+				Assist: chain{"ring_planche_lean"}, Typical: "4 to 8 weeks if the rings are new, and they usually are"},
+			{Name: "Maltese lean", Movement: chain{"maltese_lean"}, Metric: metricHold, Standard: 15,
+				Assist: chain{"planche_lean"}, Typical: "8 to 16 weeks"},
+			{Name: "Band-assisted maltese", Movement: chain{"band_maltese"}, Metric: metricHold, Standard: 10,
+				Assist: chain{"band_iron_cross"}, Typical: "3 to 9 months, and the band comes down in small steps"},
+			{Name: "Tuck maltese", Movement: chain{"tuck_maltese"}, Metric: metricHold, Standard: 8,
+				Assist: chain{"band_maltese"}, Typical: "6 to 18 months"},
+			{Name: "Straddle maltese", Movement: chain{"straddle_maltese"}, Metric: metricHold, Standard: 5,
+				Assist: chain{"tuck_maltese"}, Typical: "a year or more"},
+			{Name: "Maltese", Movement: chain{"maltese"}, Metric: metricHold, Standard: 3,
+				Assist: chain{"straddle_maltese"}, Typical: "the goal, and very few people arrive"},
+		},
+		Drills:      chain{"ring_planche_lean", "band_iron_cross", "planche_lean", "ring_support_hold"},
+		Accessories: chain{"pseudo_planche_push_up", "band_face_pull", "german_hang", "hollow_body_hold"},
+		Risks: []string{
+			"The biceps tendon and the front of the shoulder take this skill, and both fail slowly and then suddenly. A band that is too thin is the usual cause.",
+			"Reduce assistance in small steps and never inside a session. If a hold breaks early, the band comes back, not the next attempt.",
+			"Maltese work does not replace planche work. The planche is what keeps driving it, so it stays in the week.",
+		},
+		Frequency: "Two maltese sessions a week at the absolute most, and only on days with a full recovery either side.",
+	},
+	{
+		Key: "iron_cross", Phrase: "the iron cross", Name: "Iron cross", Pattern: patternPush, StraightArm: true, Cost: 3,
+		Aliases:  []string{"iron cross", "ironcross", "eisernes kreuz", "kreuzhang", "l cross"},
+		Timeline: "One to three years on rings, and the shoulders decide the pace.",
+		Entry: []Requirement{
+			{Slug: "ring_support_hold", Metric: metricHold, Standard: 30,
+				Why: "The cross is a ring skill first. Thirty seconds of honest support is the price of entry."},
+			{Slug: "back_lever", Metric: metricHold, Standard: 10,
+				Why: "Both put the biceps tendon on a long lever with the shoulder open."},
+		},
+		Ladder: []Step{
+			{Name: "Ring support", Movement: chain{"ring_support_hold"}, Metric: metricHold, Standard: 30,
+				Assist: chain{"ring_dip"}, Typical: "4 to 8 weeks"},
+			{Name: "Band-assisted cross", Movement: chain{"band_iron_cross"}, Metric: metricHold, Standard: 15,
+				Assist: chain{"ring_support_hold"}, Typical: "6 to 18 months, band thinning slowly"},
+			{Name: "Iron cross", Movement: chain{"iron_cross"}, Metric: metricHold, Standard: 5,
+				Assist: chain{"band_iron_cross"}, Typical: "the goal"},
+			{Name: "L-cross", Movement: chain{"ring_l_cross"}, Metric: metricHold, Standard: 5,
+				Assist: chain{"iron_cross"}, Typical: "past the goal, and the step toward maltese"},
+		},
+		Drills:      chain{"band_iron_cross", "ring_support_hold", "ring_dip"},
+		Accessories: chain{"band_face_pull", "german_hang", "pull_up", "hollow_body_hold"},
+		Risks: []string{
+			"The elbow is the joint that ends cross careers. Straight arms, small steps on the band, and no attempts on a tired day.",
+			"Any sharp inner-elbow pain during a cross attempt is the end of that session, not a cue to adjust.",
+		},
+		Frequency: "Two sessions a week, and the band comes down monthly rather than weekly.",
+	},
+	{
+		Key: "planche_press", Phrase: "the planche press to handstand", Name: "Planche press", Pattern: patternPush, StraightArm: true, Wrists: true, Cost: 3,
+		Aliases:  []string{"planche press", "press to handstand from planche", "planche press to handstand", "full planche press"},
+		Timeline: "One to three years past a held full planche.",
+		Entry: []Requirement{
+			{Slug: "full_planche", Metric: metricHold, Standard: 8,
+				Why: "The press starts in the planche. If the position is not owned, the press is a shape you pass through by accident."},
+			{Slug: "handstand", Metric: metricHold, Standard: 30,
+				Why: "It ends in a handstand, and a press into a shape you cannot hold is a fall with extra steps."},
+		},
+		Feeds: []string{"planche", "handstand"},
+		Ladder: []Step{
+			{Name: "Straight-arm press", Movement: chain{"press_to_handstand"}, Metric: metricAttempt, Standard: 1,
+				Assist: chain{"pancake_stretch"}, Typical: "3 to 9 months, and hamstrings decide most of it"},
+			{Name: "Straddle planche press", Movement: chain{"straddle_planche_press"}, Metric: metricReps, Standard: 3,
+				Assist: chain{"straddle_planche"}, Typical: "6 to 18 months"},
+			{Name: "Planche press", Movement: chain{"planche_press"}, Metric: metricReps, Standard: 3,
+				Assist: chain{"straddle_planche_press"}, Typical: "the goal"},
+		},
+		Drills:      chain{"straddle_planche", "pseudo_planche_push_up", "planche_lean"},
+		Accessories: chain{"pancake_stretch", "seated_pike_stretch", "band_face_pull", "hollow_body_hold"},
+		Risks: []string{
+			"This is the most wrist-loaded thing in the sport: full bodyweight, full extension, moving. Parallettes are not a comfort here, they are the sensible default.",
+			"Pressing volume without matching pulling volume is how the shoulder in front gets angry.",
+		},
+		Frequency: "Two sessions a week, low reps, always fresh.",
+	},
+	{
+		Key: "front_lever_pull_up", Phrase: "the front lever pull-up", Name: "Front lever pull-up", Pattern: patternPull, StraightArm: true, Cost: 2,
+		Aliases:  []string{"front lever pull up", "front lever pullup", "fl pull up", "front lever pull-ups"},
+		Timeline: "Six to eighteen months past a held front lever.",
+		Entry: []Requirement{
+			{Slug: "front_lever", Metric: metricHold, Standard: 10,
+				Why: "You cannot pull from a position you cannot hold. Ten seconds is the floor, twenty is where it gets useful."},
+			{Slug: "pull_up", Metric: metricReps, Standard: 12,
+				Why: "The bent-arm pull underneath it still has to be there."},
+		},
+		Feeds: []string{"front_lever"},
+		Ladder: []Step{
+			{Name: "Held front lever", Movement: chain{"front_lever"}, Metric: metricHold, Standard: 15,
+				Assist: chain{"front_lever_raise"}, Typical: "the base this is built on"},
+			{Name: "Front lever rows", Movement: chain{"front_lever_row"}, Metric: metricReps, Standard: 5,
+				Assist: chain{"tuck_front_lever_row"}, Typical: "3 to 9 months"},
+			{Name: "Front lever pull-up", Movement: chain{"front_lever_pull_up"}, Metric: metricReps, Standard: 3,
+				Assist: chain{"front_lever_row"}, Typical: "the goal"},
+		},
+		Drills:      chain{"front_lever_row", "front_lever_raise", "ice_cream_maker"},
+		Accessories: chain{"weighted_pull_up", "hanging_leg_raise", "band_face_pull", "hollow_body_hold"},
+		Risks: []string{
+			"The lever line breaks before the arms do. A rep with the hips dropped is a row, and it trains the row.",
+			"Elbow load is high and constant here; the elbow preparation is not optional.",
+		},
+		Frequency: "Two sessions a week, low reps, stopped the moment the line goes.",
+	},
+	{
+		Key: "one_arm_handstand", Phrase: "the one-arm handstand", Name: "One-arm handstand", Pattern: patternPush, Wrists: true, Cost: 2,
+		Aliases:  []string{"one arm handstand", "one-arm handstand", "oahs", "einarmiger handstand", "one arm hand stand"},
+		Timeline: "One and a half to three years to a first straddle one-arm, even with good preparation. It is a balance skill, so it is paid for in sessions, not in sets.",
+		Entry: []Requirement{
+			{Slug: "handstand", Metric: metricHold, Standard: 45,
+				Why: "The sources want full mastery on two arms first — a comfortable 30 to 60 seconds, not a hard-won 20."},
+		},
+		Feeds: []string{"handstand"},
+		Ladder: []Step{
+			{Name: "Weight shifts", Movement: chain{"handstand_shifts"}, Metric: metricReps, Standard: 10,
+				Assist: chain{"handstand_shoulder_taps"}, Typical: "2 to 6 months"},
+			{Name: "Wall one-arm", Movement: chain{"wall_one_arm_handstand"}, Metric: metricHold, Standard: 15,
+				Assist: chain{"handstand_shifts"}, Typical: "3 to 9 months"},
+			{Name: "Tuck one-arm", Movement: chain{"tuck_one_arm_handstand"}, Metric: metricHold, Standard: 8,
+				Assist: chain{"wall_one_arm_handstand"}, Typical: "6 to 18 months"},
+			{Name: "Straddle one-arm", Movement: chain{"straddle_one_arm_handstand"}, Metric: metricHold, Standard: 10,
+				Assist: chain{"tuck_one_arm_handstand"}, Typical: "a year or more; this is the shape most people get first"},
+			{Name: "One-arm handstand", Movement: chain{"one_arm_handstand"}, Metric: metricHold, Standard: 5,
+				Assist: chain{"straddle_one_arm_handstand"}, Typical: "the goal"},
+		},
+		Drills:      chain{"handstand_shifts", "wall_handstand", "handstand_shoulder_taps"},
+		Accessories: chain{"wrist_prep", "wrist_extensor_curl", "hollow_body_hold", "band_face_pull"},
+		Risks: []string{
+			"The wrist takes all of it on one side. This is the skill most likely to turn a niggle into a season.",
+			"Balance is neural: short and frequent beats long and tired, and a fatigued attempt rehearses a fall.",
+		},
+		Frequency: "Most days, short. Five sessions of fifteen minutes beat two of an hour.",
+	},
+	{
 		Key: "front_lever", Phrase: "the front lever", Name: "Front lever", Pattern: patternPull, StraightArm: true,
 		Aliases:  []string{"front lever", "frontlever", "front-lever", "fl"},
 		Timeline: "A straddle in six to twelve months for someone with a solid tuck; a full lever is often a two-year project.",
@@ -225,7 +407,11 @@ var Goals = []Goal{
 			{Name: "Straddle", Movement: chain{"straddle_front_lever"}, Metric: metricHold, Standard: 12,
 				Assist: chain{"front_lever_raise"}, Typical: "8 to 20 weeks"},
 			{Name: "Full front lever", Movement: chain{"front_lever"}, Metric: metricHold, Standard: 10,
-				Assist: chain{"front_lever_raise", "ice_cream_maker"}, Typical: "the goal"},
+				Assist: chain{"front_lever_raise", "ice_cream_maker"}, Typical: "the goal for most people"},
+			{Name: "Held front lever", Movement: chain{"front_lever"}, Metric: metricHold, Standard: 20,
+				Assist: chain{"front_lever_row"}, Typical: "where the lever stops being a hold and starts being a base"},
+			{Name: "Weighted front lever", Movement: chain{"weighted_front_lever"}, Metric: metricAdded, Standard: 10,
+				Assist: chain{"front_lever_row"}, Typical: "a year or more, and the honest way past a twenty-second lever"},
 		},
 		Drills:      chain{"tuck_front_lever_row", "front_lever_raise", "ice_cream_maker", "scapular_pull_up"},
 		Accessories: chain{"pull_up", "hanging_leg_raise", "hollow_body_hold", "band_face_pull"},
@@ -275,7 +461,11 @@ var Goals = []Goal{
 			{Name: "Straddle planche", Movement: chain{"straddle_planche"}, Metric: metricHold, Standard: 10,
 				Assist: chain{"pseudo_planche_push_up"}, Typical: "6 to 18 months"},
 			{Name: "Full planche", Movement: chain{"full_planche"}, Metric: metricHold, Standard: 5,
-				Assist: chain{"straddle_planche"}, Typical: "the goal, and it is measured in years"},
+				Assist: chain{"straddle_planche"}, Typical: "the goal for most people, and it is measured in years"},
+			{Name: "Held full planche", Movement: chain{"full_planche"}, Metric: metricHold, Standard: 15,
+				Assist: chain{"planche_push_up"}, Typical: "a year or more past the first clean rep, and what the skills above it are built on"},
+			{Name: "Ring planche", Movement: chain{"ring_planche"}, Metric: metricHold, Standard: 5,
+				Assist: chain{"ring_straddle_planche"}, Typical: "the version with a neutral wrist, and the one the rings punish"},
 		},
 		Drills:      chain{"pseudo_planche_push_up", "planche_lean", "scapular_push_up"},
 		Accessories: chain{"dip", "band_face_pull", "hollow_body_hold", "wrist_extensor_curl"},

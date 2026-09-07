@@ -74,14 +74,41 @@ type Rung struct {
 // about the athlete, and — when the model was asked and could not answer —
 // why the athlete is reading the algorithm's plan instead.
 type Method struct {
-	Source         string `json:"source"` // one of the Source constants below
-	Goal           string `json:"goal"`
-	GoalMatched    bool   `json:"goal_matched"`
-	Rung           string `json:"rung,omitempty"`
-	NextRung       string `json:"next_rung,omitempty"`
-	Ladder         []Rung `json:"ladder,omitempty"`
-	Readiness      string `json:"readiness,omitempty"`
+	Source      string `json:"source"` // one of the Source constants below
+	Goal        string `json:"goal"`
+	GoalMatched bool   `json:"goal_matched"`
+	Rung        string `json:"rung,omitempty"`
+	NextRung    string `json:"next_rung,omitempty"`
+	Ladder      []Rung `json:"ladder,omitempty"`
+	Readiness   string `json:"readiness,omitempty"`
+	// EntryMet says whether the goal's own prerequisites are demonstrated. When
+	// they are not, the plan trains the gaps instead of the skill and Gaps says
+	// which ones and by how much — which is a more useful answer than a plan
+	// for a skill the athlete cannot safely start.
+	EntryMet bool  `json:"entry_met"`
+	Gaps     []Gap `json:"gaps,omitempty"`
+	// Load is what this week costs against the athlete's tolerance for maximal
+	// straight-arm work, and what else is spending from the same account.
+	Load           *Load  `json:"load,omitempty"`
 	FallbackReason string `json:"fallback_reason,omitempty"`
+}
+
+// Gap is one unmet entry requirement, with the athlete's own number beside it.
+type Gap struct {
+	Name     string `json:"name"`
+	Standard string `json:"standard"`
+	Have     string `json:"have"`
+	Why      string `json:"why"`
+}
+
+// Load is the tendon budget: how much maximal straight-arm work the week is
+// being asked to carry, against what one athlete recovers from.
+type Load struct {
+	Spent    int      `json:"spent"`
+	Ceiling  int      `json:"ceiling"`
+	Learning []string `json:"learning,omitempty"`
+	Parked   []string `json:"parked,omitempty"`
+	Note     string   `json:"note,omitempty"`
 }
 
 // Where a plan came from.

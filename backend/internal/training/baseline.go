@@ -42,11 +42,14 @@ func (b BaselineRecord) empty() bool {
 // Baseline is the whole self-assessment: the numbers, plus the training
 // context that is not a set.
 type Baseline struct {
-	BodyweightKg  *float64         `json:"bodyweight_kg"`
-	TrainsPerWeek *int             `json:"trains_per_week"`
-	SleepHours    *float64         `json:"sleep_hours"`
-	Equipment     []string         `json:"equipment"`
-	Records       []BaselineRecord `json:"records"`
+	BodyweightKg  *float64 `json:"bodyweight_kg"`
+	TrainsPerWeek *int     `json:"trains_per_week"`
+	SleepHours    *float64 `json:"sleep_hours"`
+	Equipment     []string `json:"equipment"`
+	// Learning is the skills the athlete is currently working on, by goal key.
+	// It is what lets a plan for a new skill see the other three.
+	Learning []string         `json:"learning"`
+	Records  []BaselineRecord `json:"records"`
 }
 
 // Equipment an athlete can own. The planner will not prescribe a movement the
@@ -162,9 +165,9 @@ func (s *Service) loadBaseline(ctx context.Context, userID string) (Baseline, er
 	out := Baseline{Records: []BaselineRecord{}}
 
 	err := s.pool.QueryRow(ctx, `
-		select bodyweight_kg, trains_per_week, sleep_hours, equipment
+		select bodyweight_kg, trains_per_week, sleep_hours, equipment, learning
 		from users where id = $1`, userID,
-	).Scan(&out.BodyweightKg, &out.TrainsPerWeek, &out.SleepHours, &out.Equipment)
+	).Scan(&out.BodyweightKg, &out.TrainsPerWeek, &out.SleepHours, &out.Equipment, &out.Learning)
 	if err != nil {
 		return out, err
 	}
@@ -262,15 +265,20 @@ func (s *Service) PutBaseline(w http.ResponseWriter, r *http.Request) {
 	if in.Equipment != nil {
 		equipment = in.Equipment
 	}
+	var learning any
+	if in.Learning != nil {
+		learning = in.Learning
+	}
 
 	_, err = tx.Exec(ctx, `
 		update users set
 			bodyweight_kg   = coalesce($2, bodyweight_kg),
 			trains_per_week = coalesce($3, trains_per_week),
 			sleep_hours     = coalesce($4, sleep_hours),
-			equipment       = coalesce($5, equipment)
+			equipment       = coalesce($5, equipment),
+			learning        = coalesce($6, learning)
 		where id = $1`,
-		me.ID, in.BodyweightKg, in.TrainsPerWeek, in.SleepHours, equipment)
+		me.ID, in.BodyweightKg, in.TrainsPerWeek, in.SleepHours, equipment, learning)
 	if err != nil {
 		httpx.Fail(w, http.StatusInternalServerError, "Couldn't save your baseline. Try again.")
 		return

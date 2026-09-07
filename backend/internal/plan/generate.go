@@ -26,6 +26,10 @@ func Generate(req Request, snap training.Snapshot, lib Library) (Plan, []string)
 	b := newBuilder(req, snap, lib)
 	b.applyEquipment()
 	b.applyInjuries()
+	// Entry first, because it can replace the ladder outright, and the budget
+	// after it, because what the week costs depends on which ladder won.
+	b.checkEntry()
+	b.weighLoad()
 	b.place()
 
 	weeks := b.schedule()
@@ -95,26 +99,37 @@ func (r *Request) clamp() {
 // ---------- the builder ----------
 
 type builder struct {
-	req      Request
-	lib      Library
-	snap     training.Snapshot
-	rec      records
-	goal     Goal
-	matched  bool
-	ladder   []Step
-	rung     int
-	banned   map[string]bool
-	injured  map[string]bool
-	owned    map[string]bool
-	answered bool
-	rehab    []string
-	volume   float64
+	req     Request
+	lib     Library
+	snap    training.Snapshot
+	rec     records
+	goal    Goal
+	matched bool
+	ladder  []Step
+	rung    int
+	banned  map[string]bool
+	// substitute redirects a movement onto the version this athlete can train
+	// today — the ring planche for the floor planche when the wrist is angry.
+	// It is a swap rather than a ban, which is the difference between training
+	// around an injury and stopping.
+	substitute map[string]string
+	injured    map[string]bool
+	owned      map[string]bool
+	answered   bool
+	rehab      []string
+	volume     float64
 	// bonusCap limits how fast the weeks climb. Volume is a multiplier on set
 	// counts of three to six, where a ten percent correction rounds away to
 	// nothing — so a readiness problem that deserves less than a whole step
 	// down slows the climb instead of shrinking week one.
 	bonusCap int
 	readines string
+
+	// The elite end of the catalogue: whether the goal is open, what is
+	// missing if not, and what the week costs the tendons.
+	entryMet bool
+	gaps     []Gap
+	load     *Load
 
 	restrictions []string
 	notes        []string
@@ -131,7 +146,7 @@ func newBuilder(req Request, snap training.Snapshot, lib Library) *builder {
 	b := &builder{
 		req: req, lib: lib, snap: snap,
 		rec: recordsOf(snap), goal: goal, matched: matched,
-		banned: map[string]bool{}, injured: map[string]bool{},
+		banned: map[string]bool{}, substitute: map[string]string{}, injured: map[string]bool{},
 		volume:       1,
 		bonusCap:     2,
 		restrictions: []string{},
@@ -253,6 +268,16 @@ func (b *builder) applyInjuries() {
 					"automatically. Skip anything in here that loads it.")
 			continue
 		}
+		// A mild wrist is the one case where clearing the region is the wrong
+		// answer: it would delete the whole sport for a complaint that half of
+		// all hand-balancers carry. That one moves the load off the palm
+		// instead. Everything else, and anything severe, clears the region.
+		if region == regionWrist && injury.Severity <= 2 {
+			b.spareTheWrist(injury.Severity)
+			b.volume = math.Min(b.volume, 0.9)
+			continue
+		}
+
 		b.injured[region] = true
 		if slug, ok := rehabFor[region]; ok {
 			b.rehab = appendUnique(b.rehab, slug)
@@ -349,11 +374,17 @@ func (b *builder) applyEquipment() {
 // Where neither says anything, the answer is the bottom of the ladder. An
 // unlogged athlete is a beginner, which is the safe direction to be wrong in.
 func (b *builder) place() {
-	if len(b.ladder) == 0 {
-		return
+	b.rung = b.placeOn(b.ladder)
+}
+
+// placeOn is the placement rule on its own, so the same reasoning can locate
+// the athlete on a skill they are only maintaining rather than chasing.
+func (b *builder) placeOn(ladder []Step) int {
+	if len(ladder) == 0 {
+		return 0
 	}
 	floor := 0
-	for i, step := range b.ladder {
+	for i, step := range ladder {
 		if b.cleared(step) {
 			floor = max(floor, i+1)
 		}
@@ -361,7 +392,22 @@ func (b *builder) place() {
 			floor = max(floor, i)
 		}
 	}
-	b.rung = min(floor, len(b.ladder)-1)
+	return min(floor, len(ladder)-1)
+}
+
+// maintains returns the rungs of the skills this goal is built on, at the
+// athlete's own level. These stay in the week at maintenance volume: a planche
+// parked to chase a maltese takes the maltese down with it.
+func (b *builder) maintains() []Step {
+	out := make([]Step, 0, len(b.goal.Feeds))
+	for _, key := range b.goal.Feeds {
+		fed, ok := goalByKey[key]
+		if !ok || len(fed.Ladder) == 0 {
+			continue
+		}
+		out = append(out, fed.Ladder[b.placeOn(fed.Ladder)])
+	}
+	return out
 }
 
 // logged reports whether the athlete has ever recorded a set of this rung's
@@ -454,6 +500,7 @@ func (r records) added(slug string) float64 { return r.best(slug, metricAdded) }
 func (b *builder) pick(candidates ...chain) string {
 	for _, group := range candidates {
 		for _, slug := range group {
+			slug = b.substituteFor(slug)
 			if b.lib.Has(slug) && !b.banned[slug] {
 				return slug
 			}

@@ -109,6 +109,10 @@ type Snapshot struct {
 	// Equipment is nil when unanswered and non-nil — possibly empty — once
 	// answered. An empty answer is a real constraint and is treated as one.
 	Equipment []string `json:"equipment"`
+	// Learning is the other skills the athlete is in the middle of. Straight-arm
+	// tissue has one budget, and it does not know which goal a set belonged to,
+	// so the planner has to be able to see the rest of the week's ambitions.
+	Learning []string `json:"learning"`
 }
 
 // BuildSnapshot is the single source of truth for "what level is this athlete".

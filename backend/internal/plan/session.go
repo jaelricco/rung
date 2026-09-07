@@ -160,10 +160,23 @@ func (s *sessionBuilder) prescribe(w work) {
 		}
 	}
 
+	// A movement with no history behind it starts small however strong the
+	// athlete is elsewhere. Almost every straight-arm injury follows a spike,
+	// and a first week at an experienced athlete's usual volume on a movement
+	// their tissue has never seen is exactly that spike.
+	if w.Intent == "skill" && s.novel(slug) {
+		sets = min(sets, 3)
+		block.Notes = "Nothing logged on this movement yet, so the numbers here are the rung's own standard " +
+			"rather than yours: treat the first session as finding out. Work up to one honest effort, log it, " +
+			"and everything after it scales from a real number. The volume stays deliberately below what you " +
+			"could probably do — new tissue load is where straight-arm injuries come from, not the set that " +
+			"felt hard. " + block.Notes
+	}
+
 	if w.MaxSets > 0 {
 		sets = min(sets, w.MaxSets)
-		block.Prescription = renumber(block.Prescription, sets)
 	}
+	block.Prescription = renumber(block.Prescription, sets)
 	s.write(w.Intent, slug, sets, block)
 }
 
@@ -196,12 +209,39 @@ func (s *sessionBuilder) literal(intent string, candidates chain, sets int, pres
 func (s *sessionBuilder) available(candidates ...chain) string {
 	for _, group := range candidates {
 		for _, slug := range group {
+			slug = s.substituteFor(slug)
 			if s.lib.Has(slug) && !s.banned[slug] && !s.used[slug] {
 				return slug
 			}
 		}
 	}
 	return ""
+}
+
+// maintenanceNote explains a maintenance block that had to change implement,
+// because "keep your planche" and "start a planche on rings" are not the same
+// instruction and the athlete deserves to know which one they got.
+func (s *sessionBuilder) maintenanceNote(step Step) string {
+	if len(step.Movement) == 0 {
+		return ""
+	}
+	original := step.Movement[0]
+	swapped := s.substituteFor(original)
+	if swapped == original {
+		return ""
+	}
+	return fmt.Sprintf("Your %s moves to %s while the wrist settles. On rings this is its own skill and it "+
+		"starts over, which is the cost of keeping it in the week at all. ",
+		strings.ToLower(s.exerciseName(original)), strings.ToLower(s.exerciseName(swapped)))
+}
+
+// novel reports that the athlete has never logged or declared this movement.
+func (s *sessionBuilder) novel(slug string) bool {
+	rec, ok := s.rec[slug]
+	if !ok {
+		return true
+	}
+	return rec.BestReps == nil && rec.BestHold == nil && rec.BestWeight == nil
 }
 
 func (s *sessionBuilder) measureOf(slug string) string {
@@ -347,6 +387,22 @@ func (s *sessionBuilder) skill(light bool) {
 		Standard: 8, HoldStandard: 30, Light: light, MaxSets: 4, Rest: 120,
 		Notes: "The drill, not the test. It is what makes the position above it possible.",
 	})
+
+	// The skills this one is built on, kept alive at maintenance volume. They
+	// are not the session's point, and they are not optional either.
+	for _, step := range s.maintains() {
+		if len(step.Movement) == 0 {
+			continue
+		}
+		s.prescribe(work{
+			Intent: "skill", Candidates: append(chain{}, step.Movement...),
+			Standard: step.Standard, Light: true, MaxSets: 3, Rest: 150,
+			Progression: "Held, not pushed. This is the base the new skill is built on, so it keeps its place " +
+				"in the week rather than growing in it.",
+			Notes: s.maintenanceNote(step) + "Maintenance, not development: clean efforts at a comfortable " +
+				"fraction of your best, enough that the position stays yours while the work above it happens.",
+		})
+	}
 
 	if light {
 		s.noteGreaseTheGroove()

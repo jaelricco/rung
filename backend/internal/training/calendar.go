@@ -14,9 +14,9 @@ import (
 )
 
 type CalendarEntry struct {
-	ID          string          `json:"id"`
-	PlanID      *string         `json:"plan_id"`
-	RoutineID   *string         `json:"routine_id"`
+	ID        string  `json:"id"`
+	PlanID    *string `json:"plan_id"`
+	RoutineID *string `json:"routine_id"`
 	// Source is plan, routine or manual: where this session came from, which
 	// is what decides whether editing it is editing one day or a template.
 	Source      string          `json:"source"`

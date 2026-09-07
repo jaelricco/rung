@@ -27,13 +27,13 @@ var validRegions = map[string]bool{
 // sequences them; it does not invent rehab of its own. Adding a protocol here
 // is how the app learns a new one.
 type Protocol struct {
-	Slug        string   `json:"slug"`
-	Region      string   `json:"region"`
-	Title       string   `json:"title"`
-	Purpose     string   `json:"purpose"` // "warmup" or "rehab"
-	Steps       []string `json:"steps"`
-	AvoidWhile  []string `json:"avoid_while"`
-	SeeClinician string  `json:"see_clinician"`
+	Slug         string   `json:"slug"`
+	Region       string   `json:"region"`
+	Title        string   `json:"title"`
+	Purpose      string   `json:"purpose"` // "warmup" or "rehab"
+	Steps        []string `json:"steps"`
+	AvoidWhile   []string `json:"avoid_while"`
+	SeeClinician string   `json:"see_clinician"`
 }
 
 // Protocols is intentionally small and hand-checked. Grow it deliberately.

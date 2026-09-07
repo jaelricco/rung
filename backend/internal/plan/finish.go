@@ -32,6 +32,9 @@ func (b *builder) finish(p *Plan, weeks []weekSpec) {
 		NextRung:    b.nextRungName(),
 		Ladder:      b.ladderView(),
 		Readiness:   b.readines,
+		EntryMet:    b.entryMet,
+		Gaps:        b.gaps,
+		Load:        b.load,
 	}
 }
 
@@ -39,6 +42,9 @@ func (b *builder) title() string {
 	step := b.currentStep()
 	if step.Name == "" {
 		return fmt.Sprintf("%s — %d weeks", b.goal.Name, b.req.Weeks)
+	}
+	if !b.entryMet {
+		return fmt.Sprintf("%s — %d weeks to the entry standards", b.goal.Name, b.req.Weeks)
 	}
 	return fmt.Sprintf("%s — %d weeks · %s", b.goal.Name, b.req.Weeks, step.Name)
 }
@@ -49,11 +55,18 @@ func (b *builder) title() string {
 func (b *builder) summary(weeks []weekSpec, step Step) string {
 	var parts []string
 
-	if len(b.ladder) > 0 {
+	switch {
+	case !b.entryMet:
+		parts = append(parts, fmt.Sprintf(
+			"This is not a %s plan yet. %s asks for %s first, and %s not on record, so these %d weeks "+
+				"close that gap instead. %s",
+			strings.ToLower(b.goal.Name), capitalise(b.goal.phrase()),
+			humanList(b.entryStandards()), b.gapVerb(), b.req.Weeks, b.evidence(step)))
+	case len(b.ladder) > 0:
 		parts = append(parts, fmt.Sprintf(
 			"This is rung %d of %d on the way to %s: %s. %s",
 			b.rung+1, len(b.ladder), b.goal.phrase(), step.Name, b.evidence(step)))
-	} else {
+	default:
 		parts = append(parts, "This is a balanced strength plan across pull, push, legs and core, "+
 			"built from the movements you have logged.")
 	}
@@ -78,7 +91,7 @@ func (b *builder) summary(weeks []weekSpec, step Step) string {
 	}
 
 	if len(b.restrictions) > 0 {
-		parts = append(parts, "Movements that load an open injury have been removed — see the restrictions below.")
+		parts = append(parts, "What an open injury or your equipment changed is in the restrictions below.")
 	}
 	if b.readines != "" {
 		parts = append(parts, b.readines)
@@ -254,6 +267,22 @@ func (b *builder) test(step Step) string {
 		return fmt.Sprintf("Pass: one clean %s, made and filmed. Fail: anything that needs an assist. "+
 			"Log it either way — the next plan is built from it.", strings.ToLower(name))
 	}
+}
+
+// entryStandards names what the goal asks for before it opens.
+func (b *builder) entryStandards() []string {
+	out := make([]string, 0, len(b.goal.Entry))
+	for _, req := range b.goal.Entry {
+		out = append(out, measure(req.Standard, req.Metric)+" of "+strings.ToLower(b.exerciseName(req.Slug)))
+	}
+	return out
+}
+
+func (b *builder) gapVerb() string {
+	if len(b.gaps) == 1 {
+		return "one of them is"
+	}
+	return fmt.Sprintf("%d of them are", len(b.gaps))
 }
 
 func (b *builder) nextRungName() string {
