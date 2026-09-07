@@ -265,6 +265,24 @@ app's vocabulary means adding rows, not loosening the prompt, which is why the
 library carries the progressions each skill is actually built from: negatives,
 band-assisted work, tuck and straddle steps, lean drills and joint preparation.
 
+**The reference data is authored in Go and projected into tables.**
+Exercises were always a table; the skills and their ladders, the injury
+regions, the rehab protocols, the equipment list and the maps saying which
+movement loads which joint were only Go values, which meant nothing could
+query or serve any of it. Migration `0015` adds the tables and
+`plan.SyncCatalogue` rewrites them on every boot.
+
+The direction is deliberate and worth stating, because the obvious move is the
+other one. CI runs `go test ./...` against no database, and the tests that hold
+the ladders together — that a rung is never easier than the one below it, that
+every slug exists, that an athlete lands where their records put them — are
+this app's main quality mechanism. Authoring the catalogue in SQL would mean
+standing up Postgres in CI or parsing SQL in the tests. So Go stays where it is
+written, where the compiler and the tests can see it, and the tables are where
+it is read from. They also carry foreign keys onto `exercises`, which is a
+stronger guarantee than the test that used to be the only thing checking those
+slugs were real: a bad slug now stops the app at boot.
+
 **The plan is computed first, and a model only ever improves it.**
 `internal/plan` writes a complete, checked, athlete-specific plan from the
 snapshot alone — no model account, no network beyond the database, no budget,
@@ -750,6 +768,8 @@ GET    /api/v1/auth/providers        which identity providers this server offers
 GET    /api/v1/auth/oauth/{p}/start  browser redirect; signed in, it links instead
 GET    /api/v1/auth/oauth/{p}/callback
 GET    /api/v1/exercises
+GET    /api/v1/skills
+       ^ every skill, its ladder, and what each rung is cleared at
 GET    /api/v1/protocols?region=wrist
 GET    /api/v1/parks?lat=&lng=&radius_km=
 ```

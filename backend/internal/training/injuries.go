@@ -18,22 +18,45 @@ type Injury struct {
 	ResolvedOn  *time.Time `json:"resolved_on"`
 }
 
-var validRegions = map[string]bool{
-	"wrist": true, "elbow": true, "shoulder": true, "chest": true, "back": true,
-	"core": true, "hip": true, "knee": true, "ankle": true, "other": true,
+// Region is a body area an injury can be recorded against. Ordered, because
+// the form shows them in this order and the reference table records it.
+type Region struct {
+	Key   string `json:"key"`
+	Label string `json:"label"`
 }
+
+var Regions = []Region{
+	{"wrist", "Wrist"},
+	{"elbow", "Elbow"},
+	{"shoulder", "Shoulder"},
+	{"chest", "Chest"},
+	{"back", "Back"},
+	{"core", "Core"},
+	{"hip", "Hip"},
+	{"knee", "Knee"},
+	{"ankle", "Ankle"},
+	{"other", "Somewhere else"},
+}
+
+var validRegions = func() map[string]bool {
+	out := make(map[string]bool, len(Regions))
+	for _, r := range Regions {
+		out[r.Key] = true
+	}
+	return out
+}()
 
 // Protocol is a curated prehab/rehab block. The model picks from these and
 // sequences them; it does not invent rehab of its own. Adding a protocol here
 // is how the app learns a new one.
 type Protocol struct {
-	Slug        string   `json:"slug"`
-	Region      string   `json:"region"`
-	Title       string   `json:"title"`
-	Purpose     string   `json:"purpose"` // "warmup" or "rehab"
-	Steps       []string `json:"steps"`
-	AvoidWhile  []string `json:"avoid_while"`
-	SeeClinician string  `json:"see_clinician"`
+	Slug         string   `json:"slug"`
+	Region       string   `json:"region"`
+	Title        string   `json:"title"`
+	Purpose      string   `json:"purpose"` // "warmup" or "rehab"
+	Steps        []string `json:"steps"`
+	AvoidWhile   []string `json:"avoid_while"`
+	SeeClinician string   `json:"see_clinician"`
 }
 
 // Protocols is intentionally small and hand-checked. Grow it deliberately.

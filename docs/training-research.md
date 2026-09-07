@@ -375,7 +375,230 @@ plan stops taking your word for it.
 
 ---
 
-## 7. What this means for an algorithm
+## 7. The tier above the full planche
+
+Everything above assumed a ceiling somewhere around a full planche or a full
+front lever. That ceiling was in the app, not in the sport. An athlete holding a
+twelve-second full planche is past the last rung of every ladder in §1, and the
+skills that come next — maltese, iron cross, one-arm handstand, planche press,
+front lever pull-up — do not behave like harder versions of what came before.
+Three things change.
+
+### Entry standards stop being advice and become a gate
+
+Below this tier, starting a progression early costs you a slow month. Here it
+costs a biceps tendon. So these skills carry prerequisites that are checked
+rather than suggested.
+
+**Maltese.** The commonly cited entry is a **full planche held 10–15 seconds in
+good form**, alongside a **straddle planche at 10–15 seconds**, a **back lever
+of at least 10 seconds**, and — because every honest progression is on rings —
+ring competence before ring skill
+([Calisthenics 101](https://www.calisthenics-101.co.uk/maltese-calisthenics),
+[Calisthenics world](https://calisthenicsworld.org/maltese/),
+[Caliathletics](https://caliathletics.com/knowledge/how-to-train-maltese/),
+[GymnasticBodies forum](https://www.gymnasticbodies.com/forum/topic/5286-maltese-ring-prerequisites-skipping-the-planche)).
+The back lever is not decoration: it is the cheapest available test of whether
+the biceps tendon tolerates a long lever with the shoulder open, which is
+exactly what maltese work asks for and exactly what it damages.
+
+**One-arm handstand.** A **comfortable 30–60 second two-arm handstand**, and
+the sources are unusually blunt that this means full mastery rather than a
+hard-won maximum: "the alignment, technique, control and comfort must be very
+high on two arms to the degree there is little challenge left in the basic
+drills". Then **20–30 seconds at each progression** before the next, and
+**1.5–3 years** to a first straddle one-arm even with good preparation
+([Handstand Factory](https://handstandfactory.com/articles/are-your-ready-for-the-one-arm-handstand/),
+[GMB](https://gmb.io/oahs/)).
+
+### The prerequisite does not stop mattering once you are past it
+
+The relationship between planche and maltese is reciprocal in *training effect*
+— you are learning one language of straight-arm, hollow-body control, so lever
+work and planche work feed each other — but it is **one-directional in
+sequencing**: planche is the base that builds the maltese, and the standard
+advice is to approach maltese only after the planche is genuinely held
+([Calisthenics world](https://calisthenicsworld.org/maltese/),
+[Gravgear](https://au.thegravgear.com/blogs/gymnastic-ring-training/maltese-cross-rings-gymnastics)).
+
+The practical consequence is the one most people get wrong: **the planche stays
+in the week**. An athlete who parks their planche to chase a maltese loses the
+thing that was driving the maltese, and ends up with neither. So a goal in this
+tier declares what feeds it, and those skills keep a maintenance slot — held,
+not pushed.
+
+### There is one tendon budget, and every skill spends from it
+
+Elite practice splits training by elbow position — straight-arm skills (planche,
+levers, cross) on their own days, bent-arm skills (HSPU, muscle-up, dips) on
+others — precisely so the straight-arm structures get a full week between
+exposures. High-strain statics sit around **3–4 days a week**, and the limiter
+is connective tissue rather than muscle
+([Coach Bachmann](https://www.coachbachmann.com/knowledgebase/the-ultimate-calisthenics-training-split-for-maximum-gains)).
+
+The framing worth stealing is the **tendon budget**: most calisthenics injuries
+appear after *a spike in training stress*, and **a new skill layers load onto
+tissue the previous skills did not prepare** — especially when it is added on
+top of an already high-volume routine
+([BULLBAR](https://bullbarfit.com/blogs/updates/calisthenics-injury-prevention-the-tendon-budget-approach-so-you-can-train-for-years)).
+Muscle adapts faster than tendon, so the athlete feels ready before the tissue
+is.
+
+There is no dose-response curve for elite statics to lean on, so the planner
+uses a deliberately blunt count: each maximal straight-arm skill costs 2–3
+units of a week that holds about 5. Four skills in flight is roughly double
+what one athlete recovers from, and the answer is to park, not to squeeze.
+
+### Adding a skill without getting hurt
+
+The rule that falls out of all of the above: **a movement with no history starts
+small regardless of how strong the athlete is elsewhere.** An experienced
+athlete's normal volume, applied to tissue that has never seen the position, is
+the spike. First exposures are capped, the first session is treated as finding
+the number rather than hitting one, and assistance (bands) comes down in small
+steps between blocks rather than inside a session
+([Gravgear](https://au.thegravgear.com/blogs/gymnastic-ring-training/maltese-cross-rings-gymnastics)).
+
+---
+
+## 8. Wrists, specifically
+
+This deserves its own section because the evidence points somewhere other than
+where the intuition does.
+
+A 2025 cross-sectional survey of **321 adult handstand practitioners** found
+chronic wrist pain in **182 of them — 56.7%**. The striking part is what it was
+*not* associated with: **no significant association with weekly training hours,
+warm-up routines, brace use, or grip device use.** Younger age was associated
+with *higher* prevalence
+([Martonovich et al., J. Funct. Morphol. Kinesiol. 2025](https://pubmed.ncbi.nlm.nih.gov/41133562/)).
+
+Read that carefully, because it inverts the usual advice. If wrist pain in this
+population does not track volume or warm-ups, then cutting sets and adding a
+wrist circuit is treating the wrong variable. What it does track is
+**how much load arrives through a wrist in extension** — the wrist has limited
+tolerance for sustained hyperextension, and axial load in that position readily
+exceeds what the carpal ligaments stabilise, with force going through the
+radiocarpal and midcarpal joints, the volar radiocarpal ligaments and the TFCC
+([StatPearls, TFCC](https://www.ncbi.nlm.nih.gov/books/NBK537055/),
+[Warringah Physio](https://www.warringahphysio.com.au/single-post/2020/06/22/wrist-pain-in-gymnastics)).
+Sustained end-range extension is also the mechanism behind **dorsal wrist
+impingement**, where soft tissue is repeatedly pinched between radius and
+carpals until the capsule thickens
+([Hooper's Beta](https://www.hoopersbeta.com/library/how-to-fix-ulnar-wrist-pain-tfcc-injury-recovery-guide),
+[E3 Rehab](https://e3rehab.com/wrist-pain-rehab/)).
+
+So for a **mild, chronic** wrist complaint the useful lever is the *position*,
+not the amount:
+
+| Instead of | Train | Why |
+| --- | --- | --- |
+| Floor planche | **Ring planche** | Neutral wrist; harder skill, no extension |
+| Dips, L-sits on the floor | **Rings, parallettes** | Wrist out of end-range |
+| Push-ups, planks | **Fists, knuckles** | Neutral |
+| Handstand on flat palms | **Fingertips, wedge, parallettes** | Reduces the extension angle |
+
+Deleting every wrist-loading movement — which is what a naive injury filter
+does — removes essentially the entire sport for a complaint that half of all
+hand balancers carry. That is not caution, it is uselessness.
+
+**Where the line is.** This substitution logic is for a niggle. Pain that has
+lasted months, wakes the athlete at night, or comes with numbness or clicking
+on rotation is a wrist that needs imaging and an in-person assessment, and a
+severe complaint still clears the region outright. Loading is managed the same
+way as any other tendon: isometrics for pain, reduce the provoking position,
+heavy slow resistance as tolerance returns (§3).
+
+---
+
+## 9. Two traditions build a maltese, and they are not the same ladder
+
+§7 built the maltese out of rings, from ring support and band-assisted crosses,
+because that is what the freely available sources describe. A structured
+calisthenics programme for planche and maltese — Cali-Aesthetics, paid, so the
+tables are not reproduced here — builds it entirely differently, and the
+difference is not cosmetic.
+
+In the **rings-gymnastics** lineage a maltese is a cross derivative: ring
+support, iron cross, L-cross, maltese. In the **floor-and-parallel-bars**
+lineage it is a planche whose hands keep travelling outward, and the ladder runs
+
+> lean maltese → **wide planche hold** → wide planche press → zanetti →
+> maltese elevator → maltese hold → maltese press
+
+The **wide planche** — hands wider than a planche, narrower than a maltese — is
+the rung §7 had no equivalent for at all, and it is the one that teaches the
+shoulder the angle. Across five documents of that programme, "back lever",
+"iron cross", "ring support" and "front lever" appear **zero** times; "rings"
+appears three times, as an implement variant at the very top. The prerequisites
+§7 took from the rings sources were being applied to a skill from the other
+tradition.
+
+This app follows the floor ladder, because that is the sport its athletes are
+in. The rings ladder survives as the iron cross, which is genuinely its own
+goal.
+
+### Gates belong on rungs, not on goals
+
+The same programme prescribes **lean maltese, banded, as an accessory block in
+its beginner workouts** — two sets of 5–10 seconds, at the end of the session.
+So "may I train toward a maltese" is the wrong question. Leaning into the
+position with a band is available early; *holding* and *pressing* it are not.
+
+A gate on the goal gets the first half wrong, so the prerequisites moved onto
+individual rungs. An athlete is then placed by their records and capped by the
+gate of the rung above — held one rung below what they have logged, with the
+number that would release them.
+
+### What the programme's own parameters are
+
+Counted across its beginner, intermediate, advanced and personal workouts:
+
+| | Values used |
+| --- | --- |
+| **Rest** | 5 min (64×), 3 min (32×), 2 min (29×), 4 min (18×), 7 min (6×) |
+| **Sets** | 5 (66×), 2 (60×), 3 (27×) |
+| **Holds** | 2–4s, 3–6s, 3–8s, 4–8s, 5–10s, 8–15s, 10–20s |
+| **Reps** | 1–3, 2–4, 3–5, 3–8, 5–10, 8–15 |
+
+Three things fall out of that, and all three contradicted what this app was
+doing:
+
+**Rest is 4 to 7 minutes for maximal work, at every level.** The beginner
+holding a tuck planche rests as long as the athlete pressing a maltese, because
+the rest is for the maximality of the position, not for the experience of the
+athlete. This app had been prescribing 2.5 to 3 minutes.
+
+**Everything is a range, never a point.** `5–10s`, `3–8r`. A range is met at the
+top on a good day and the bottom on a bad one without the plan being wrong
+either time. Computed targets are now snapped onto the nearest band from the
+lists above rather than printed as a single number.
+
+**Volume is held constant and difficulty is moved.** Five sets is the workhorse
+at every level; what changes between beginner and advanced is the variant and
+the assistance — band, neck band, elevated, parallel bars versus floor versus
+supinated grip, +2 kg ankle, +4 kg hips, +10 kg vest. That is the reverse of
+scaling sets by readiness, and for skill work it is the better way round.
+
+### The session is a span of the ladder
+
+Every workout in the programme has the same four-block shape:
+
+```
+2–3 sets   the hardest variant       5–7 min rest
+5 sets     the main rung             5 min
+5 sets     the rung below it         3–4 min
+2–3 sets   the easiest variant       2 min
+```
+
+Read against a ladder, that is not four arbitrary exercises — it is a span of
+rungs, hardest first while the athlete is completely fresh. The opener is two
+or three sets of the *next rung up*, attempted before anything has tired. A
+skill attempted at the end of a session is a skill rehearsed badly.
+
+---
+
+## 10. What this means for an algorithm
 
 Rules the generator implements directly, each traceable to a section above:
 
@@ -399,5 +622,24 @@ Rules the generator implements directly, each traceable to a section above:
     was left out for want of kit (§6).
 12. Take a stated figure when there is no logged one, mark every prescription
     built on it as stated, and let a logged set outrank it (§6).
-13. Anything it cannot do — diagnose, prescribe a diet, promise a full planche
+13. **Gate the elite skills on demonstrated prerequisites**, and when they are
+    not met, train the gaps instead of the skill and say which numbers are
+    missing (§7).
+14. **Keep the skills a goal is built on in the week** at maintenance volume,
+    rather than dropping them for the new one (§7).
+15. **Count every maximal skill against one tendon budget**, and name what to
+    park when the total exceeds what one athlete recovers from (§7).
+16. **Cap the first exposures to any movement with no history**, however strong
+    the athlete is elsewhere, and treat the first session as finding the number
+    (§7).
+17. For a **mild wrist**, change the position rather than the volume: swap onto
+    the neutral-wrist version where one exists, and remove only what has none
+    (§8).
+18. **Rest maximal straight-arm work for 4 to 7 minutes**, at every level, and
+    the accessories for two (§9).
+19. **Prescribe ranges, not point values**, snapped onto the bands the coaching
+    material actually uses (§9).
+20. **Open a straight-arm session with the rung above**, two or three sets,
+    before anything has tired (§9).
+21. Anything it cannot do — diagnose, prescribe a diet, promise a full planche
     in eight weeks — it declines to do, in writing (§1, §3, §5).

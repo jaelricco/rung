@@ -46,6 +46,14 @@ func main() {
 		log.Fatalf("migrations: %v", err)
 	}
 
+	// The reference tables are a projection of the Go catalogue, refreshed on
+	// every boot. A stale skills table is a worse read than a fresh one, but it
+	// is not a reason to refuse to serve training, so this warns rather than
+	// exits.
+	if err := plan.SyncCatalogue(startupCtx, pool); err != nil {
+		log.Printf("warning: could not refresh the reference tables: %v", err)
+	}
+
 	authSvc := auth.New(pool, cfg.SecureCookies, auth.OAuthConfig{
 		GoogleClientID:      cfg.GoogleClientID,
 		GoogleClientSecret:  cfg.GoogleClientSecret,
@@ -105,6 +113,7 @@ func main() {
 	mux.HandleFunc("GET /api/v1/auth/oauth/{provider}/callback", authSvc.OAuthCallback)
 	mux.HandleFunc("GET /api/v1/exercises", trainingSvc.ListExercises)
 	mux.HandleFunc("GET /api/v1/protocols", trainingSvc.ListProtocols)
+	mux.HandleFunc("GET /api/v1/skills", planHandler.Skills)
 	mux.HandleFunc("GET /api/v1/parks", parksSvc.Nearby)
 
 	// Authenticated

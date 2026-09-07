@@ -110,10 +110,18 @@ func (s *sessionBuilder) prescribe(w work) {
 		}
 		seconds, best, basis := s.holdWork(slug, standard)
 		sets = s.setCount(w.Base + 1) // statics are short, so an extra set is cheap
+		if w.Intent == "skill" && s.goal.StraightArm && w.Base >= 4 {
+			// Five sets is the workhorse across every level of the coaching
+			// material, and it does not scale with the athlete: what scales is
+			// the difficulty of the variant. Readiness still moves it, but from
+			// five rather than from three.
+			sets = clampInt(sets+1, 3, 6)
+		}
 		if w.Light {
 			sets, seconds = max(2, sets-1), max(3, seconds*2/3)
 		}
-		block.Prescription = fmt.Sprintf("%d × %ds hold", sets, seconds)
+		lo, hi := band(seconds, holdBands)
+		block.Prescription = fmt.Sprintf("%d × %d-%ds hold", sets, lo, hi)
 		block.Intensity = fmt.Sprintf("about %d%% of your best hold (%s)%s", int(s.week.Fraction*100),
 			secs(best), basis)
 		block.Tempo = ""
@@ -128,7 +136,8 @@ func (s *sessionBuilder) prescribe(w work) {
 		if w.Light {
 			sets, kg = max(2, sets-1), roundLoad(kg*0.7)
 		}
-		block.Prescription = fmt.Sprintf("%d × %d reps with +%s kg", sets, reps, kilos(kg))
+		lo, hi := band(reps, repBands)
+		block.Prescription = fmt.Sprintf("%d × %d-%d reps with +%s kg", sets, lo, hi, kilos(kg))
 		block.Intensity = s.week.Effort + " " + basis
 		block.Tempo = "3s down, drive up"
 		if block.Progression == "" {
@@ -151,7 +160,8 @@ func (s *sessionBuilder) prescribe(w work) {
 		if w.Light {
 			sets, reps = max(2, sets-1), max(2, reps*2/3)
 		}
-		block.Prescription = fmt.Sprintf("%d × %d reps", sets, reps)
+		lo, hi := band(reps, repBands)
+		block.Prescription = fmt.Sprintf("%d × %d-%d reps", sets, lo, hi)
 		block.Intensity = fmt.Sprintf("%s Your best set is %s%s.", s.week.Effort,
 			plural(int(best), "rep"), basis)
 		if block.Progression == "" {
@@ -160,10 +170,23 @@ func (s *sessionBuilder) prescribe(w work) {
 		}
 	}
 
+	// A movement with no history behind it starts small however strong the
+	// athlete is elsewhere. Almost every straight-arm injury follows a spike,
+	// and a first week at an experienced athlete's usual volume on a movement
+	// their tissue has never seen is exactly that spike.
+	if w.Intent == "skill" && s.novel(slug) {
+		sets = min(sets, 3)
+		block.Notes = "Nothing logged on this movement yet, so the numbers here are the rung's own standard " +
+			"rather than yours: treat the first session as finding out. Work up to one honest effort, log it, " +
+			"and everything after it scales from a real number. The volume stays deliberately below what you " +
+			"could probably do — new tissue load is where straight-arm injuries come from, not the set that " +
+			"felt hard. " + block.Notes
+	}
+
 	if w.MaxSets > 0 {
 		sets = min(sets, w.MaxSets)
-		block.Prescription = renumber(block.Prescription, sets)
 	}
+	block.Prescription = renumber(block.Prescription, sets)
 	s.write(w.Intent, slug, sets, block)
 }
 
@@ -196,12 +219,39 @@ func (s *sessionBuilder) literal(intent string, candidates chain, sets int, pres
 func (s *sessionBuilder) available(candidates ...chain) string {
 	for _, group := range candidates {
 		for _, slug := range group {
+			slug = s.substituteFor(slug)
 			if s.lib.Has(slug) && !s.banned[slug] && !s.used[slug] {
 				return slug
 			}
 		}
 	}
 	return ""
+}
+
+// maintenanceNote explains a maintenance block that had to change implement,
+// because "keep your planche" and "start a planche on rings" are not the same
+// instruction and the athlete deserves to know which one they got.
+func (s *sessionBuilder) maintenanceNote(step Step) string {
+	if len(step.Movement) == 0 {
+		return ""
+	}
+	original := step.Movement[0]
+	swapped := s.substituteFor(original)
+	if swapped == original {
+		return ""
+	}
+	return fmt.Sprintf("Your %s moves to %s while the wrist settles. On rings this is its own skill and it "+
+		"starts over, which is the cost of keeping it in the week at all. ",
+		strings.ToLower(s.exerciseName(original)), strings.ToLower(s.exerciseName(swapped)))
+}
+
+// novel reports that the athlete has never logged or declared this movement.
+func (s *sessionBuilder) novel(slug string) bool {
+	rec, ok := s.rec[slug]
+	if !ok {
+		return true
+	}
+	return rec.BestReps == nil && rec.BestHold == nil && rec.BestWeight == nil
 }
 
 func (s *sessionBuilder) measureOf(slug string) string {
@@ -234,16 +284,20 @@ func (s *sessionBuilder) protocols() []string {
 	// load, and this one is not going to be loaded.
 	kept := []string{}
 	for _, slug := range out {
-		if p, ok := s.lib.Protocols[slug]; ok && p.Purpose == "warmup" && s.injured[p.Region] {
+		if p, ok := s.lib.Protocols[slug]; ok && p.Purpose == "warmup" &&
+			(s.injured[p.Region] || s.spared[p.Region]) {
 			continue
 		}
 		kept = append(kept, slug)
 	}
+	// The cap applies to warm-ups. A rehab protocol for an open injury is the
+	// one thing in this list that is not optional, so it is appended after the
+	// trim rather than competing with the warm-ups for a place in it.
+	if len(kept) > 3 {
+		kept = kept[:3]
+	}
 	for _, slug := range s.rehab {
 		kept = appendUnique(kept, slug)
-	}
-	if len(kept) > 4 {
-		kept = kept[:4]
 	}
 	return s.lib.KeepProtocols(kept, nil)
 }
@@ -259,7 +313,7 @@ func (s *sessionBuilder) prep() {
 	if s.goal.StraightArm && skillDay {
 		s.literal("prep", chain{"elbow_prep_circuit", "band_dislocate"}, 2, "12 slow reps per position", Block{
 			Intensity:   "light — this is preparation, not training",
-			RestSeconds: 45,
+			RestSeconds: restPrep,
 			Progression: "Unchanged for the whole plan. It is the price of straight-arm work, not a thing to progress.",
 			Notes:       "Elbows locked, load taken slowly. If the inner elbow is already sore before you start, that is the session telling you to skip its straight-arm work.",
 		})
@@ -319,6 +373,27 @@ func (s *sessionBuilder) skill(light bool) {
 		intent = "strength"
 	}
 
+	// The opener: two sets of the next rung up, before anything has tired.
+	//
+	// Every session in the coaching material starts this way — the hardest
+	// variant of the day first, for two or three sets of a very short hold,
+	// then the main work below it. It is not extra volume; it is where the
+	// hardest thing gets attempted while the athlete can still hold a shape.
+	// A skill attempted at the end of a session is a skill rehearsed badly.
+	if !light && s.goal.StraightArm && s.rung+1 < len(s.ladder) {
+		next := s.ladder[s.rung+1]
+		if len(s.unmetGate(next)) == 0 {
+			s.prescribe(work{
+				Intent: "skill", Candidates: append(chain{}, next.Movement...),
+				Standard: next.Standard * 0.5, HoldStandard: next.Standard * 0.5,
+				Base: 2, MaxSets: 3, Rest: restOpener,
+				Progression: "This is the rung above the one you are training. It moves when the rung below it does.",
+				Notes: "Hardest thing first, while you are completely fresh, and deliberately few sets of it. " +
+					"Stop the moment the shape is not there — this block is a look at the next position, not a fight with it.",
+			})
+		}
+	}
+
 	// The rung itself, and only the rung. Falling back to its assist drill
 	// here would produce a session that looks like skill work and is not: if
 	// the movement this rung is measured on cannot be trained, the honest
@@ -327,7 +402,7 @@ func (s *sessionBuilder) skill(light bool) {
 	before := len(s.blocks)
 	s.prescribe(work{
 		Intent: intent, Candidates: append(chain{}, step.Movement...),
-		Standard: step.Standard, Light: light, Base: 4, Rest: restForSkill(s.week),
+		Standard: step.Standard, Light: light, Base: 4, Rest: restForSkill(s.week, s.goal.StraightArm),
 		Notes: "Stop the set the moment the shape breaks, not when the arms give out. " +
 			"Several clean efforts beat one taken to collapse — a position held to failure rehearses the failure.",
 	})
@@ -344,9 +419,25 @@ func (s *sessionBuilder) skill(light bool) {
 	// takes six months instead of two.
 	s.prescribe(work{
 		Intent: intent, Candidates: append(append(chain{}, step.Assist...), s.goal.Drills...),
-		Standard: 8, HoldStandard: 30, Light: light, MaxSets: 4, Rest: 120,
+		Standard: 8, HoldStandard: 30, Light: light, MaxSets: 4, Rest: restSecondary,
 		Notes: "The drill, not the test. It is what makes the position above it possible.",
 	})
+
+	// The skills this one is built on, kept alive at maintenance volume. They
+	// are not the session's point, and they are not optional either.
+	for _, step := range s.maintains() {
+		if len(step.Movement) == 0 {
+			continue
+		}
+		s.prescribe(work{
+			Intent: "skill", Candidates: append(chain{}, step.Movement...),
+			Standard: step.Standard, Light: true, MaxSets: 3, Rest: restSecondary,
+			Progression: "Held, not pushed. This is the base the new skill is built on, so it keeps its place " +
+				"in the week rather than growing in it.",
+			Notes: s.maintenanceNote(step) + "Maintenance, not development: clean efforts at a comfortable " +
+				"fraction of your best, enough that the position stays yours while the work above it happens.",
+		})
+	}
 
 	if light {
 		s.noteGreaseTheGroove()
@@ -415,7 +506,7 @@ func (s *sessionBuilder) strengthFor(pattern string) {
 		candidates, standard = s.coreChain(), 10
 	}
 	s.prescribe(work{
-		Intent: "strength", Candidates: candidates, Standard: standard, HoldStandard: 30, MaxSets: 5, Rest: 150,
+		Intent: "strength", Candidates: candidates, Standard: standard, HoldStandard: 30, MaxSets: 5, Rest: restSecondary,
 		Notes: "Full range, no bounce. The set is over when the speed of the rep changes, not when the count runs out.",
 	})
 }
@@ -435,7 +526,7 @@ func (s *sessionBuilder) accessories() {
 	if s.day.Hard {
 		s.prescribe(work{
 			Intent: "accessory", Candidates: s.balanceChain(), Standard: 12, HoldStandard: 30,
-			MaxSets: 3, Rest: 75,
+			MaxSets: 3, Rest: restAccessory,
 			Notes: "The counterweight to the hard work above it. This is the block that keeps the shoulder even.",
 		})
 	}
@@ -445,14 +536,14 @@ func (s *sessionBuilder) accessories() {
 	s.prescribe(work{
 		Intent:     "accessory",
 		Candidates: rotate(append(append(chain{}, s.goal.Accessories...), "band_face_pull", "australian_row", "bulgarian_split"), s.day.Day-1),
-		Standard:   12, HoldStandard: 30, MaxSets: 3, Rest: 75,
+		Standard:   12, HoldStandard: 30, MaxSets: 3, Rest: restAccessory,
 		Notes: "Volume, not a fight. Drop this before you drop a warm-up, and never before a main block.",
 	})
 
 	if s.day.Role != roleRecovery {
 		s.prescribe(work{
 			Intent: "accessory", Candidates: rotate(s.coreChain(), s.day.Day-1), Standard: 10, HoldStandard: 45,
-			MaxSets: 3, Rest: 60,
+			MaxSets: 3, Rest: 90,
 			Notes: "The moment the lower back lifts off the floor or the hips sag, the set is finished.",
 		})
 	}
@@ -692,11 +783,55 @@ func estimateMinutes(blocks []Block) int {
 	return clampInt(minutes, 20, 120)
 }
 
-func restForSkill(w weekSpec) int {
-	if w.Phase == phaseIntensifation {
-		return 180
+// Rest, as the coaching material actually prescribes it rather than as a
+// generic strength template would. Maximal straight-arm work rests 4 to 7
+// minutes between sets at every level — the beginner holding a tuck planche
+// rests as long as the athlete pressing a maltese, because the rest is for the
+// maximality of the position rather than for the athlete's experience. Nothing
+// in this app rested longer than three minutes before, which was simply wrong
+// for the work it was prescribing.
+const (
+	restOpener    = 420 // the hardest variant of the day, 2 to 3 sets of it
+	restMaximal   = 300 // straight-arm skill work
+	restSecondary = 210
+	restAccessory = 120
+	restPrep      = 45
+)
+
+func restForSkill(w weekSpec, straightArm bool) int {
+	if !straightArm {
+		// A first pull-up is not planche work, and five minutes between sets
+		// of band-assisted pull-ups is a way to spend an evening.
+		if w.Phase == phaseIntensifation {
+			return 180
+		}
+		return 150
 	}
-	return 150
+	return restMaximal
+}
+
+// The rep and second bands the programme prescribes in. Every prescription in
+// it is a range rather than a number, which is what lets an athlete meet it at
+// the top on a good day and the bottom on a bad one without the plan being
+// wrong either time. Computed targets are snapped onto the nearest band rather
+// than printed as a false point value.
+var holdBands = [][2]int{{2, 4}, {3, 6}, {3, 8}, {4, 8}, {5, 10}, {8, 15}, {10, 20}, {15, 30}, {20, 45}}
+var repBands = [][2]int{{1, 3}, {2, 4}, {3, 5}, {3, 8}, {5, 10}, {8, 15}, {12, 20}}
+
+// band picks the range whose lower bound sits closest to the computed target,
+// so a target of 7 seconds is prescribed as "5-10s" rather than as "7s".
+func band(target int, bands [][2]int) (int, int) {
+	best, distance := bands[0], 1<<30
+	for _, candidate := range bands {
+		d := target - candidate[0]
+		if d < 0 {
+			d = -d
+		}
+		if d < distance {
+			best, distance = candidate, d
+		}
+	}
+	return best[0], best[1]
 }
 
 func tempoFor(slug string) string {
