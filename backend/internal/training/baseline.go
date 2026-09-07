@@ -222,6 +222,20 @@ func (s *Service) PutBaseline(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	// Skill keys are not validated against the catalogue here: this package
+	// cannot see it without an import cycle, and the planner already ignores a
+	// key it does not recognise. What is worth refusing is the shape — an
+	// unbounded array on a field nobody reads back byte for byte.
+	if len(in.Learning) > 20 {
+		httpx.Fail(w, http.StatusBadRequest, "That's more skills than anyone is learning at once.")
+		return
+	}
+	for _, key := range in.Learning {
+		if key == "" || len(key) > 64 {
+			httpx.Fail(w, http.StatusBadRequest, "A skill entry is empty or improbably long.")
+			return
+		}
+	}
 	if len(in.Records) > 100 {
 		httpx.Fail(w, http.StatusBadRequest, "That's more baseline entries than the library has exercises.")
 		return

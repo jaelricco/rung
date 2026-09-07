@@ -769,7 +769,8 @@ GET    /api/v1/auth/oauth/{p}/start  browser redirect; signed in, it links inste
 GET    /api/v1/auth/oauth/{p}/callback
 GET    /api/v1/exercises
 GET    /api/v1/skills
-       ^ every skill, its ladder, and what each rung is cleared at
+       ^ every skill, its ladder, what each rung is cleared at, and what one
+         week of it costs against the tendon budget the baseline weighs
 GET    /api/v1/protocols?region=wrist
 GET    /api/v1/parks?lat=&lng=&radius_km=
 ```

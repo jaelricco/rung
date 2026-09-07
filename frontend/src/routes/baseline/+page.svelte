@@ -14,6 +14,8 @@
 	let goal = $state(page.url.searchParams.get('goal') ?? '');
 	let questions = $state([]);
 	let equipment = $state([]);
+	let skills = $state([]);
+	let ceiling = $state(5);
 	let goalMatched = $state(false);
 	let goalName = $state('');
 
@@ -24,6 +26,10 @@
 	// Whether the equipment question has been answered at all. Untouched, it
 	// is left out of the save so the server keeps treating it as unanswered.
 	let answered = $state(false);
+	// Which skills are in flight. Every one of them spends from the same
+	// tendon budget, which is why this is a question and not a guess.
+	let learning = $state(new Set());
+	let learningAnswered = $state(false);
 	let answers = $state({});
 
 	let error = $state(null);
@@ -37,12 +43,17 @@
 		loading = true;
 		error = null;
 		try {
-			const [form, current] = await Promise.all([
+			const [form, current, catalogue] = await Promise.all([
 				api.get(`/plan/benchmarks?goal=${encodeURIComponent(goal)}`),
-				api.get('/baseline')
+				api.get('/baseline'),
+				api.get('/skills')
 			]);
 			questions = form.questions ?? [];
 			equipment = form.equipment ?? [];
+			// Balanced strength is a fallback track rather than something you
+			// set out to learn, so it is not offered here.
+			skills = (catalogue.skills ?? []).filter((s) => !s.foundation);
+			ceiling = catalogue.tendon_ceiling ?? 5;
 			goalMatched = form.goal_matched ?? false;
 			goalName = form.goal ?? '';
 
@@ -53,6 +64,8 @@
 			// same as answering "none of it".
 			owned = new Set(current.equipment ?? []);
 			answered = current.equipment !== null && current.equipment !== undefined;
+			learning = new Set(current.learning ?? []);
+			learningAnswered = current.learning !== null && current.learning !== undefined;
 
 			const existing = {};
 			for (const record of current.records ?? []) {
@@ -86,6 +99,13 @@
 		answered = true;
 	}
 
+	function toggleLearning(key) {
+		const next = new Set(learning);
+		next.has(key) ? next.delete(key) : next.add(key);
+		learning = next;
+		learningAnswered = true;
+	}
+
 	function fieldFor(question) {
 		if (question.measure === 'static_hold') return { unit: 'seconds', key: 'hold_seconds' };
 		if (question.measure === 'weighted_reps') return { unit: 'added kg', key: 'added_kg' };
@@ -112,6 +132,7 @@
 			if (trainsPerWeek !== '') body.trains_per_week = Number(trainsPerWeek);
 			if (sleepHours !== '') body.sleep_hours = Number(sleepHours);
 			if (answered) body.equipment = [...owned];
+			if (learningAnswered) body.learning = [...learning];
 
 			await api.put('/baseline', body);
 			saved = true;
@@ -121,6 +142,30 @@
 			saving = false;
 		}
 	}
+
+	// The budget, computed here rather than waiting for the plan to say it:
+	// the moment to find out that a fourth maximal skill is one too many is
+	// while you are picking it.
+	let spent = $derived(
+		[...learning].reduce((total, key) => total + (skills.find((s) => s.key === key)?.cost ?? 1), 0)
+	);
+	let overBudget = $derived(spent > ceiling);
+
+	// Grouped by what each one costs, because that is the thing this section
+	// is trying to teach.
+	const TIERS = [
+		{ cost: 3, label: 'Maximal', note: 'Three units each. Two of these is already a full week.' },
+		{ cost: 2, label: 'Demanding', note: 'Two units each.' },
+		{ cost: 1, label: 'Everything else', note: 'One unit each.' }
+	];
+	let tiers = $derived(
+		TIERS.map((tier) => ({
+			...tier,
+			skills: skills
+				.filter((s) => (s.cost || 1) === tier.cost)
+				.sort((a, b) => a.name.localeCompare(b.name))
+		})).filter((tier) => tier.skills.length)
+	);
 
 	let core = $derived(questions.filter((q) => q.scope === 'core'));
 	let ladder = $derived(questions.filter((q) => q.scope !== 'core'));
@@ -190,6 +235,86 @@
 		</label>
 	{/each}
 </div>
+
+<div class="bar"></div>
+<p class="eyebrow">What you are learning right now</p>
+<p class="muted" style="font-size:0.85rem;margin:0.3rem 0 0.9rem;max-width:44rem">
+	Every maximal straight-arm skill spends from the same tendons, and they do not know which goal a
+	set belonged to. Naming what is already in flight is what lets a plan for a new skill say what to
+	park instead of quietly adding a fourth. Leave this untouched if you would rather it did not.
+</p>
+
+<div class="panel form-width" style="margin-bottom:1rem">
+	<div style="display:flex;align-items:baseline;gap:0.6rem;flex-wrap:wrap">
+		<strong style="font-size:1.05rem">{spent} of {ceiling}</strong>
+		<span class="muted" style="font-size:0.85rem">units of maximal straight-arm work a week</span>
+	</div>
+
+	<!-- One segment per unit the week holds, then overflow in the warning
+	     colour: the shape of being over budget, not just the number. -->
+	<div style="display:flex;gap:3px;margin-top:0.6rem">
+		{#each Array(Math.max(ceiling, spent)) as _, i (i)}
+			<span
+				style="flex:1 1 0;height:8px;border-radius:2px;background:{i < spent
+					? i < ceiling
+						? 'var(--signal)'
+						: 'var(--bad)'
+					: 'var(--line)'}"
+			></span>
+		{/each}
+	</div>
+
+	<p class="muted" style="font-size:0.85rem;margin:0.7rem 0 0">
+		{#if !learning.size}
+			Nothing selected. The plan will assume whatever you ask it for is the only thing you are
+			training.
+		{:else if overBudget}
+			<span style="color:var(--bad);font-weight:600">That is more than one athlete recovers from.</span
+			>
+			A plan for any of these will name which to park — cheapest first, and never the skill the
+			others are built on. Adding a skill without removing one is the shape almost every
+			straight-arm injury has.
+		{:else if spent === ceiling}
+			Full. Anything you add from here will push a plan into telling you what to drop.
+		{:else}
+			Inside what a week holds.
+		{/if}
+	</p>
+</div>
+
+{#if !loading && !skills.length}
+	<div class="notice form-width">
+		The skill catalogue came back empty, so there is nothing to pick from. Everything else on this
+		page still saves — this section is the only part affected.
+	</div>
+{/if}
+
+{#each tiers as tier (tier.cost)}
+	<p class="eyebrow" style="margin-top:1rem">{tier.label}</p>
+	<p class="muted" style="font-size:0.82rem;margin:0.2rem 0 0.5rem">{tier.note}</p>
+	<div class="grid">
+		{#each tier.skills as skill (skill.key)}
+			<label
+				class="panel"
+				style="display:flex;gap:0.6rem;align-items:flex-start;text-transform:none;letter-spacing:0;cursor:pointer"
+			>
+				<input
+					type="checkbox"
+					checked={learning.has(skill.key)}
+					onchange={() => toggleLearning(skill.key)}
+					style="width:auto;margin-top:0.25rem"
+				/>
+				<span>
+					<span style="font-weight:600">{skill.name}</span>
+					<span class="muted" style="font-size:0.78rem"> · {skill.cost} unit{skill.cost === 1 ? '' : 's'}</span>
+					{#if skill.frequency}
+						<span class="muted" style="display:block;font-size:0.8rem">{skill.frequency}</span>
+					{/if}
+				</span>
+			</label>
+		{/each}
+	</div>
+{/each}
 
 <div class="bar"></div>
 <div class="row form-width" style="align-items:flex-end">
