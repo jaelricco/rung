@@ -55,6 +55,18 @@ func SyncCatalogue(ctx context.Context, pool *pgxpool.Pool) error {
 	return tx.Commit(ctx)
 }
 
+// list makes a slice safe to send to a NOT NULL array column. A nil Go slice
+// encodes as SQL NULL, and Postgres does not fall back to a column default for
+// a value that was passed explicitly — so a goal with nothing to maintain took
+// the whole projection down rather than storing an empty list. It also carries
+// the named slice types (chain) over to the plain []string pgx encodes.
+func list[S ~[]E, E any](s S) []E {
+	if s == nil {
+		return []E{}
+	}
+	return []E(s)
+}
+
 func syncSkills(ctx context.Context, tx pgx.Tx) error {
 	for i, goal := range Goals {
 		_, err := tx.Exec(ctx, `
@@ -63,9 +75,9 @@ func syncSkills(ctx context.Context, tx pgx.Tx) error {
 			                    drills, accessories, risks)
 			values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,
 			goal.Key, i, goal.Name, goal.Phrase, goal.Pattern, goal.StraightArm, goal.Wrists,
-			goal.Foundation, goal.Cost, goal.Timeline, goal.Frequency,
-			[]string(goal.Aliases), goal.Feeds, []string(goal.Drills),
-			[]string(goal.Accessories), goal.Risks)
+			goal.Foundation, goal.Units(), goal.Timeline, goal.Frequency,
+			list(goal.Aliases), list(goal.Feeds), list(goal.Drills),
+			list(goal.Accessories), list(goal.Risks))
 		if err != nil {
 			return fmt.Errorf("skill %s: %w", goal.Key, err)
 		}
@@ -83,7 +95,7 @@ func syncSkills(ctx context.Context, tx pgx.Tx) error {
 				                         typical, movements, assists)
 				values ($1,$2,$3,$4,$5,$6,$7,$8)`,
 				goal.Key, position, step.Name, step.Metric, step.Standard, step.Typical,
-				[]string(step.Movement), []string(step.Assist))
+				list(step.Movement), list(step.Assist))
 			if err != nil {
 				return fmt.Errorf("skill %s step %d: %w", goal.Key, position, err)
 			}
@@ -121,7 +133,8 @@ func syncInjuryReference(ctx context.Context, tx pgx.Tx) error {
 			insert into protocols (slug, position, region, title, purpose, steps,
 			                       avoid_while, see_clinician)
 			values ($1,$2,$3,$4,$5,$6,$7,$8)`,
-			p.Slug, i, p.Region, p.Title, p.Purpose, p.Steps, p.AvoidWhile, p.SeeClinician); err != nil {
+			p.Slug, i, p.Region, p.Title, p.Purpose, list(p.Steps), list(p.AvoidWhile),
+			p.SeeClinician); err != nil {
 			return fmt.Errorf("protocol %s: %w", p.Slug, err)
 		}
 	}
@@ -144,7 +157,7 @@ func syncExerciseMaps(ctx context.Context, tx pgx.Tx) error {
 		for group, options := range requires[slug] {
 			if _, err := tx.Exec(ctx, `
 				insert into exercise_equipment (exercise_slug, group_no, options)
-				values ($1,$2,$3)`, slug, group, options); err != nil {
+				values ($1,$2,$3)`, slug, group, list(options)); err != nil {
 				return fmt.Errorf("equipment for %s: %w", slug, err)
 			}
 		}
@@ -162,7 +175,7 @@ func syncExerciseMaps(ctx context.Context, tx pgx.Tx) error {
 	for _, slug := range sortedKeys(regions) {
 		if _, err := tx.Exec(ctx, `
 			insert into exercise_regions (exercise_slug, regions) values ($1,$2)`,
-			slug, regions[slug]); err != nil {
+			slug, list(regions[slug])); err != nil {
 			return fmt.Errorf("regions for %s: %w", slug, err)
 		}
 	}
@@ -170,7 +183,7 @@ func syncExerciseMaps(ctx context.Context, tx pgx.Tx) error {
 	for _, category := range sortedKeys(byCategory) {
 		if _, err := tx.Exec(ctx, `
 			insert into category_regions (category, regions) values ($1,$2)`,
-			category, byCategory[category]); err != nil {
+			category, list(byCategory[category])); err != nil {
 			return fmt.Errorf("category %s: %w", category, err)
 		}
 	}
@@ -187,7 +200,7 @@ func syncExerciseMaps(ctx context.Context, tx pgx.Tx) error {
 	for _, r := range training.Rubrics() {
 		if _, err := tx.Exec(ctx, `
 			insert into level_rubrics (exercise_slug, metric, cuts) values ($1,$2,$3)`,
-			r.Slug, r.Metric, r.Cuts); err != nil {
+			r.Slug, r.Metric, list(r.Cuts)); err != nil {
 			return fmt.Errorf("rubric for %s: %w", r.Slug, err)
 		}
 	}

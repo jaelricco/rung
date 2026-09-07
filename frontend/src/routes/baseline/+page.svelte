@@ -146,8 +146,11 @@
 	// The budget, computed here rather than waiting for the plan to say it:
 	// the moment to find out that a fourth maximal skill is one too many is
 	// while you are picking it.
+	// One place decides what a skill costs, so the meter and the grouping below
+	// can never disagree about it. No skill is free: an unpriced one is a unit.
+	const units = (skill) => skill?.cost || 1;
 	let spent = $derived(
-		[...learning].reduce((total, key) => total + (skills.find((s) => s.key === key)?.cost ?? 1), 0)
+		[...learning].reduce((total, key) => total + units(skills.find((s) => s.key === key)), 0)
 	);
 	let overBudget = $derived(spent > ceiling);
 
@@ -162,7 +165,7 @@
 		TIERS.map((tier) => ({
 			...tier,
 			skills: skills
-				.filter((s) => (s.cost || 1) === tier.cost)
+				.filter((s) => units(s) === tier.cost)
 				.sort((a, b) => a.name.localeCompare(b.name))
 		})).filter((tier) => tier.skills.length)
 	);
@@ -306,7 +309,9 @@
 				/>
 				<span>
 					<span style="font-weight:600">{skill.name}</span>
-					<span class="muted" style="font-size:0.78rem"> · {skill.cost} unit{skill.cost === 1 ? '' : 's'}</span>
+					<span class="muted" style="font-size:0.78rem">
+						· {units(skill)} unit{units(skill) === 1 ? '' : 's'}
+					</span>
 					{#if skill.frequency}
 						<span class="muted" style="display:block;font-size:0.8rem">{skill.frequency}</span>
 					{/if}
