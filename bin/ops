@@ -10,6 +10,7 @@
 #   bin/ops deploy-tag <tag>    deploy one specific tag
 #   bin/ops backup              dump the database now
 #   bin/ops migrate-status      which migrations have run
+#   bin/ops catalogue           row counts of the reference tables
 #   bin/ops prune               reclaim disk from old images
 #
 # Each of these dispatches the `ops` workflow, waits for it, and prints what
@@ -22,8 +23,11 @@ ARG="${2:-}"
 LINES="${3:-120}"
 
 case "$ACTION" in
--h | --help | help) sed -n '2,18p' "$0"; exit 0 ;;
-status | health | logs | restart | redeploy | rollback | deploy-tag | backup | migrate-status | prune) ;;
+# The comment block at the top is the help, however long it grows. It used to
+# be a line range, which meant adding an action printed the first line of code
+# along with it.
+-h | --help | help) awk 'NR > 1 { if (!/^#/) exit; print }' "$0"; exit 0 ;;
+status | health | logs | restart | redeploy | rollback | deploy-tag | backup | migrate-status | catalogue | prune) ;;
 *) die "unknown action: $ACTION (try: bin/ops --help)" ;;
 esac
 
