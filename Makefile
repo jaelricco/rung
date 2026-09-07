@@ -10,7 +10,7 @@ BUILD := $(COMPOSE) -f compose.yaml -f compose.build.yaml
 LIVE = $$(sed -n 's/^IMAGE_TAG=//p' .env | tail -n1)
 
 .PHONY: help deploy deploy-tag rollback redeploy build-deploy up down restart rebuild \
-        logs ps health version history migrate-status psql backup prune
+        logs ps health version history migrate-status catalogue psql backup prune
 
 help: ## Show this list
 	@grep -hE '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) | sort | \
@@ -69,6 +69,32 @@ history: ## Recent deploys
 migrate-status:
 	$(COMPOSE) exec db psql -U $${POSTGRES_USER:-cali} -d $${POSTGRES_DB:-cali} \
 		-c "select version, applied_at from schema_migrations order by version;"
+
+# The reference tables are rewritten from the Go catalogue on every boot, and a
+# projection that fails warns rather than exiting — so the server stays healthy
+# and the tables stay empty. That happened, and there was no way to ask about it
+# from outside. This is the way to ask.
+CATALOGUE_COUNTS := \
+	select 1 as ord, 'skills' as name, count(*) as rows from skills \
+	union all select  2, 'skill_steps',          count(*) from skill_steps \
+	union all select  3, 'skill_requirements',   count(*) from skill_requirements \
+	union all select  4, 'injury_regions',       count(*) from injury_regions \
+	union all select  5, 'protocols',            count(*) from protocols \
+	union all select  6, 'equipment',            count(*) from equipment \
+	union all select  7, 'exercise_equipment',   count(*) from exercise_equipment \
+	union all select  8, 'exercise_regions',     count(*) from exercise_regions \
+	union all select  9, 'category_regions',     count(*) from category_regions \
+	union all select 10, 'exercise_substitutes', count(*) from exercise_substitutes \
+	union all select 11, 'level_rubrics',        count(*) from level_rubrics
+
+catalogue: ## Row counts of the reference tables the Go catalogue projects into
+	@$(COMPOSE) exec -T db psql -U $${POSTGRES_USER:-cali} -d $${POSTGRES_DB:-cali} \
+		-c "select name, rows from ($(CATALOGUE_COUNTS)) t order by ord;" \
+		-c "select case when count(*) filter (where rows = 0) > 0 \
+		         then count(*) filter (where rows = 0) || ' of ' || count(*) || \
+		              ' tables are empty — the projection did not run; see the api log at boot' \
+		         else 'all ' || count(*) || ' tables populated' \
+		    end as catalogue from ($(CATALOGUE_COUNTS)) t;"
 
 psql:
 	$(COMPOSE) exec db psql -U $${POSTGRES_USER:-cali} -d $${POSTGRES_DB:-cali}

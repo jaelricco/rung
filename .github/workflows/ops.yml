@@ -25,6 +25,7 @@ on:
           - deploy-tag      # deploy one specific tag
           - backup          # dump the database now
           - migrate-status  # which migrations have run
+          - catalogue       # row counts of the reference tables
           - prune           # reclaim disk from old images
       service:
         description: "logs/restart: api, web, db, caddy (blank = all)"
@@ -131,6 +132,10 @@ jobs:
               deploy-tag) registry; sync_repo; bash infra/deploy.sh "$TAG" ;;
               backup)     make backup && ls -lh backups | tail -3 ;;
               migrate-status) make migrate-status ;;
+              # The projection warns and lets the app serve rather than
+              # exiting, so empty reference tables look exactly like healthy
+              # ones from outside. This is how to tell them apart.
+              catalogue)      make catalogue ;;
               prune)
                 df -h / | tail -1
                 docker image prune -af >/dev/null
