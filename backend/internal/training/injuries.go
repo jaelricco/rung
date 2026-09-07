@@ -50,19 +50,99 @@ var validRegions = func() map[string]bool {
 // sequences them; it does not invent rehab of its own. Adding a protocol here
 // is how the app learns a new one.
 type Protocol struct {
-	Slug         string   `json:"slug"`
-	Region       string   `json:"region"`
-	Title        string   `json:"title"`
-	Purpose      string   `json:"purpose"` // "warmup" or "rehab"
+	Slug    string `json:"slug"`
+	Region  string `json:"region"`
+	Title   string `json:"title"`
+	Purpose string `json:"purpose"` // "warmup" or "rehab"
+	// Phase is where in a session this belongs, and it is what the session
+	// page groups by. The four warm-up phases are RAMP as the research states
+	// it — raise, mobilise, potentiate, with joint preparation named
+	// separately because in this sport it is the part that gets skipped.
+	// A rehab protocol is not a warm-up phase and carries PhaseRehab.
+	Phase        string   `json:"phase"`
 	Steps        []string `json:"steps"`
 	AvoidWhile   []string `json:"avoid_while"`
 	SeeClinician string   `json:"see_clinician"`
 }
 
+// The phases a session is performed in, in order. Blocks fill PhaseSpecific
+// and PhaseTraining by their intent; everything else is protocol work.
+const (
+	PhaseJoint    = "joint"
+	PhaseMuscular = "muscular"
+	PhaseMobility = "mobility"
+	PhaseSpecific = "specific"
+	PhaseTraining = "training"
+	PhaseCooldown = "cooldown"
+	PhaseRehab    = "rehab"
+)
+
+// SessionPhases is the running order, with the name each phase is shown under.
+// It is served with the protocols so the page and the planner cannot disagree
+// about either the set of phases or the order they come in.
+var SessionPhases = []struct {
+	Key   string `json:"key"`
+	Label string `json:"label"`
+	Note  string `json:"note"`
+}{
+	{PhaseJoint, "Joint Warm Up",
+		"Every joint the session will load, taken through its range unloaded. Slow, and never into pain."},
+	{PhaseMuscular, "Muscular Warm Up",
+		"Raise temperature and blood flow. You should be warm and slightly out of breath before anything hard."},
+	{PhaseMobility, "Mobility / Dynamic Stretching",
+		"Moving through range, not holding an end position. Long static holds before training cost strength for the next hour."},
+	{PhaseSpecific, "Specific Warm-Up",
+		"The movements of this session, at a fraction of the effort. This is rehearsal and potentiation, not training."},
+	{PhaseTraining, "Training",
+		"The session itself, in the order it is written: skill and straight-arm work while fresh, then strength, then the rest."},
+	{PhaseCooldown, "Cooldown",
+		"Bring the breathing down and move gently through what was worked."},
+}
+
 // Protocols is intentionally small and hand-checked. Grow it deliberately.
 var Protocols = []Protocol{
+	// The three that open every session. They were one protocol until the
+	// session page started showing the warm-up as the phases it is actually
+	// performed in — at which point "general_warmup" turned out to be four
+	// lines belonging to four different phases, which is exactly the warm-up
+	// an athlete skips three quarters of.
 	{
-		Slug: "wrist_warmup", Region: "wrist", Title: "Wrist preparation", Purpose: "warmup",
+		Slug: "joint_warmup", Region: "other", Title: "Joints, unloaded", Purpose: "warmup", Phase: PhaseJoint,
+		Steps: []string{
+			"Ankles, knees and hips: 10 slow circles each, from the ground up.",
+			"Spine: 10 cat-cows, then 10 seated rotations each way.",
+			"Shoulders: 10 slow circles back, 10 forward, arms long.",
+			"Elbows: 10 full flexions and extensions, then 10 rotations of the forearm.",
+			"Wrists: 10 circles each way, then 10 slow flexions and extensions per hand.",
+		},
+		AvoidWhile:   []string{},
+		SeeClinician: "A joint that is painful before it has been loaded at all is not a warm-up problem.",
+	},
+	{
+		Slug: "muscular_warmup", Region: "other", Title: "Raise", Purpose: "warmup", Phase: PhaseMuscular,
+		Steps: []string{
+			"Five minutes of easy cardio — skipping, rowing, a brisk walk — until you are warm and slightly out of breath.",
+			"Push-ups at half effort: 2 sets of 10.",
+			"Rows or an active hang at half effort: 2 sets of 10.",
+			"Bodyweight squats: 1 set of 15, unhurried.",
+		},
+		AvoidWhile:   []string{},
+		SeeClinician: "",
+	},
+	{
+		Slug: "mobility_warmup", Region: "other", Title: "Mobilise", Purpose: "warmup", Phase: PhaseMobility,
+		Steps: []string{
+			"Band or stick dislocates: 2 sets of 10, straight arms, as wide as you need.",
+			"Wall slides: 2 sets of 10, ribs down.",
+			"Deep squat, 5 slow rocks side to side, then stand and repeat once.",
+			"Leg swings, front to back and across: 10 each way per leg.",
+			"Thoracic rotations on all fours: 8 per side.",
+		},
+		AvoidWhile:   []string{},
+		SeeClinician: "",
+	},
+	{
+		Slug: "wrist_warmup", Region: "wrist", Title: "Wrist preparation", Purpose: "warmup", Phase: PhaseJoint,
 		Steps: []string{
 			"Palms down on the floor, fingers forward: rock forward and back, 10 slow reps.",
 			"Palms down, fingers pointing back toward the knees: rock back gently, 10 reps.",
@@ -74,7 +154,7 @@ var Protocols = []Protocol{
 		SeeClinician: "Wrist pain that persists beyond two weeks, or any numbness or tingling, needs a clinician rather than a warm-up.",
 	},
 	{
-		Slug: "wrist_rehab_light", Region: "wrist", Title: "Wrist irritation: reduced-load work", Purpose: "rehab",
+		Slug: "wrist_rehab_light", Region: "wrist", Title: "Wrist irritation: reduced-load work", Purpose: "rehab", Phase: PhaseRehab,
 		Steps: []string{
 			"Move floor pressing to parallettes or push-up handles so the wrist stays neutral.",
 			"Replace straight-arm floor holds with hanging work for two weeks.",
@@ -86,7 +166,7 @@ var Protocols = []Protocol{
 		SeeClinician: "Swelling, night pain, or pain that has not improved in two weeks should be assessed in person.",
 	},
 	{
-		Slug: "straight_arm_warmup", Region: "elbow", Title: "Straight-arm and elbow preparation", Purpose: "warmup",
+		Slug: "straight_arm_warmup", Region: "elbow", Title: "Straight-arm and elbow preparation", Purpose: "warmup", Phase: PhaseSpecific,
 		Steps: []string{
 			"Scapular pull-ups: 2 sets of 8, slow and controlled.",
 			"German hang, easing in: 2 holds of 20 seconds.",
@@ -98,7 +178,7 @@ var Protocols = []Protocol{
 		SeeClinician: "Inner elbow pain that sharpens on straight-arm loading is common and slow to heal; get it looked at early.",
 	},
 	{
-		Slug: "shoulder_warmup", Region: "shoulder", Title: "Shoulder preparation", Purpose: "warmup",
+		Slug: "shoulder_warmup", Region: "shoulder", Title: "Shoulder preparation", Purpose: "warmup", Phase: PhaseMobility,
 		Steps: []string{
 			"Band shoulder dislocates: 2 sets of 10, straight arms, wide grip.",
 			"Scapular push-ups: 2 sets of 10.",
@@ -110,7 +190,7 @@ var Protocols = []Protocol{
 		SeeClinician: "Pain with overhead reaching that does not settle within two weeks, or any sense of instability, needs assessment.",
 	},
 	{
-		Slug: "shoulder_rehab_light", Region: "shoulder", Title: "Shoulder irritation: reduced-load work", Purpose: "rehab",
+		Slug: "shoulder_rehab_light", Region: "shoulder", Title: "Shoulder irritation: reduced-load work", Purpose: "rehab", Phase: PhaseRehab,
 		Steps: []string{
 			"Pause all overhead pressing and dips until pain-free at rest.",
 			"Keep pulling volume but reduce range: stop the pull-up short of full extension for two weeks.",
@@ -122,7 +202,7 @@ var Protocols = []Protocol{
 		SeeClinician: "Weakness rather than pain, or pain waking you at night, should be assessed promptly.",
 	},
 	{
-		Slug: "chest_shoulder_girdle_warmup", Region: "chest", Title: "Chest and girdle preparation", Purpose: "warmup",
+		Slug: "chest_shoulder_girdle_warmup", Region: "chest", Title: "Chest and girdle preparation", Purpose: "warmup", Phase: PhaseMuscular,
 		Steps: []string{
 			"Push-ups at half effort: 2 sets of 10.",
 			"Band chest flyes: 2 sets of 15.",
@@ -132,8 +212,10 @@ var Protocols = []Protocol{
 		AvoidWhile:   []string{"sharp pain at the sternum"},
 		SeeClinician: "A sudden tearing sensation during a dip or press needs urgent assessment.",
 	},
+	// Retained because sessions saved before the split still name it. The
+	// planner no longer selects it.
 	{
-		Slug: "general_warmup", Region: "other", Title: "General session warm-up", Purpose: "warmup",
+		Slug: "general_warmup", Region: "other", Title: "General session warm-up", Purpose: "warmup", Phase: PhaseMuscular,
 		Steps: []string{
 			"Five minutes of easy cardio to raise temperature.",
 			"Wrist preparation circuit.",

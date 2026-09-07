@@ -130,10 +130,10 @@ func syncInjuryReference(ctx context.Context, tx pgx.Tx) error {
 	}
 	for i, p := range training.Protocols {
 		if _, err := tx.Exec(ctx, `
-			insert into protocols (slug, position, region, title, purpose, steps,
+			insert into protocols (slug, position, region, title, purpose, phase, steps,
 			                       avoid_while, see_clinician)
-			values ($1,$2,$3,$4,$5,$6,$7,$8)`,
-			p.Slug, i, p.Region, p.Title, p.Purpose, list(p.Steps), list(p.AvoidWhile),
+			values ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+			p.Slug, i, p.Region, p.Title, p.Purpose, p.Phase, list(p.Steps), list(p.AvoidWhile),
 			p.SeeClinician); err != nil {
 			return fmt.Errorf("protocol %s: %w", p.Slug, err)
 		}

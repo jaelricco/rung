@@ -40,7 +40,7 @@
 						{#if block.intensity}<span class="mono">{block.intensity}</span>{/if}
 						{#if block.tempo}<span class="mono">tempo {block.tempo}</span>{/if}
 						{#if block.notes}<span>{block.notes}</span>{/if}
-						{#if block.progression}<span class="next">Next week: {block.progression}</span>{/if}
+						{#if block.progression}<span class="next">{block.progression}</span>{/if}
 					</td>
 				</tr>
 			{/if}

@@ -1,0 +1,12 @@
+-- Where in a session a protocol belongs.
+--
+-- The warm-up was one general protocol plus whatever the session's regions
+-- asked for, and it rendered as a comma-separated line of slugs. Naming the
+-- phase makes the session page able to lay a session out in the order it is
+-- performed: joints, raise, mobilise, the specific warm-up, the training
+-- itself, and the cool-down.
+--
+-- Like every column in 0015 this is a projection of the Go catalogue, rewritten
+-- by plan.SyncCatalogue on every boot. The default is the phase a protocol
+-- written before this migration would have belonged to.
+alter table protocols add column phase text not null default 'muscular';
