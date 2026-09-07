@@ -825,6 +825,7 @@ GET    /api/v1/calendar?from=&to=
 GET    /api/v1/calendar.ics
 POST   /api/v1/sessions          {scheduled_on, body}
 GET    /api/v1/sessions/{id}     one session, with its warm-up resolved
+PUT    /api/v1/sessions/{id}/progress {done_protocols[], done_blocks[]}
 PATCH  /api/v1/sessions/{id}     {scheduled_on?, body?}
 DELETE /api/v1/sessions/{id}
 POST   /api/v1/sessions/{id}/complete
