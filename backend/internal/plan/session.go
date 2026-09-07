@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"math"
 	"strings"
+
+	"calisthenics/api/internal/training"
 )
 
 // One session, assembled. The order of the blocks is the order they are
@@ -121,7 +123,7 @@ func (s *sessionBuilder) prescribe(w work) {
 			sets, seconds = max(2, sets-1), max(3, seconds*2/3)
 		}
 		lo, hi := band(seconds, holdBands)
-		block.Prescription = fmt.Sprintf("%d × %d-%ds hold", sets, lo, hi)
+		block.Prescription = fmt.Sprintf("%d-%ds hold", lo, hi)
 		block.Intensity = fmt.Sprintf("about %d%% of your best hold (%s)%s", int(s.week.Fraction*100),
 			secs(best), basis)
 		block.Tempo = ""
@@ -137,7 +139,7 @@ func (s *sessionBuilder) prescribe(w work) {
 			sets, kg = max(2, sets-1), roundLoad(kg*0.7)
 		}
 		lo, hi := band(reps, repBands)
-		block.Prescription = fmt.Sprintf("%d × %d-%d reps with +%s kg", sets, lo, hi, kilos(kg))
+		block.Prescription = fmt.Sprintf("%d-%d reps with +%s kg", lo, hi, kilos(kg))
 		block.Intensity = s.week.Effort + " " + basis
 		block.Tempo = "3s down, drive up"
 		if block.Progression == "" {
@@ -147,7 +149,7 @@ func (s *sessionBuilder) prescribe(w work) {
 
 	case "skill_attempt":
 		sets = max(3, s.setCount(w.Base))
-		block.Prescription = fmt.Sprintf("%d × 2 quality attempts", sets)
+		block.Prescription = "2 quality attempts"
 		block.Intensity = "full effort on each attempt, fully rested before the next"
 		block.Tempo = ""
 		if block.Progression == "" {
@@ -161,7 +163,7 @@ func (s *sessionBuilder) prescribe(w work) {
 			sets, reps = max(2, sets-1), max(2, reps*2/3)
 		}
 		lo, hi := band(reps, repBands)
-		block.Prescription = fmt.Sprintf("%d × %d-%d reps", sets, lo, hi)
+		block.Prescription = fmt.Sprintf("%d-%d reps", lo, hi)
 		block.Intensity = fmt.Sprintf("%s Your best set is %s%s.", s.week.Effort,
 			plural(int(best), "rep"), basis)
 		if block.Progression == "" {
@@ -263,12 +265,14 @@ func (s *sessionBuilder) measureOf(slug string) string {
 
 // ---------- the parts of a session ----------
 
-// protocols picks the warm-up. RAMP in the app's own vocabulary: the general
-// warm-up raises, and the region protocols activate and mobilise whatever this
+// protocols picks the warm-up. RAMP as the research states it: joints first,
+// then raise, then mobilise, and the region protocols prepare whatever this
 // session is about to load. A rehab protocol for an open injury is never
 // dropped, whatever else is on.
 func (s *sessionBuilder) protocols() []string {
-	out := []string{"general_warmup"}
+	// Every session opens with these three, because every session loads
+	// joints, and none of them depends on what the session is.
+	out := []string{"joint_warmup", "muscular_warmup", "mobility_warmup"}
 	if s.goal.StraightArm && (s.day.Role == roleSkill || s.day.Role == roleLightSkill || s.isTest) {
 		out = appendUnique(out, "straight_arm_warmup")
 	}
@@ -290,16 +294,33 @@ func (s *sessionBuilder) protocols() []string {
 		}
 		kept = append(kept, slug)
 	}
-	// The cap applies to warm-ups. A rehab protocol for an open injury is the
-	// one thing in this list that is not optional, so it is appended after the
-	// trim rather than competing with the warm-ups for a place in it.
-	if len(kept) > 3 {
-		kept = kept[:3]
+
+	// The cap is per phase rather than over the whole list. A flat cap was
+	// fine when the warm-up was one general protocol plus regions; against a
+	// list that now opens with three, it would have cut every region protocol
+	// the session actually needed. Two in a phase is already several minutes.
+	const perPhase = 2
+	seen := map[string]int{}
+	trimmed := []string{}
+	for _, slug := range kept {
+		phase := training.PhaseMuscular
+		if p, ok := s.lib.Protocols[slug]; ok {
+			phase = p.Phase
+		}
+		if seen[phase] >= perPhase {
+			continue
+		}
+		seen[phase]++
+		trimmed = append(trimmed, slug)
 	}
+
+	// A rehab protocol for an open injury is the one thing in this list that
+	// is not optional, so it is appended after the trim rather than competing
+	// with the warm-ups for a place in it.
 	for _, slug := range s.rehab {
-		kept = appendUnique(kept, slug)
+		trimmed = appendUnique(trimmed, slug)
 	}
-	return s.lib.KeepProtocols(kept, nil)
+	return s.lib.KeepProtocols(trimmed, nil)
 }
 
 // prep is the joint work that has to happen before the session, not the

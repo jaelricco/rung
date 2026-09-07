@@ -553,14 +553,13 @@ h2 {
 	padding: 0.3rem 0.4rem;
 	cursor: pointer;
 	transition: none;
+	/* A calendar entry is a link to the session's own tab, and a link that
+	   looks like a link here would put an underline through every day. */
+	text-decoration: none;
 }
 .cal-item:hover:not(:disabled) {
 	border-color: var(--signal);
 	filter: none;
-}
-.cal-item.on {
-	background: var(--panel-lift);
-	border-color: var(--signal);
 }
 /* The colour of the bar is how hard the session is, so the label does not
    have to spend its few characters saying so. */

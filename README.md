@@ -824,6 +824,7 @@ POST   /api/v1/injuries/{id}/resolve
 GET    /api/v1/calendar?from=&to=
 GET    /api/v1/calendar.ics
 POST   /api/v1/sessions          {scheduled_on, body}
+GET    /api/v1/sessions/{id}     one session, with its warm-up resolved
 PATCH  /api/v1/sessions/{id}     {scheduled_on?, body?}
 DELETE /api/v1/sessions/{id}
 POST   /api/v1/sessions/{id}/complete

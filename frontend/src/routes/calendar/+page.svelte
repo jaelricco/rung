@@ -1,7 +1,7 @@
 <script>
 	import { api } from '$lib/api.js';
+	import { page } from '$app/state';
 	import { session } from '$lib/session.svelte.js';
-	import SessionDetail from '$lib/SessionDetail.svelte';
 	import SessionEditor from '$lib/SessionEditor.svelte';
 	import {
 		DAY_SHORT,
@@ -25,7 +25,6 @@
 	let exercises = $state([]);
 	let error = $state('');
 	let busyId = $state('');
-	let openId = $state('');
 	// The session being written, if any: a new one on a day, or an existing
 	// one opened for correction.
 	let editor = $state(null);
@@ -42,8 +41,12 @@
 			.catch((e) => (error = e.message));
 	});
 
+	// reloads is bumped to ask for the calendar again without moving the window.
+	let reloads = $state(0);
+
 	$effect(() => {
 		if (!session.user) return;
+		reloads;
 		const query = `?from=${isoDate(from)}&to=${isoDate(to)}`;
 		Promise.all([api.get(`/calendar${query}`), api.get('/plans')])
 			.then(([cal, saved]) => {
@@ -51,6 +54,35 @@
 				plans = saved;
 			})
 			.catch((e) => (error = e.message));
+	});
+
+	// A session is performed in its own tab, and marked done there. Coming back
+	// to this one should not show a week that is out of date by an hour.
+	$effect(() => {
+		const refresh = () => (reloads += 1);
+		window.addEventListener('focus', refresh);
+		return () => window.removeEventListener('focus', refresh);
+	});
+
+	// The session page sends corrections back here: ?edit=<id> opens that
+	// session in the editor, and ?on=<date> makes sure the week holding it is
+	// the week being shown, since the editor works from the loaded calendar.
+	let editRequest = $state('');
+	$effect(() => {
+		const wanted = page.url.searchParams.get('edit') ?? '';
+		const on = page.url.searchParams.get('on') ?? '';
+		if (!wanted || wanted === editRequest) return;
+		editRequest = wanted;
+		if (on) anchor = mondayOf(new Date(`${on}T00:00:00`));
+	});
+
+	$effect(() => {
+		if (!editRequest) return;
+		const found = (calendar?.sessions ?? []).find((s) => s.id === editRequest);
+		if (found) {
+			startEdit(found);
+			editRequest = '';
+		}
 	});
 
 	// The API answers with a flat list of dated sessions; the grid wants them
@@ -82,10 +114,6 @@
 	});
 
 	let scheduled = $derived((calendar?.sessions ?? []).length);
-	let open = $derived(
-		(calendar?.sessions ?? []).find((s) => s.id === openId) ?? null
-	);
-
 	// The month a cell belongs to is only worth saying on the first of it.
 	function dayLabel(date) {
 		const day = date.getDate();
@@ -94,14 +122,12 @@
 
 	function shift(weeks) {
 		anchor = addDays(anchor, weeks * 7);
-		openId = '';
 	}
 
 	// ---------- writing sessions straight onto a day ----------
 
 	function startNew(iso) {
 		editor = { id: '', scheduled_on: iso, body: blankSession('') };
-		openId = '';
 	}
 
 	function startEdit(entry) {
@@ -139,32 +165,7 @@
 				...calendar,
 				sessions: (calendar?.sessions ?? []).filter((s) => s.id !== entry.id)
 			};
-			if (openId === entry.id) openId = '';
 			if (editor?.id === entry.id) editor = null;
-		} catch (e) {
-			error = e.message;
-		} finally {
-			busyId = '';
-		}
-	}
-
-	const SOURCES = {
-		routine: 'From your routine — a change here is for this week only',
-		plan: 'From a plan',
-		manual: 'Written by you'
-	};
-
-	async function toggle(entry) {
-		busyId = entry.id;
-		error = '';
-		try {
-			if (entry.completed_at) {
-				await api.del(`/sessions/${entry.id}/complete`);
-				entry.completed_at = null;
-			} else {
-				await api.post(`/sessions/${entry.id}/complete`, {});
-				entry.completed_at = new Date().toISOString();
-			}
 		} catch (e) {
 			error = e.message;
 		} finally {
@@ -183,7 +184,6 @@
 				...calendar,
 				sessions: (calendar?.sessions ?? []).filter((s) => s.plan_id !== plan.id)
 			};
-			openId = '';
 		} catch (e) {
 			error = e.message;
 		} finally {
@@ -196,7 +196,8 @@
 <h1>Your calendar</h1>
 <p class="muted column" style="margin-top:0.6rem">
 	Every session on the day it falls, wherever it came from: a plan, your repeating routine, or typed
-	straight onto a day here. Open one to see the work; tick it off when it is done.
+	straight onto a day here. Opening one gives you the session in its own tab, in the order it is
+	performed — joints, warm-up, mobility, the specific warm-up, the training, the cool-down.
 </p>
 
 {#if error}
@@ -244,6 +245,19 @@
 				{busyId === 'editor' ? 'Saving…' : editor.id ? 'Save changes' : 'Add to calendar'}
 			</button>
 			<button class="ghost" style="flex:0 0 auto" onclick={() => (editor = null)}>Cancel</button>
+			{#if editor.id}
+				{@const entry = (calendar?.sessions ?? []).find((s) => s.id === editor.id)}
+				{#if entry}
+					<button
+						class="link"
+						style="flex:0 0 auto"
+						onclick={() => removeSession(entry)}
+						disabled={busyId === entry.id}
+					>
+						Remove
+					</button>
+				{/if}
+			{/if}
 			<p class="note" style="flex:1 1 auto;margin:0;text-align:right">
 				Training the same week every week? <a href="/routine">Save it as a routine</a> instead.
 			</p>
@@ -284,15 +298,17 @@
 				{/each}
 
 				{#each day.entries as entry (entry.id)}
-					<button
+					<a
 						class="cal-item"
-						class:on={openId === entry.id}
 						class:done={entry.completed_at}
-						onclick={() => (openId = openId === entry.id ? '' : entry.id)}
+						href={`/session/${entry.id}`}
+						target="_blank"
+						rel="noopener"
+						title={`Open ${entry.title} in a new tab`}
 					>
 						<span class="title">{entry.title}</span>
 						<span class="meta">{sessionShape(entry.body)}</span>
-					</button>
+					</a>
 				{/each}
 
 				<button
@@ -306,40 +322,6 @@
 			</div>
 		{/each}
 
-		{#if open && week.days.some((day) => day.iso === open.scheduled_on)}
-				<div class="cal-detail">
-					<div class="cal-detail-head">
-					<p class="eyebrow" style="margin:0">{formatDate(open.scheduled_on)}</p>
-					<strong class="item-title" style="flex:1 1 auto">{open.title}</strong>
-					<button
-						class="ghost"
-						style="padding:0.35rem 0.7rem;font-size:0.8rem"
-						onclick={() => toggle(open)}
-						disabled={busyId === open.id}
-					>
-						{open.completed_at ? 'Done — undo' : 'Mark done'}
-					</button>
-					<button
-						class="ghost"
-						style="padding:0.35rem 0.7rem;font-size:0.8rem"
-						onclick={() => startEdit(open)}
-					>
-						Edit
-					</button>
-					<button class="link" onclick={() => removeSession(open)} disabled={busyId === open.id}>
-						Remove
-					</button>
-					<button class="link" onclick={() => (openId = '')}>Close</button>
-				</div>
-				<p class="lede" style="margin:0 0 0.6rem">
-					{open.focus}
-					<span class="note">
-						{open.focus ? ' · ' : ''}{SOURCES[open.source] ?? ''}
-					</span>
-				</p>
-				<SessionDetail session={open.body} />
-			</div>
-		{/if}
 	{/each}
 </div>
 

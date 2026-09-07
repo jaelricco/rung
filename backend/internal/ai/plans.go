@@ -433,7 +433,7 @@ Return JSON in exactly this shape:
         {"exercise_slug": "slug_from_library",
          "intent": "one of: prep, skill, strength, accessory, conditioning",
          "sets": 4,
-         "prescription": "e.g. 6-8 reps, or 4x12s hold",
+         "prescription": "the work of ONE set, with sets carried separately: e.g. 6-8 reps, or 12s hold",
          "intensity": "e.g. 2 reps in reserve, or 60%% of best hold",
          "tempo": "e.g. 3s down, 1s pause",
          "rest_seconds": 120,

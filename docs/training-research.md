@@ -169,9 +169,20 @@ worse rehearsal and a higher-risk one.
 
 Warm-up follows **RAMP** — Raise, Activate, Mobilise, Potentiate
 ([Human Kinetics](https://humankinetics.me/2019/03/04/what-is-the-ramp-warm-up/),
-[Teambuildr](https://blog.teambuildr.com/understanding-and-implementing-the-ramp-protocol)) —
-which maps onto the app's protocol library: general raise, then the region
-protocol for the day, then ramp-up sets of the first main movement.
+[Teambuildr](https://blog.teambuildr.com/understanding-and-implementing-the-ramp-protocol)).
+
+Every protocol carries the phase it belongs to, and a session is performed and
+displayed in six named parts: **joint warm-up**, **muscular warm-up** (raise),
+**mobility and dynamic stretching** (mobilise), **specific warm-up**
+(potentiate — the movements of the session at a fraction of the effort),
+**training**, **cool-down**. Joint preparation is named separately from the
+rest of RAMP rather than folded into activation, because in a sport loading
+wrists and elbows at full extension it is the part that gets skipped and the
+part the injury tables are about.
+
+Mobilise means moving through range, not holding an end position: static
+stretching immediately before training reduces strength for roughly the next
+hour, which is the wrong hour.
 
 ### Spacing
 
