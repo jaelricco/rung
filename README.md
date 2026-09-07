@@ -269,7 +269,7 @@ band-assisted work, tuck and straddle steps, lean drills and joint preparation.
 Exercises were always a table; the skills and their ladders, the injury
 regions, the rehab protocols, the equipment list and the maps saying which
 movement loads which joint were only Go values, which meant nothing could
-query or serve any of it. Migration `0011` adds the tables and
+query or serve any of it. Migration `0015` adds the tables and
 `plan.SyncCatalogue` rewrites them on every boot.
 
 The direction is deliberate and worth stating, because the obvious move is the

@@ -1,15 +1,15 @@
 -- The maltese as calisthenics trains it, rather than as gymnastics does.
 --
--- Migration 0009 built the maltese out of rings: support hold, band-assisted
+-- Migration 0013 built the maltese out of rings: support hold, band-assisted
 -- cross, tuck and straddle maltese. That is the rings-gymnastics lineage, and
 -- it is a real one — but it is not the tradition this app's athletes are in.
 -- In the floor-and-parallel-bars lineage a maltese is a planche whose hands
 -- keep travelling outward, and the ladder to it runs through a *wide planche*
--- — hands wider than a planche, narrower than a maltese — which 0009 had no
+-- — hands wider than a planche, narrower than a maltese — which 0013 had no
 -- rung for at all.
 --
 -- These are the movements that ladder is actually made of. The rings rows from
--- 0009 stay: they are still what the iron cross is built from, and still the
+-- 0013 stay: they are still what the iron cross is built from, and still the
 -- neutral-wrist substitutions an angry wrist needs.
 insert into exercises (slug, name, category, measure, difficulty, description) values
     -- The band between planche and maltese.
