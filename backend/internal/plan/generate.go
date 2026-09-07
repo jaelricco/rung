@@ -452,6 +452,49 @@ func (b *builder) place() {
 			break
 		}
 	}
+
+	b.stepDownToWhatIsTrainable()
+}
+
+// stepDownToWhatIsTrainable moves the athlete to the highest rung an injury or
+// their equipment has not taken away.
+//
+// The planner used to place them and then discover, block by block, that the
+// rung's movement was banned — at which point the session stopped being about
+// the skill at all and said so. That is the right answer when the whole ladder
+// is gone and the wrong one when it is not, and the hefesto is what made the
+// difference obvious: its first two rungs are a german hang and a back lever,
+// neither of which touches a wrist, while everything above them finishes with
+// bodyweight on the palms behind the body. A sore wrist should cost that
+// athlete the top of the ladder, not the skill.
+func (b *builder) stepDownToWhatIsTrainable() {
+	if b.trainable(b.currentStep()) {
+		return
+	}
+	for i := b.rung - 1; i >= 0; i-- {
+		if !b.trainable(b.ladder[i]) {
+			continue
+		}
+		b.restrictions = append(b.restrictions, fmt.Sprintf(
+			"%s is where your records put you, and nothing on it can be trained around what you have "+
+				"open, so this plan works at %s instead. That is a lower rung, not a smaller goal: the "+
+				"ladder is climbed from wherever you can stand on it.",
+			b.ladder[b.rung].Name, strings.ToLower(b.ladder[i].Name)))
+		b.rung = i
+		return
+	}
+}
+
+// trainable reports whether any movement this rung is measured on survives the
+// injury and equipment filters, once substitutions have been applied.
+func (b *builder) trainable(step Step) bool {
+	for _, slug := range step.Movement {
+		slug = b.substituteFor(slug)
+		if b.lib.Has(slug) && !b.banned[slug] {
+			return true
+		}
+	}
+	return false
 }
 
 // unmetGate reports the rung's own prerequisites that this athlete has not

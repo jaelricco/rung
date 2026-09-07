@@ -366,14 +366,30 @@ extent of the catalogue, and it meant the budget under-counted anyone training
 a maximal pull and the focus dial could not ration a week around a skill it did
 not know about.
 
-Two skills fill it, both of them a direction out of the front lever. The **SAT**
+Four skills fill it. Three are directions out of the front lever. The **SAT**
 is the front lever with the arms opened to the maximum on a straight bar — the
 bar's answer to the rings victorian, and to the front lever exactly what the
 maltese is to the planche, so it gets the same shape of ladder including the
 half-way rung tradition runs through: a wide-grip front lever. The **one-arm
 front lever** is the same hands, one of them, and follows the ordinary
 tuck-to-straddle progression because shortening a lever looks the same
-whichever arm holds it. Neither carries an entry gate on the goal, because the
+whichever arm holds it. The **victorian** is the SAT on rings — one skill on
+two implements, with the rung the rings tradition runs through that the bar
+version has no equivalent for (a one-leg hold between the tuck and the
+straddle) and without the wrist question, because the ring turns with the
+forearm. That is why it is what an angry wrist trains the SAT as, rung for
+rung.
+
+The fourth is the **hefesto**, and it is the odd one: a pull rather than a
+hold, pulled from a german hang, over the bar, into a korean dip. Its ladder is
+therefore mostly other people's skills, which is not a shortcut but what the
+movement is assembled from — german hang, back lever, korean dip, then
+negatives, banded, tucked, full. The korean dip is gated on fifteen strict dips
+and a thirty-second german hang, because below that it is an unprepared
+shoulder working at the end of its range; the negatives are gated on the korean
+dip, because you cannot lower out of a position you cannot get into. Unlike the
+SAT it has no neutral-wrist form: the rings do not save this one, and a plan
+written around a sore wrist says so. Neither carries an entry gate on the goal, because the
 first rung of both *is* the front lever: an athlete who does not have one is
 placed there and trains it, and nothing has to refuse them. The gates sit on
 the rungs above — twelve then twenty seconds of front lever for the SAT plus a
@@ -386,11 +402,21 @@ one to park. The SAT's wrists rest on the bar in extension, so its rungs are
 wrist-loading and substitute onto the rings victorian, where the ring turns
 with the forearm.
 
-Adding them exposed a fault that was already there: the baseline form derived
-its questions from a ladder's rungs, so a rung gated on something off the
-ladder — the maltese on a full planche, the SAT on a front lever touch — asked
-for nothing, read "nothing logged or declared" for ever and held the athlete a
-rung below where they were. It now asks for every gate and entry standard too.
+Adding them exposed three faults that were already there. The baseline form
+derived its questions from a ladder's rungs, so a rung gated on something off
+the ladder — the maltese on a full planche, the SAT on a front lever touch —
+asked for nothing, read "nothing logged or declared" for ever and held the
+athlete a rung below where they were; it now asks for every gate and entry
+standard too. Placement used to leave an athlete on a rung an injury had taken
+away and then discover it block by block, at which point the session stopped
+being about the skill — right when the whole ladder is gone, wrong when it is
+not, and the hefesto makes the difference obvious because its first two rungs
+touch no wrist and everything above them does; placement now steps down to the
+highest rung that survives the filters and says which one it came from. And the
+opener — two sets of the rung above, attempted fresh — is suppressed when that
+rung's own gate is unmet, machinery that already existed and had nothing
+pointed at it until a hefesto ladder put a back lever one rung above somebody
+with no shoulder-extension tolerance at all.
 
 **Accessories are chosen at the athlete's level, not from a list.** The
 supporting work used to come from fixed chains, and a fixed chain keeps

@@ -449,6 +449,125 @@ var Goals = []Goal{
 		Frequency: "Two SAT sessions a week at the most, with a full recovery day either side.",
 	},
 	{
+		Key: "victorian", Phrase: "the victorian", Name: "Victorian", Pattern: patternPull, StraightArm: true, Cost: 3,
+		Aliases: []string{"victorian", "victorian cross", "ring victorian", "rings victorian", "viktorian"},
+		Timeline: "Years past a front lever that is owned rather than reached, and it is the same wait as the SAT " +
+			"because it is the same position.",
+		// The SAT and the victorian are one skill on two implements: the front
+		// lever with the arms opened to the maximum, on a bar or on rings. So
+		// this ladder is the SAT's, with the rung the rings tradition runs
+		// through and the bar version does not — a one-leg hold between the
+		// tuck and the straddle — and with the wrist question absent, because
+		// the ring turns with the forearm instead of the forearm being
+		// pressed against a bar. That is also why it is what an angry wrist
+		// trains the SAT as.
+		Feeds: []string{"front_lever"},
+		Ladder: []Step{
+			{Name: "Held front lever", Movement: chain{"front_lever"}, Metric: metricHold, Standard: 15,
+				Assist: chain{"front_lever_row"}, Typical: "the base, and everything here waits on it"},
+			{Name: "Tuck victorian", Movement: chain{"tuck_victorian"}, Metric: metricHold, Standard: 20,
+				Assist: chain{"band_victorian", "box_victorian"}, Typical: "6 to 18 months, banded at first",
+				Gate: []Requirement{
+					{Slug: "front_lever", Metric: metricHold, Standard: 12,
+						Why: "The arms only open on a lever you can hold. Twelve seconds is the floor the coaching sources put under any victorian work."},
+				}},
+			{Name: "One-leg victorian", Movement: chain{"one_leg_victorian"}, Metric: metricHold, Standard: 10,
+				Assist: chain{"tuck_victorian"}, Typical: "a year or more — the rung the rings ladder has and the bar one does not",
+				Gate: []Requirement{
+					{Slug: "front_lever", Metric: metricHold, Standard: 20,
+						Why: "Opening one leg out is the point where this stops being a tuck. Twenty seconds is what the sources mean by a front lever you have mastered rather than achieved."},
+				}},
+			{Name: "Straddle victorian", Movement: chain{"straddle_victorian"}, Metric: metricHold, Standard: 6,
+				Assist: chain{"band_victorian", "one_leg_victorian"}, Typical: "a year or more past the one-leg hold",
+				Gate: []Requirement{
+					{Slug: "tuck_victorian", Metric: metricHold, Standard: 15,
+						Why: "The tuck is where the shoulder learns this angle. Straddling out of one you cannot hold for fifteen seconds is arriving at the load before the position."},
+				}},
+			{Name: "Victorian", Movement: chain{"victorian"}, Metric: metricHold, Standard: 3,
+				Assist: chain{"straddle_victorian", "band_victorian"}, Typical: "the goal, and very few people arrive",
+				Gate: []Requirement{
+					{Slug: "straddle_victorian", Metric: metricHold, Standard: 5,
+						Why: "You close the legs on a position you can already hold open, or you close them into a fall."},
+					{Slug: "front_lever", Metric: metricHold, Standard: 20,
+						Why: "The same floor, and it does not move: the front lever is what keeps driving this."},
+				}},
+		},
+		Drills:      chain{"front_lever_raise", "front_lever_row", "ice_cream_maker", "ring_support_hold"},
+		Accessories: chain{"weighted_pull_up", "front_lever_row", "german_hang", "band_face_pull"},
+		Risks: []string{
+			"The biceps tendon and the front of the shoulder take this skill, exactly as they take the maltese, and both fail slowly and then suddenly.",
+			"Rings punish what a bar forgives: the hold is unstable in every direction, so a rung is held clean or it is not held.",
+			"Reduce the band between blocks, never inside a session. If the hips drop early, the band comes back rather than the next attempt.",
+			"Victorian work does not replace front lever work. The lever is what keeps driving it, so it stays in the week.",
+		},
+		Frequency: "Two victorian sessions a week at the most, with a full recovery day either side.",
+	},
+	{
+		Key: "hefesto", Phrase: "the hefesto", Name: "Hefesto", Pattern: patternPull, StraightArm: true, Wrists: true, Cost: 3,
+		Aliases: []string{"hefesto", "hephaestus", "backwards muscle up", "back muscle up", "hefesto pull"},
+		Timeline: "A year or more from a back lever and fifteen strict dips, and the shoulders set the pace " +
+			"rather than the arms.",
+		// The one skill at this end of the catalogue that is a pull rather
+		// than a hold, and the one whose ladder is mostly other people's
+		// skills. It starts in a german hang, passes through a back lever and
+		// finishes in a korean dip, so the first three rungs are exactly those
+		// three things — and the last three are the movement itself, which is
+		// the only part that is not already in the library.
+		//
+		// It carries the straight-arm flag despite being a bent-arm pull. The
+		// flag is what puts elbow preparation in front of a session, and a
+		// movement that starts under load with the arms straight behind the
+		// body is the last thing that should skip it.
+		Feeds: []string{"back_lever"},
+		Ladder: []Step{
+			{Name: "Shoulder extension", Movement: chain{"german_hang"}, Metric: metricHold, Standard: 30,
+				Assist: chain{"skin_the_cat"}, Typical: "2 to 6 weeks, and rushed at your shoulder's expense"},
+			{Name: "Back lever", Movement: chain{"back_lever"}, Metric: metricHold, Standard: 10,
+				Assist: chain{"straddle_back_lever"}, Typical: "the position the pull passes through",
+				Gate: []Requirement{
+					{Slug: "german_hang", Metric: metricHold, Standard: 20,
+						Why: "A back lever is a german hang with a longer lever. Twenty seconds of the short one first is the difference between a shoulder that is being trained and one that is being surprised."},
+				}},
+			{Name: "Korean dip", Movement: chain{"korean_dip"}, Metric: metricReps, Standard: 8,
+				Assist: chain{"dip", "german_hang"}, Typical: "6 to 18 months from fifteen strict dips",
+				Gate: []Requirement{
+					{Slug: "dip", Metric: metricReps, Standard: 15,
+						Why: "Fifteen strict dips is the base the sources put under a korean dip. Below it you are asking an unprepared shoulder to work at the end of its range."},
+					{Slug: "german_hang", Metric: metricHold, Standard: 30,
+						Why: "The korean dip forces the shoulders behind the body, and the german hang is the cheapest test of whether they will go there under load."},
+				}},
+			{Name: "Hefesto negatives", Movement: chain{"hefesto_negative"}, Metric: metricReps, Standard: 5,
+				Assist: chain{"korean_dip"}, Typical: "3 to 9 months, and where most of the strength is built",
+				Gate: []Requirement{
+					{Slug: "korean_dip", Metric: metricReps, Standard: 5,
+						Why: "A negative is lowered out of the korean dip position. You cannot lower out of a position you cannot get into."},
+				}},
+			{Name: "Band-assisted hefesto", Movement: chain{"band_hefesto"}, Metric: metricReps, Standard: 5,
+				Assist: chain{"hefesto_negative"}, Typical: "3 to 9 months, band coming down one step per block"},
+			{Name: "Tuck hefesto", Movement: chain{"tuck_hefesto"}, Metric: metricReps, Standard: 3,
+				Assist: chain{"band_hefesto"}, Typical: "6 to 18 months",
+				Gate: []Requirement{
+					{Slug: "back_lever", Metric: metricHold, Standard: 15,
+						Why: "The pull passes through a back lever, and it passes through it under acceleration. Fifteen seconds of holding one still is the floor under that."},
+				}},
+			{Name: "Hefesto", Movement: chain{"hefesto"}, Metric: metricReps, Standard: 2,
+				Assist: chain{"tuck_hefesto", "hefesto_negative"}, Typical: "the goal",
+				Gate: []Requirement{
+					{Slug: "korean_dip", Metric: metricReps, Standard: 8,
+						Why: "The korean dip is the half of this that happens after the hard part. Arriving there without it is arriving somewhere you cannot hold."},
+				}},
+		},
+		Drills:      chain{"skin_the_cat", "german_hang", "korean_dip", "hefesto_negative"},
+		Accessories: chain{"german_hang", "skin_the_cat", "dip", "band_face_pull"},
+		Risks: []string{
+			"This is the most shoulder-extended loaded position in the sport, and the anatomy has a hard limit at roughly ninety degrees. Sharp pain here is a stop, not a cue to warm up more.",
+			"The biceps tendon works at full length against a moving load. That is the mechanism behind the injury tables' worst entries, and the reason the elbow preparation in front of these sessions is not optional.",
+			"Build the eccentric before the concentric. Negatives are where this is actually earned, and the sources are unanimous that people who skip them are the people who get hurt.",
+			"Hefesto work does not replace back lever work. The lever is what keeps the shoulder tolerant of the position, so it stays in the week.",
+		},
+		Frequency: "Two sessions a week at the most, low reps, stopped the moment the shoulder complains.",
+	},
+	{
 		Key: "one_arm_front_lever", Phrase: "the one-arm front lever", Name: "One-arm front lever",
 		Pattern: patternPull, StraightArm: true, Cost: 3,
 		Aliases: []string{"one arm front lever", "one-arm front lever", "oafl", "einarmiger front lever",
@@ -942,6 +1061,13 @@ var wristLoaded = map[string]bool{
 	// instead, and it is not on this list for exactly that reason.
 	"box_victorian": true, "tuck_sat": true, "adv_tuck_sat": true,
 	"straddle_sat": true, "sat": true, "band_sat": true,
+	// The korean dip and everything built on it finish with bodyweight on the
+	// palms with the hands behind the body, which is the wrist at the far end
+	// of extension carrying the lot. The rings victorian is deliberately not
+	// here: the ring turns with the forearm, which is the whole reason it is
+	// what an angry wrist trains instead.
+	"korean_dip": true, "hefesto_negative": true, "band_hefesto": true,
+	"tuck_hefesto": true, "hefesto": true,
 }
 
 // extraRegions is everything else the category misses.

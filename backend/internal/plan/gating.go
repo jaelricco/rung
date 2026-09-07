@@ -270,10 +270,10 @@ var neutralWrist = map[string]string{
 	// it simply asks nothing of the wrist.
 	"box_victorian": "tuck_victorian",
 	"tuck_sat":      "tuck_victorian",
-	"adv_tuck_sat":  "tuck_victorian",
-	"straddle_sat":  "victorian",
+	"adv_tuck_sat":  "one_leg_victorian",
+	"straddle_sat":  "straddle_victorian",
 	"sat":           "victorian",
-	"band_sat":      "tuck_victorian",
+	"band_sat":      "band_victorian",
 
 	"lean_maltese":     "band_maltese",
 	"maltese":          "band_maltese",

@@ -810,8 +810,9 @@ func (s *sessionBuilder) addedWork(slug string) (reps int, kg float64, basis str
 
 func (s *sessionBuilder) noteSkillRemoved() {
 	s.builder.restrictions = appendUnique(s.builder.restrictions, fmt.Sprintf(
-		"Every movement on the %s ladder loads an injured area, so the skill work itself is out until that "+
-			"resolves. What is left keeps the rest of you training in the meantime, which is the point.",
+		"Every rung of the %s ladder loads an injured area — the planner already stepped down as far as it "+
+			"could — so the skill work itself is out until that resolves. What is left keeps the rest of you "+
+			"training in the meantime, which is the point.",
 		strings.ToLower(s.goal.Name)))
 }
 

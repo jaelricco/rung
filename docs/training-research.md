@@ -904,7 +904,10 @@ under-counted every athlete training a maximal pull, because the skill they
 were training was either absent or rated at one unit. And the focus dial of §10
 could not ration a week around a skill it did not know about.
 
-Two skills fill the gap, and they are the front lever's two directions out.
+Four skills fill the gap. Three of them are the front lever's directions out —
+open the arms on a bar, open them on rings, or take one hand off — and the
+fourth is the one skill at this end of the catalogue that is a pull rather than
+a hold.
 
 ### The SAT is to the front lever what the maltese is to the planche
 
@@ -993,6 +996,79 @@ the athlete for nothing, read "nothing logged or declared" for ever, and held
 them a rung below where they actually were. The form now asks for every gate
 and every entry standard as well, and a test holds it there.
 
+### The victorian is the SAT on rings
+
+They are one skill on two implements — the front lever with the arms opened to
+the maximum — and the sources treat them that way, giving the same prerequisite
+for both: a front lever that is *owned*, meaning the long hold, the pull-ups
+and the touch, not a personal best
+([GorNation, victorian](https://www.gornation.com/blogs/calisthenics-exercises/victorian),
+[Calisthenics world](https://calisthenicsworld.org/victorian/)).
+
+The rings ladder differs from the bar one in one rung and one risk. It runs
+**tuck (20 s) → one leg (10 s) → straddle → full**, banded where the athlete
+needs it — the one-leg hold is a rung the bar version has no equivalent for,
+the same way the wide-grip front lever is a rung the rings version does not
+need. And the wrist question disappears, because the ring turns with the
+forearm instead of the forearm being pressed against a bar. That is exactly why
+the victorian is what §8's substitution logic trains the SAT as, rung for rung.
+
+Rings punish what a bar forgives, which is the compensating cost: the hold is
+unstable in every direction, so a rung is held clean or it is not held.
+
+### The hefesto is the one that is a pull
+
+Every other skill at this end of the catalogue is a hold. The hefesto is a
+pull, and it is pulled from the worst position the shoulder has: from a german
+hang, arms behind the body, over the bar, finishing in a korean dip
+([Calisthenics world](https://calisthenicsworld.org/hefesto/),
+[Calisteniapp tutorial](https://calisteniapp.com/articles/hefesto-tutorial),
+[BARSTARZZ](https://barstarzz.com/hefesto-backwards-muscle-up-tutorial/)).
+The cue the sources agree on is **pull to the armpits, not to the lower back**.
+
+Its ladder is therefore mostly other people's skills, and that is not a
+shortcut — it is what the movement is assembled from:
+
+> german hang → back lever → korean dip → hefesto negatives → band-assisted →
+> tuck hefesto → hefesto
+
+Two of those are gates with numbers behind them. The korean dip asks for **15
+strict dips and a 30-second german hang**, which is the base the sources put
+under it, and below that you are asking an unprepared shoulder to work at the
+end of its range
+([More Than Lifting](https://morethanlifting.com/how-to-do-korean-dips/),
+[Caliverse](https://www.caliverse.app/exercises/korean-dips-97)). The negatives
+ask for the korean dip itself, because a negative is lowered out of a position
+you have to be able to get into — and the sources are unanimous that the
+eccentric is where this is actually earned and that skipping it is what hurts
+people.
+
+The shoulder position has **a hard anatomical limit at roughly ninety degrees**
+of extension. That is not a range to train into; sharp pain there is a stop.
+And the korean dip and everything built on it finish with bodyweight on the
+palms with the hands behind the body, which is the wrist at the far end of
+extension carrying the lot — so those rungs are wrist-loading and, unlike the
+SAT, they have no neutral-wrist form at all. The rings do not save this one.
+
+### Two faults the hefesto exposed
+
+**A rung an injury takes away is not the whole ladder.** The planner used to
+place an athlete and then discover, block by block, that the rung's movement
+was banned — at which point the session stopped being about the skill and said
+so. That is right when the whole ladder is gone and wrong when it is not, and
+the hefesto makes the difference impossible to miss: its first two rungs are a
+german hang and a back lever, neither of which touches a wrist, while
+everything above them is wrist-loading. A sore wrist should cost that athlete
+the top of the ladder, not the skill. Placement now steps down to the highest
+rung that survives the filters, and says which rung it came from and why.
+
+**An opener is a rung, and rungs have gates.** The session's first block is two
+or three sets of the rung *above* the one being trained, attempted fresh. For
+the hefesto that meant somebody with no shoulder-extension tolerance at all
+being shown a back lever. The rung above now carries its own gate — twenty
+seconds of german hang — and the opener is simply not written when it is unmet,
+which is the machinery that already existed being pointed at the right rung.
+
 ---
 
 ## 13. What this means for an algorithm
@@ -1076,3 +1152,6 @@ Rules the generator implements directly, each traceable to a section above:
     tier made only of pushing skills under-counts the tendon budget of every
     athlete training a maximal pull, and gives the focus dial nothing to
     ration (§12).
+33. **Step down the ladder when an injury takes a rung**, to the highest rung
+    that survives the filters, and say which one it came from. Losing the skill
+    is the answer only when every rung is gone (§12).

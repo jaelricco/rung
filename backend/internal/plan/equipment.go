@@ -92,14 +92,24 @@ var requires = map[string][][]string{
 	// The SAT is a straight-bar skill by definition — the hips rest on the bar
 	// — so unlike the levers above it, rings are not an alternative. They are
 	// the other skill: the victorian, which is why that has its own row.
-	"box_victorian":  {{EquipBar, EquipDipBars}},
-	"tuck_sat":       {{EquipBar}},
-	"adv_tuck_sat":   {{EquipBar}},
-	"straddle_sat":   {{EquipBar}},
-	"sat":            {{EquipBar}},
-	"band_sat":       {{EquipBar}, {EquipBands}},
-	"tuck_victorian": {{EquipRings}},
-	"victorian":      {{EquipRings}},
+	"box_victorian":      {{EquipBar, EquipDipBars}},
+	"tuck_sat":           {{EquipBar}},
+	"adv_tuck_sat":       {{EquipBar}},
+	"straddle_sat":       {{EquipBar}},
+	"sat":                {{EquipBar}},
+	"band_sat":           {{EquipBar}, {EquipBands}},
+	"tuck_victorian":     {{EquipRings}},
+	"one_leg_victorian":  {{EquipRings}},
+	"straddle_victorian": {{EquipRings}},
+	"victorian":          {{EquipRings}},
+	"band_victorian":     {{EquipRings}, {EquipBands}},
+
+	// The hefesto: a bar to hang behind, and something to dip on behind you.
+	"korean_dip":       {{EquipBar, EquipDipBars}},
+	"hefesto_negative": {{EquipBar}},
+	"band_hefesto":     {{EquipBar}, {EquipBands}},
+	"tuck_hefesto":     {{EquipBar}},
+	"hefesto":          {{EquipBar}},
 
 	// One arm, on whatever the other levers hang from.
 	"assisted_one_arm_front_lever": {{EquipBar, EquipRings}},
