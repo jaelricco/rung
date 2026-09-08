@@ -890,13 +890,14 @@ a heavy push day as a band face pull.
 
 ---
 
-## 12. The pull side of the same tier
+## 12. Filling out the maximal tier
 
 §7 opened the tier above the full planche and §9 rebuilt its maltese on the
-floor. Both were push. Counted afterwards, every skill the app rated as costing
-three units of the tendon budget — the group the baseline page draws as
-"Maximal" — was a pushing skill: maltese, iron cross, planche press. Nothing
-you hang from was in it.
+floor. Both were push, and both stopped short. Counted afterwards, every skill
+the app rated as costing three units of the tendon budget — the group the
+baseline page draws as "Maximal" — was a pushing skill: maltese, iron cross,
+planche press. Nothing you hang from was in it, and the two hardest things you
+can do on your hands were not in it either.
 
 That was not a judgement about what counts as maximal. It was the extent of the
 catalogue, and it had two consequences worth naming. The tendon budget
@@ -1109,6 +1110,81 @@ catalogue is now checked against the exercise it names, with added load the one
 metric allowed two measures, because a weighted pull-up is reps with a belt and
 a weighted front lever is seconds with one.
 
+### The one-arm planche is a balance skill with a strength requirement
+
+Every other maximal skill in this document is a strength problem with a
+technique component. The athletes who have this one describe it the other way
+round: *mainly a balancing move, but a decent amount of strength is also
+required*, and what they name as the prerequisites is **a good straddle planche
+and a great one-arm handstand** — two ladders, not one
+([Street Workout wiki](https://street-workout.fandom.com/wiki/One_arm_planche)).
+
+The position is also not what the name suggests. **The body curves sideways**,
+away from the supporting hand, because a symmetric one puts the mass where
+there is nothing under it. Fighting for a square shape here is fighting the
+skill, and it is how the supporting shoulder ends up loaded in rotation.
+
+So it is the first goal in the catalogue fed by two skills, and its rungs are
+gated on both: the straddle planche for the push half, the tuck and straddle
+one-arm handstand for the balance half. Somebody with one and not the other is
+held where they are and told which number is missing — a better answer than
+half a plan for a skill made of two halves.
+
+> straddle planche → one-arm planche lean → tuck one-arm planche →
+> straddle one-arm planche → one-arm planche
+
+Its ladder starts at the **straddle** planche rather than the full one, which
+is what the sources ask for and also what keeps the rungs in difficulty order.
+And it is the one skill in the catalogue with no version that spares a wrist: a
+planche angle with one hand under it instead of two, and no rings, parallettes
+or fists that change it. An angry wrist therefore steps the athlete back down
+to two arms rather than substituting — the §12 rule, doing exactly what it was
+added for.
+
+### The inverted cross has a benchmark, which almost nothing here does
+
+The inverted cross is the iron cross upside down: inverted on rings with the
+arms straight out from the shoulders. The prerequisites the coaching sources
+give are **a comfortable ring handstand and a Japanese handstand**, with
+maltese-press strength helping the rest
+([Street Workout wiki](https://street-workout.fandom.com/wiki/Inverted_cross),
+[GymnasticBodies](https://www.gymnasticbodies.com/forum/topic/9565-inverted-cross-technique/)).
+
+Two things make this element unusual for a document that has spent most of its
+length apologising for coaching consensus.
+
+**It has a peer-reviewed strength benchmark.** Schärer, Yusof and Capelli
+measured nine elite and ten junior artistic gymnasts on a five-second assisted
+inverted cross and on two conditioning lifts — an inverted cross with dumbbells
+and a seated overhead barbell press. Elites were 22.4% stronger on the hold and
+33.2% stronger on the press, and both lifts correlated with the hold at
+**r > 0.65, p < 0.01**
+([Sports 2025, 13(5):146](https://www.mdpi.com/2075-4663/13/5/146);
+[PMC12115426](https://pmc.ncbi.nlm.nih.gov/articles/PMC12115426/)). That is a
+real, citable answer to "what should I do besides the skill", and it is why the
+accessories on this ladder are overhead pressing rather than the band work
+every other rings ladder reaches for. A test holds them there, so a later tidy
+cannot quietly swap it back.
+
+It also tells you how the skill is *measured*: the study's max-strength test is
+an assisted five-second hold with a pulley. Assistance is not only how this is
+trained, it is the instrument — which is why the rung below the full hold is
+the banded one and why it is gated at ten seconds rather than at a feeling.
+
+**The failure mode is depth, not strength.** A shallow inverted cross is a
+Japanese handstand with the arms open, and it trains that instead. So the
+Japanese handstand is a rung of this ladder rather than a footnote: owning the
+thing the skill collapses into is how an athlete can tell which one they just
+did. Film it from the front, or you do not know.
+
+> ring support → ring handstand → Japanese handstand → band-assisted inverted
+> cross → inverted cross
+
+Neither ladder carries an entry gate on the goal, for the reason §12 gave: the
+first rung of each is something an ordinary strong athlete already trains — a
+straddle planche, a ring support — so a beginner is placed on the base and
+trains it, and nothing has to refuse them.
+
 ---
 
 ## 13. What this means for an algorithm
@@ -1200,3 +1276,8 @@ Rules the generator implements directly, each traceable to a section above:
 35. **Check every rung's metric against its exercise's measure.** They are one
     set described in two files, and a disagreement is silent: the block comes
     out in the wrong units and the number the rung is about vanishes (§12).
+36. **A skill made of two skills is gated on both**, and keeps both in the week
+    (§12).
+37. **Where there is a measured benchmark, prescribe from it.** The inverted
+    cross is conditioned with overhead pressing because a study found the
+    correlation, not because the movements look alike (§12).

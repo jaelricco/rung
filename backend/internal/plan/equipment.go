@@ -104,6 +104,14 @@ var requires = map[string][][]string{
 	"victorian":          {{EquipRings}},
 	"band_victorian":     {{EquipRings}, {EquipBands}},
 
+	// The inverted cross, which is a rings element start to finish. The
+	// one-arm planche needs nothing at all: it is a floor skill and one hand
+	// is the only equipment it has ever required.
+	"ring_handstand":      {{EquipRings}},
+	"japanese_handstand":  {{EquipRings}},
+	"inverted_cross":      {{EquipRings}},
+	"band_inverted_cross": {{EquipRings}, {EquipBands}},
+
 	// The hefesto: a bar to hang behind, and something to dip on behind you.
 	"korean_dip":       {{EquipBar, EquipDipBars}},
 	"hefesto_negative": {{EquipBar}},

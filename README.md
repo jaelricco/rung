@@ -418,6 +418,30 @@ rung's own gate is unmet, machinery that already existed and had nothing
 pointed at it until a hefesto ladder put a back lever one rung above somebody
 with no shoulder-extension tolerance at all.
 
+The push side stopped short too, in a different way. The **one-arm planche** is
+the only goal in the catalogue made of two skills rather than one: the athletes
+who have it call it a balance move with a strength requirement, and name a
+straddle planche *and* a one-arm handstand as what it takes. Its rungs are
+gated on both ladders and it keeps both in the week, so somebody with one half
+and not the other is held where they are and told which number is missing. It
+is also the one skill with no version that spares a wrist — a planche angle
+with one hand under it instead of two, and no rings or parallettes that change
+that — so an angry wrist steps the athlete back onto two arms rather than
+substituting.
+
+The **inverted cross** is the iron cross upside down, and the one element in
+the catalogue with a laboratory benchmark behind it: Schärer, Yusof and Capelli
+(Sports 2025) measured elite and junior gymnasts on a five-second assisted hold
+and found overhead pressing correlated with it at r > 0.65. So its accessories
+are overhead pressing rather than the band work every other rings ladder
+reaches for, and a test holds them there. The study also settles how the skill
+is measured — its max-strength test is the assisted hold — which is why the
+rung below the full one is the banded version, gated at ten seconds. Its
+failure mode is depth rather than strength: a shallow one is a Japanese
+handstand with the arms open, so the Japanese handstand is a rung of the
+ladder, because owning the thing a skill collapses into is how you tell which
+one you just did.
+
 **A hold with weight on it is a measure of its own.** Every exercise declared
 one of four measures — reps, reps with load, a hold in seconds, an attempt made
 or missed — and a weighted front lever is none of them: it is held for seconds

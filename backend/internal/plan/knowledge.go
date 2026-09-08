@@ -621,6 +621,127 @@ var Goals = []Goal{
 		Frequency: "Two sessions a week at the most, both sides every session, and stopped the moment the line goes.",
 	},
 	{
+		Key: "one_arm_planche", Phrase: "the one-arm planche", Name: "One-arm planche",
+		Pattern: patternPush, StraightArm: true, Wrists: true, Cost: 3,
+		// Not "oap": the one-arm pull-up claimed that one first, and in a
+		// calisthenics gym it means the pull-up far more often than the
+		// planche. An abbreviation two skills answer to is an abbreviation
+		// that sends somebody to the wrong ladder.
+		Aliases: []string{"one arm planche", "one-arm planche", "einarmige planche",
+			"single arm planche", "one hand planche"},
+		Timeline: "Years past a straddle planche, and the one-arm handstand alongside it is not optional. " +
+			"Almost nobody arrives.",
+		// The odd one at this end of the catalogue. Every other maximal skill
+		// here is a strength problem with a technique component; the athletes
+		// who have this one describe it the other way round — a balance skill
+		// with a strength requirement. And the position is not a planche on
+		// one arm: the body curves away from the supporting hand, because a
+		// symmetric one puts the mass where there is nothing under it.
+		//
+		// So it is fed by two skills rather than one, and its rungs are gated
+		// on both ladders: the straddle planche for the push, the one-arm
+		// handstand progressions for the balance. Somebody who has only one of
+		// the two is held where they are and told which number is missing,
+		// which is the honest answer rather than a plan that trains half of a
+		// skill made of two halves.
+		Feeds: []string{"planche", "one_arm_handstand"},
+		Ladder: []Step{
+			{Name: "Straddle planche", Movement: chain{"straddle_planche"}, Metric: metricHold, Standard: 10,
+				Assist: chain{"adv_tuck_planche"}, Typical: "the base, and everything here waits on it"},
+			{Name: "One-arm planche lean", Movement: chain{"one_arm_planche_lean"}, Metric: metricHold, Standard: 15,
+				Assist: chain{"planche_lean"}, Typical: "8 to 16 weeks; this rung is open to anyone with a straddle planche",
+				Gate: []Requirement{
+					{Slug: "straddle_planche", Metric: metricHold, Standard: 8,
+						Why: "Leaning onto one hand asks the shoulder for what a straddle planche asks of two. Below that you are learning the lean with the wrong shoulder."},
+				}},
+			{Name: "Tuck one-arm planche", Movement: chain{"tuck_one_arm_planche"}, Metric: metricHold, Standard: 10,
+				Assist: chain{"one_arm_planche_lean"}, Typical: "a year or more",
+				Gate: []Requirement{
+					{Slug: "tuck_one_arm_handstand", Metric: metricHold, Standard: 10,
+						Why: "This is a balance skill as much as a strength one. If you cannot find the line on one arm upside down, you will not find it horizontal."},
+				}},
+			{Name: "Straddle one-arm planche", Movement: chain{"straddle_one_arm_planche"}, Metric: metricHold, Standard: 6,
+				Assist: chain{"tuck_one_arm_planche"}, Typical: "a year or more past the tuck",
+				Gate: []Requirement{
+					{Slug: "full_planche", Metric: metricHold, Standard: 10,
+						Why: "Opening the legs on one arm asks for more than a straddle planche on two. Ten seconds of full planche is the floor the sources put under it."},
+				}},
+			{Name: "One-arm planche", Movement: chain{"one_arm_planche"}, Metric: metricHold, Standard: 3,
+				Assist: chain{"straddle_one_arm_planche"}, Typical: "the goal, and very few people arrive",
+				Gate: []Requirement{
+					{Slug: "straddle_one_arm_handstand", Metric: metricHold, Standard: 5,
+						Why: "The balance half of this does not get easier when the legs close. A straddle one-arm handstand is the last honest test of it."},
+				}},
+		},
+		Drills:      chain{"one_arm_planche_lean", "planche_lean", "handstand_shifts", "pseudo_planche_push_up"},
+		Accessories: chain{"weighted_dip", "band_face_pull", "wrist_extensor_curl", "hollow_body_hold"},
+		Risks: []string{
+			"One wrist carries what two were carrying, at the angle a planche already asks for. This is the most wrist-loaded position in the sport and it has no version that is not.",
+			"The body curves sideways on purpose. Fighting for a symmetric shape here is fighting the skill, and it is how the supporting shoulder gets loaded in rotation.",
+			"Train both sides. A side two rungs behind is the side that gets hurt, and on the floor it is also the side you land on.",
+			"One-arm work does not replace planche work or handstand work. Both are what keep driving it, so both stay in the week.",
+		},
+		Frequency: "Two sessions a week at the most, both sides every session, and attempted fresh or not at all.",
+	},
+	{
+		Key: "inverted_cross", Phrase: "the inverted cross", Name: "Inverted cross",
+		Pattern: patternPush, StraightArm: true, Cost: 3,
+		Aliases: []string{"inverted cross", "reverse cross", "umgekehrtes kreuz", "inverted iron cross"},
+		Timeline: "Years on rings past a comfortable ring handstand, and the depth of the position is what " +
+			"takes the time rather than the strength.",
+		// The iron cross upside down, and the one element at this end of the
+		// catalogue with a peer-reviewed strength benchmark behind it. Schärer,
+		// Yusof and Capelli (Sports, 2025) measured elite and junior gymnasts
+		// on a five-second assisted hold and on two conditioning lifts, and
+		// found overhead pressing correlated with the hold strongly enough
+		// (r > 0.65) to be worth prescribing as the conditioning for it. That
+		// is why the accessories here are overhead pressing rather than the
+		// band work every rings ladder otherwise reaches for.
+		//
+		// No entry gate on the goal: the first rung is the ring support, so
+		// somebody without one is placed there and trains it.
+		Feeds: []string{"handstand"},
+		Ladder: []Step{
+			{Name: "Ring support", Movement: chain{"ring_support_hold"}, Metric: metricHold, Standard: 30,
+				Assist: chain{"ring_dip"}, Typical: "4 to 8 weeks, and the price of entry to any rings skill"},
+			{Name: "Ring handstand", Movement: chain{"ring_handstand"}, Metric: metricHold, Standard: 20,
+				Assist: chain{"handstand", "ring_support_hold"}, Typical: "6 to 18 months; comfortable means the rings stop moving",
+				Gate: []Requirement{
+					{Slug: "handstand", Metric: metricHold, Standard: 30,
+						Why: "A ring handstand is a handstand with the floor taken away. Thirty seconds of the ordinary one is the floor under it."},
+				}},
+			{Name: "Japanese handstand", Movement: chain{"japanese_handstand"}, Metric: metricHold, Standard: 15,
+				Assist: chain{"ring_handstand"}, Typical: "6 to 18 months",
+				Gate: []Requirement{
+					{Slug: "ring_handstand", Metric: metricHold, Standard: 15,
+						Why: "Opening the shoulders on rings only makes sense once the rings are still. Before that you are learning to wobble in a harder position."},
+				}},
+			{Name: "Band-assisted inverted cross", Movement: chain{"band_inverted_cross"}, Metric: metricHold, Standard: 15,
+				Assist: chain{"japanese_handstand"}, Typical: "a year or more, band or pulley coming down between blocks",
+				Gate: []Requirement{
+					{Slug: "japanese_handstand", Metric: metricHold, Standard: 10,
+						Why: "The Japanese handstand is the position this collapses into when it loses depth. Owning it first is how you can tell the difference."},
+				}},
+			{Name: "Inverted cross", Movement: chain{"inverted_cross"}, Metric: metricHold, Standard: 5,
+				Assist: chain{"band_inverted_cross"}, Typical: "the goal, and very few people arrive",
+				Gate: []Requirement{
+					{Slug: "band_inverted_cross", Metric: metricHold, Standard: 10,
+						Why: "The assisted hold is how this is measured as well as trained. Ten seconds of it is what the unassisted attempt is worth trying from."},
+				}},
+		},
+		Drills: chain{"band_inverted_cross", "japanese_handstand", "ring_handstand", "ring_support_hold"},
+		// Overhead pressing, because the benchmark study found it correlated
+		// with the hold rather than because it looks related.
+		Accessories: chain{"handstand_push_up", "wall_hspu", "band_face_pull", "ring_support_hold"},
+		Risks: []string{
+			"Depth is the whole skill. A shallow hold is a Japanese handstand with the arms open, and it trains that instead — film it from the front or you will not know which one you did.",
+			"The shoulder is at the end of its range, inverted, holding the athlete's weight on two points that move. Rings punish what a bar forgives.",
+			"The band or pulley comes down between blocks, never inside a session. A hold that breaks early means more assistance, not another attempt.",
+			"Overhead pressing is the conditioning that transfers here, and it is in the plan for that reason rather than as filler.",
+		},
+		Frequency: "Two sessions a week at the most, and attempted fresh — this is a balance problem before it is a strength one.",
+	},
+	{
 		Key: "front_lever_pull_up", Phrase: "the front lever pull-up", Name: "Front lever pull-up", Pattern: patternPull, StraightArm: true, Cost: 2,
 		Aliases:  []string{"front lever pull up", "front lever pullup", "fl pull up", "front lever pull-ups"},
 		Timeline: "Six to eighteen months past a held front lever.",
@@ -1068,6 +1189,12 @@ var wristLoaded = map[string]bool{
 	// what an angry wrist trains instead.
 	"korean_dip": true, "hefesto_negative": true, "band_hefesto": true,
 	"tuck_hefesto": true, "hefesto": true,
+	// And the one that is worse than all of them: a planche angle with one
+	// wrist under it instead of two. There is no version of this that is not
+	// wrist-loaded, which is why it has no substitution below and why an angry
+	// wrist steps the athlete back down to the straddle planche instead.
+	"one_arm_planche_lean": true, "tuck_one_arm_planche": true,
+	"straddle_one_arm_planche": true, "one_arm_planche": true,
 }
 
 // extraRegions is everything else the category misses.
