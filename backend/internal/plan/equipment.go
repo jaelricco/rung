@@ -86,6 +86,45 @@ var requires = map[string][][]string{
 	"adv_tuck_back_lever":  {{EquipBar, EquipRings}},
 	"straddle_back_lever":  {{EquipBar, EquipRings}},
 	"back_lever":           {{EquipBar, EquipRings}},
+	"front_lever_touch":    {{EquipBar, EquipRings}},
+	"wide_front_lever":     {{EquipBar, EquipRings}},
+
+	// The SAT is a straight-bar skill by definition — the hips rest on the bar
+	// — so unlike the levers above it, rings are not an alternative. They are
+	// the other skill: the victorian, which is why that has its own row.
+	"box_victorian":      {{EquipBar, EquipDipBars}},
+	"tuck_sat":           {{EquipBar}},
+	"adv_tuck_sat":       {{EquipBar}},
+	"straddle_sat":       {{EquipBar}},
+	"sat":                {{EquipBar}},
+	"band_sat":           {{EquipBar}, {EquipBands}},
+	"tuck_victorian":     {{EquipRings}},
+	"one_leg_victorian":  {{EquipRings}},
+	"straddle_victorian": {{EquipRings}},
+	"victorian":          {{EquipRings}},
+	"band_victorian":     {{EquipRings}, {EquipBands}},
+
+	// The inverted cross, which is a rings element start to finish. The
+	// one-arm planche needs nothing at all: it is a floor skill and one hand
+	// is the only equipment it has ever required.
+	"ring_handstand":      {{EquipRings}},
+	"japanese_handstand":  {{EquipRings}},
+	"inverted_cross":      {{EquipRings}},
+	"band_inverted_cross": {{EquipRings}, {EquipBands}},
+
+	// The hefesto: a bar to hang behind, and something to dip on behind you.
+	"korean_dip":       {{EquipBar, EquipDipBars}},
+	"hefesto_negative": {{EquipBar}},
+	"band_hefesto":     {{EquipBar}, {EquipBands}},
+	"tuck_hefesto":     {{EquipBar}},
+	"hefesto":          {{EquipBar}},
+
+	// One arm, on whatever the other levers hang from.
+	"assisted_one_arm_front_lever": {{EquipBar, EquipRings}},
+	"one_arm_tuck_front_lever":     {{EquipBar, EquipRings}},
+	"one_arm_adv_tuck_front_lever": {{EquipBar, EquipRings}},
+	"one_arm_straddle_front_lever": {{EquipBar, EquipRings}},
+	"one_arm_front_lever":          {{EquipBar, EquipRings}},
 
 	// Dynamics.
 	"muscle_up":          {{EquipBar}},

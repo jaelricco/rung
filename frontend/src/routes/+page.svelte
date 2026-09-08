@@ -42,6 +42,7 @@
 		if (s.kind === 'reps') return `${s.reps} reps`;
 		if (s.kind === 'weighted_reps') return `${s.reps} reps + ${s.weight_kg} kg`;
 		if (s.kind === 'static_hold') return `${s.hold_seconds}s hold`;
+		if (s.kind === 'weighted_hold') return `${s.hold_seconds}s hold + ${s.weight_kg} kg`;
 		return s.success ? 'made' : 'missed';
 	}
 

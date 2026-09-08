@@ -21,6 +21,11 @@ const (
 	KindReps         = "reps"
 	KindWeightedReps = "weighted_reps"
 	KindStaticHold   = "static_hold"
+	// KindWeightedHold is a hold with load on it — a weighted front lever, an
+	// L-sit with ankle weights. Both numbers are the set: the seconds say how
+	// long and the kilos say how hard, and either on its own is a different
+	// exercise.
+	KindWeightedHold = "weighted_hold"
 	KindSkillAttempt = "skill_attempt"
 )
 
@@ -59,6 +64,10 @@ func (s SetInput) validate(index int) error {
 	case KindStaticHold:
 		if s.HoldSeconds == nil {
 			return fmt.Errorf("%s needs a hold time in seconds", pos)
+		}
+	case KindWeightedHold:
+		if s.HoldSeconds == nil || s.WeightKg == nil {
+			return fmt.Errorf("%s needs both a hold time and the added weight", pos)
 		}
 	case KindSkillAttempt:
 		if s.Success == nil {

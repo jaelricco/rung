@@ -384,6 +384,364 @@ var Goals = []Goal{
 		Frequency: "Two sessions a week, low reps, always fresh.",
 	},
 	{
+		Key: "sat", Phrase: "the SAT", Name: "SAT", Pattern: patternPull, StraightArm: true, Wrists: true, Cost: 3,
+		Aliases: []string{"sat", "straight bar victorian", "bar victorian", "sat hold", "victorian bar"},
+		Timeline: "Years past a front lever that is owned rather than reached. A plan of any length buys you " +
+			"a rung; nobody arrives here in a block.",
+		// The SAT is to the front lever what the maltese is to the planche:
+		// the same skill with the hands travelling outward. So this ladder has
+		// the same shape as the floor maltese in §9, including the half-way
+		// rung that tradition runs through — a wide-grip front lever, which is
+		// the wide planche of the pulling side.
+		//
+		// There is no entry gate on the goal, and there does not need to be:
+		// the first rung *is* the front lever, so an athlete who does not have
+		// one is placed there and trains it. What is gated is opening the
+		// arms, which is where the biceps tendon and the front of the shoulder
+		// start paying.
+		Feeds: []string{"front_lever"},
+		Ladder: []Step{
+			{Name: "Held front lever", Movement: chain{"front_lever"}, Metric: metricHold, Standard: 15,
+				Assist: chain{"front_lever_row"}, Typical: "the base, and everything here waits on it"},
+			{Name: "Box victorian", Movement: chain{"box_victorian"}, Metric: metricHold, Standard: 15,
+				Assist: chain{"front_lever_raise", "front_lever_row"}, Typical: "8 to 16 weeks",
+				Gate: []Requirement{
+					{Slug: "front_lever", Metric: metricHold, Standard: 12,
+						Why: "The arms only open on a lever you can hold. Twelve seconds is the floor the coaching sources put under any victorian work."},
+				}},
+			{Name: "Wide-grip front lever", Movement: chain{"wide_front_lever"}, Metric: metricHold, Standard: 8,
+				Assist: chain{"box_victorian"}, Typical: "3 to 9 months — the rung between the lever and the SAT",
+				Gate: []Requirement{
+					{Slug: "front_lever", Metric: metricHold, Standard: 20,
+						Why: "Widening the grip only makes sense once the lever is owned. Twenty seconds is what the sources mean by a front lever you have mastered rather than achieved."},
+				}},
+			{Name: "Tuck SAT", Movement: chain{"tuck_sat"}, Metric: metricHold, Standard: 12,
+				Assist: chain{"band_sat", "box_victorian"}, Typical: "6 to 18 months, band coming down slowly",
+				Gate: []Requirement{
+					{Slug: "front_lever_touch", Metric: metricReps, Standard: 3,
+						Why: "A front lever touch is the other half of owning the lever: the sources ask for the long hold and the pull, not one of them."},
+				}},
+			{Name: "Advanced tuck SAT", Movement: chain{"adv_tuck_sat"}, Metric: metricHold, Standard: 10,
+				Assist: chain{"tuck_sat"}, Typical: "a year or more"},
+			{Name: "Straddle SAT", Movement: chain{"straddle_sat"}, Metric: metricHold, Standard: 6,
+				Assist: chain{"band_sat", "adv_tuck_sat"}, Typical: "a year or more past the advanced tuck",
+				Gate: []Requirement{
+					{Slug: "wide_front_lever", Metric: metricHold, Standard: 5,
+						Why: "The wide-grip lever is the half-way house. Straddling the full angle without it is skipping the rung that teaches the shoulder where it is going."},
+				}},
+			{Name: "SAT", Movement: chain{"sat"}, Metric: metricHold, Standard: 3,
+				Assist: chain{"straddle_sat", "band_sat"}, Typical: "the goal, and very few people arrive",
+				Gate: []Requirement{
+					{Slug: "straddle_sat", Metric: metricHold, Standard: 5,
+						Why: "You close the legs on a position you can already hold open, or you close them into a fall."},
+					{Slug: "front_lever", Metric: metricHold, Standard: 20,
+						Why: "The same floor, and it does not move: the front lever is what keeps driving this."},
+				}},
+		},
+		Drills:      chain{"front_lever_raise", "front_lever_row", "ice_cream_maker", "box_victorian"},
+		Accessories: chain{"weighted_pull_up", "front_lever_row", "german_hang", "band_face_pull"},
+		Risks: []string{
+			"The biceps tendon and the front of the shoulder take this skill, exactly as they take the maltese, and both fail slowly and then suddenly.",
+			"Reduce the band between blocks, never inside a session. If the hips drop early, the band comes back rather than the next attempt.",
+			"SAT work does not replace front lever work. The lever is what keeps driving it, so it stays in the week.",
+			"The forearms rest on the bar in this position, so the wrist takes load in extension. It is not a planche, but it is not nothing either.",
+		},
+		Frequency: "Two SAT sessions a week at the most, with a full recovery day either side.",
+	},
+	{
+		Key: "victorian", Phrase: "the victorian", Name: "Victorian", Pattern: patternPull, StraightArm: true, Cost: 3,
+		Aliases: []string{"victorian", "victorian cross", "ring victorian", "rings victorian", "viktorian"},
+		Timeline: "Years past a front lever that is owned rather than reached, and it is the same wait as the SAT " +
+			"because it is the same position.",
+		// The SAT and the victorian are one skill on two implements: the front
+		// lever with the arms opened to the maximum, on a bar or on rings. So
+		// this ladder is the SAT's, with the rung the rings tradition runs
+		// through and the bar version does not — a one-leg hold between the
+		// tuck and the straddle — and with the wrist question absent, because
+		// the ring turns with the forearm instead of the forearm being
+		// pressed against a bar. That is also why it is what an angry wrist
+		// trains the SAT as.
+		Feeds: []string{"front_lever"},
+		Ladder: []Step{
+			{Name: "Held front lever", Movement: chain{"front_lever"}, Metric: metricHold, Standard: 15,
+				Assist: chain{"front_lever_row"}, Typical: "the base, and everything here waits on it"},
+			{Name: "Tuck victorian", Movement: chain{"tuck_victorian"}, Metric: metricHold, Standard: 20,
+				Assist: chain{"band_victorian", "box_victorian"}, Typical: "6 to 18 months, banded at first",
+				Gate: []Requirement{
+					{Slug: "front_lever", Metric: metricHold, Standard: 12,
+						Why: "The arms only open on a lever you can hold. Twelve seconds is the floor the coaching sources put under any victorian work."},
+				}},
+			{Name: "One-leg victorian", Movement: chain{"one_leg_victorian"}, Metric: metricHold, Standard: 10,
+				Assist: chain{"tuck_victorian"}, Typical: "a year or more — the rung the rings ladder has and the bar one does not",
+				Gate: []Requirement{
+					{Slug: "front_lever", Metric: metricHold, Standard: 20,
+						Why: "Opening one leg out is the point where this stops being a tuck. Twenty seconds is what the sources mean by a front lever you have mastered rather than achieved."},
+				}},
+			{Name: "Straddle victorian", Movement: chain{"straddle_victorian"}, Metric: metricHold, Standard: 6,
+				Assist: chain{"band_victorian", "one_leg_victorian"}, Typical: "a year or more past the one-leg hold",
+				Gate: []Requirement{
+					{Slug: "tuck_victorian", Metric: metricHold, Standard: 15,
+						Why: "The tuck is where the shoulder learns this angle. Straddling out of one you cannot hold for fifteen seconds is arriving at the load before the position."},
+				}},
+			{Name: "Victorian", Movement: chain{"victorian"}, Metric: metricHold, Standard: 3,
+				Assist: chain{"straddle_victorian", "band_victorian"}, Typical: "the goal, and very few people arrive",
+				Gate: []Requirement{
+					{Slug: "straddle_victorian", Metric: metricHold, Standard: 5,
+						Why: "You close the legs on a position you can already hold open, or you close them into a fall."},
+					{Slug: "front_lever", Metric: metricHold, Standard: 20,
+						Why: "The same floor, and it does not move: the front lever is what keeps driving this."},
+				}},
+		},
+		Drills:      chain{"front_lever_raise", "front_lever_row", "ice_cream_maker", "ring_support_hold"},
+		Accessories: chain{"weighted_pull_up", "front_lever_row", "german_hang", "band_face_pull"},
+		Risks: []string{
+			"The biceps tendon and the front of the shoulder take this skill, exactly as they take the maltese, and both fail slowly and then suddenly.",
+			"Rings punish what a bar forgives: the hold is unstable in every direction, so a rung is held clean or it is not held.",
+			"Reduce the band between blocks, never inside a session. If the hips drop early, the band comes back rather than the next attempt.",
+			"Victorian work does not replace front lever work. The lever is what keeps driving it, so it stays in the week.",
+		},
+		Frequency: "Two victorian sessions a week at the most, with a full recovery day either side.",
+	},
+	{
+		Key: "hefesto", Phrase: "the hefesto", Name: "Hefesto", Pattern: patternPull, StraightArm: true, Wrists: true, Cost: 3,
+		Aliases: []string{"hefesto", "hephaestus", "backwards muscle up", "back muscle up", "hefesto pull"},
+		Timeline: "A year or more from a back lever and fifteen strict dips, and the shoulders set the pace " +
+			"rather than the arms.",
+		// The one skill at this end of the catalogue that is a pull rather
+		// than a hold, and the one whose ladder is mostly other people's
+		// skills. It starts in a german hang, passes through a back lever and
+		// finishes in a korean dip, so the first three rungs are exactly those
+		// three things — and the last three are the movement itself, which is
+		// the only part that is not already in the library.
+		//
+		// It carries the straight-arm flag despite being a bent-arm pull. The
+		// flag is what puts elbow preparation in front of a session, and a
+		// movement that starts under load with the arms straight behind the
+		// body is the last thing that should skip it.
+		Feeds: []string{"back_lever"},
+		Ladder: []Step{
+			{Name: "Shoulder extension", Movement: chain{"german_hang"}, Metric: metricHold, Standard: 30,
+				Assist: chain{"skin_the_cat"}, Typical: "2 to 6 weeks, and rushed at your shoulder's expense"},
+			{Name: "Back lever", Movement: chain{"back_lever"}, Metric: metricHold, Standard: 10,
+				Assist: chain{"straddle_back_lever"}, Typical: "the position the pull passes through",
+				Gate: []Requirement{
+					{Slug: "german_hang", Metric: metricHold, Standard: 20,
+						Why: "A back lever is a german hang with a longer lever. Twenty seconds of the short one first is the difference between a shoulder that is being trained and one that is being surprised."},
+				}},
+			{Name: "Korean dip", Movement: chain{"korean_dip"}, Metric: metricReps, Standard: 8,
+				Assist: chain{"dip", "german_hang"}, Typical: "6 to 18 months from fifteen strict dips",
+				Gate: []Requirement{
+					{Slug: "dip", Metric: metricReps, Standard: 15,
+						Why: "Fifteen strict dips is the base the sources put under a korean dip. Below it you are asking an unprepared shoulder to work at the end of its range."},
+					{Slug: "german_hang", Metric: metricHold, Standard: 30,
+						Why: "The korean dip forces the shoulders behind the body, and the german hang is the cheapest test of whether they will go there under load."},
+				}},
+			{Name: "Hefesto negatives", Movement: chain{"hefesto_negative"}, Metric: metricReps, Standard: 5,
+				Assist: chain{"korean_dip"}, Typical: "3 to 9 months, and where most of the strength is built",
+				Gate: []Requirement{
+					{Slug: "korean_dip", Metric: metricReps, Standard: 5,
+						Why: "A negative is lowered out of the korean dip position. You cannot lower out of a position you cannot get into."},
+				}},
+			{Name: "Band-assisted hefesto", Movement: chain{"band_hefesto"}, Metric: metricReps, Standard: 5,
+				Assist: chain{"hefesto_negative"}, Typical: "3 to 9 months, band coming down one step per block"},
+			{Name: "Tuck hefesto", Movement: chain{"tuck_hefesto"}, Metric: metricReps, Standard: 3,
+				Assist: chain{"band_hefesto"}, Typical: "6 to 18 months",
+				Gate: []Requirement{
+					{Slug: "back_lever", Metric: metricHold, Standard: 15,
+						Why: "The pull passes through a back lever, and it passes through it under acceleration. Fifteen seconds of holding one still is the floor under that."},
+				}},
+			{Name: "Hefesto", Movement: chain{"hefesto"}, Metric: metricReps, Standard: 2,
+				Assist: chain{"tuck_hefesto", "hefesto_negative"}, Typical: "the goal",
+				Gate: []Requirement{
+					{Slug: "korean_dip", Metric: metricReps, Standard: 8,
+						Why: "The korean dip is the half of this that happens after the hard part. Arriving there without it is arriving somewhere you cannot hold."},
+				}},
+		},
+		Drills:      chain{"skin_the_cat", "german_hang", "korean_dip", "hefesto_negative"},
+		Accessories: chain{"german_hang", "skin_the_cat", "dip", "band_face_pull"},
+		Risks: []string{
+			"This is the most shoulder-extended loaded position in the sport, and the anatomy has a hard limit at roughly ninety degrees. Sharp pain here is a stop, not a cue to warm up more.",
+			"The biceps tendon works at full length against a moving load. That is the mechanism behind the injury tables' worst entries, and the reason the elbow preparation in front of these sessions is not optional.",
+			"Build the eccentric before the concentric. Negatives are where this is actually earned, and the sources are unanimous that people who skip them are the people who get hurt.",
+			"Hefesto work does not replace back lever work. The lever is what keeps the shoulder tolerant of the position, so it stays in the week.",
+		},
+		Frequency: "Two sessions a week at the most, low reps, stopped the moment the shoulder complains.",
+	},
+	{
+		Key: "one_arm_front_lever", Phrase: "the one-arm front lever", Name: "One-arm front lever",
+		Pattern: patternPull, StraightArm: true, Cost: 3,
+		Aliases: []string{"one arm front lever", "one-arm front lever", "oafl", "einarmiger front lever",
+			"single arm front lever"},
+		Timeline: "Years past a front lever that is held rather than reached, and the grip is as often the " +
+			"limiter as the lat.",
+		// The other direction out of the front lever: the same hands, one of
+		// them. It follows the ordinary lever progression, because shortening
+		// a lever looks the same whichever arm is holding it — and, as with
+		// the SAT, the first rung is the front lever itself, so the ladder
+		// gates itself for anyone who has not got one.
+		Feeds: []string{"front_lever"},
+		Ladder: []Step{
+			{Name: "Held front lever", Movement: chain{"front_lever"}, Metric: metricHold, Standard: 20,
+				Assist: chain{"front_lever_row"}, Typical: "the base, and it has to be a long one"},
+			{Name: "Assisted one arm", Movement: chain{"assisted_one_arm_front_lever"}, Metric: metricHold, Standard: 15,
+				Assist: chain{"front_lever_raise", "one_arm_dead_hang"}, Typical: "8 to 16 weeks",
+				Gate: []Requirement{
+					{Slug: "front_lever", Metric: metricHold, Standard: 15,
+						Why: "Taking a hand off a lever you can only just hold is how a shoulder learns what rotation feels like the hard way."},
+				}},
+			{Name: "One-arm tuck", Movement: chain{"one_arm_tuck_front_lever"}, Metric: metricHold, Standard: 15,
+				Assist: chain{"assisted_one_arm_front_lever"}, Typical: "6 to 18 months",
+				Gate: []Requirement{
+					{Slug: "one_arm_dead_hang", Metric: metricHold, Standard: 20,
+						Why: "The grip gives out before the lat does on this ladder. Twenty seconds hanging on one arm is the cheapest test of whether it will."},
+				}},
+			{Name: "One-arm advanced tuck", Movement: chain{"one_arm_adv_tuck_front_lever"}, Metric: metricHold, Standard: 10,
+				Assist: chain{"one_arm_tuck_front_lever"}, Typical: "a year or more"},
+			{Name: "One-arm straddle", Movement: chain{"one_arm_straddle_front_lever"}, Metric: metricHold, Standard: 6,
+				Assist: chain{"one_arm_adv_tuck_front_lever"}, Typical: "a year or more past the advanced tuck",
+				Gate: []Requirement{
+					{Slug: "front_lever", Metric: metricHold, Standard: 25,
+						Why: "One arm carries what two were carrying. The two-arm lever is the only honest measure of whether there is enough to halve."},
+				}},
+			{Name: "One-arm front lever", Movement: chain{"one_arm_front_lever"}, Metric: metricHold, Standard: 3,
+				Assist: chain{"one_arm_straddle_front_lever"}, Typical: "the goal, and very few people arrive",
+				Gate: []Requirement{
+					{Slug: "one_arm_straddle_front_lever", Metric: metricHold, Standard: 5,
+						Why: "You close the legs on a position you can already hold open, or you close them into a fall."},
+				}},
+		},
+		Drills:      chain{"one_arm_negative", "front_lever_raise", "front_lever_row", "assisted_one_arm_front_lever"},
+		Accessories: chain{"weighted_pull_up", "one_arm_dead_hang", "front_lever_row", "band_face_pull"},
+		Risks: []string{
+			"This is the most asymmetric loading in the sport. The shoulder is resisting rotation as well as holding a lever, and the elbow of the working arm takes the difference.",
+			"Train both sides to the same standard even when one is obviously better. A side that is two rungs behind is the one that gets hurt.",
+			"Grip fails first for most people, and a hand that is slipping is a shoulder taking a jerk. Stop the set at the grip, not at the lat.",
+			"One-arm work does not replace front lever work. The two-arm lever is what keeps driving it, so it stays in the week.",
+		},
+		Frequency: "Two sessions a week at the most, both sides every session, and stopped the moment the line goes.",
+	},
+	{
+		Key: "one_arm_planche", Phrase: "the one-arm planche", Name: "One-arm planche",
+		Pattern: patternPush, StraightArm: true, Wrists: true, Cost: 3,
+		// Not "oap": the one-arm pull-up claimed that one first, and in a
+		// calisthenics gym it means the pull-up far more often than the
+		// planche. An abbreviation two skills answer to is an abbreviation
+		// that sends somebody to the wrong ladder.
+		Aliases: []string{"one arm planche", "one-arm planche", "einarmige planche",
+			"single arm planche", "one hand planche"},
+		Timeline: "Years past a straddle planche, and the one-arm handstand alongside it is not optional. " +
+			"Almost nobody arrives.",
+		// The odd one at this end of the catalogue. Every other maximal skill
+		// here is a strength problem with a technique component; the athletes
+		// who have this one describe it the other way round — a balance skill
+		// with a strength requirement. And the position is not a planche on
+		// one arm: the body curves away from the supporting hand, because a
+		// symmetric one puts the mass where there is nothing under it.
+		//
+		// So it is fed by two skills rather than one, and its rungs are gated
+		// on both ladders: the straddle planche for the push, the one-arm
+		// handstand progressions for the balance. Somebody who has only one of
+		// the two is held where they are and told which number is missing,
+		// which is the honest answer rather than a plan that trains half of a
+		// skill made of two halves.
+		Feeds: []string{"planche", "one_arm_handstand"},
+		Ladder: []Step{
+			{Name: "Straddle planche", Movement: chain{"straddle_planche"}, Metric: metricHold, Standard: 10,
+				Assist: chain{"adv_tuck_planche"}, Typical: "the base, and everything here waits on it"},
+			{Name: "One-arm planche lean", Movement: chain{"one_arm_planche_lean"}, Metric: metricHold, Standard: 15,
+				Assist: chain{"planche_lean"}, Typical: "8 to 16 weeks; this rung is open to anyone with a straddle planche",
+				Gate: []Requirement{
+					{Slug: "straddle_planche", Metric: metricHold, Standard: 8,
+						Why: "Leaning onto one hand asks the shoulder for what a straddle planche asks of two. Below that you are learning the lean with the wrong shoulder."},
+				}},
+			{Name: "Tuck one-arm planche", Movement: chain{"tuck_one_arm_planche"}, Metric: metricHold, Standard: 10,
+				Assist: chain{"one_arm_planche_lean"}, Typical: "a year or more",
+				Gate: []Requirement{
+					{Slug: "tuck_one_arm_handstand", Metric: metricHold, Standard: 10,
+						Why: "This is a balance skill as much as a strength one. If you cannot find the line on one arm upside down, you will not find it horizontal."},
+				}},
+			{Name: "Straddle one-arm planche", Movement: chain{"straddle_one_arm_planche"}, Metric: metricHold, Standard: 6,
+				Assist: chain{"tuck_one_arm_planche"}, Typical: "a year or more past the tuck",
+				Gate: []Requirement{
+					{Slug: "full_planche", Metric: metricHold, Standard: 10,
+						Why: "Opening the legs on one arm asks for more than a straddle planche on two. Ten seconds of full planche is the floor the sources put under it."},
+				}},
+			{Name: "One-arm planche", Movement: chain{"one_arm_planche"}, Metric: metricHold, Standard: 3,
+				Assist: chain{"straddle_one_arm_planche"}, Typical: "the goal, and very few people arrive",
+				Gate: []Requirement{
+					{Slug: "straddle_one_arm_handstand", Metric: metricHold, Standard: 5,
+						Why: "The balance half of this does not get easier when the legs close. A straddle one-arm handstand is the last honest test of it."},
+				}},
+		},
+		Drills:      chain{"one_arm_planche_lean", "planche_lean", "handstand_shifts", "pseudo_planche_push_up"},
+		Accessories: chain{"weighted_dip", "band_face_pull", "wrist_extensor_curl", "hollow_body_hold"},
+		Risks: []string{
+			"One wrist carries what two were carrying, at the angle a planche already asks for. This is the most wrist-loaded position in the sport and it has no version that is not.",
+			"The body curves sideways on purpose. Fighting for a symmetric shape here is fighting the skill, and it is how the supporting shoulder gets loaded in rotation.",
+			"Train both sides. A side two rungs behind is the side that gets hurt, and on the floor it is also the side you land on.",
+			"One-arm work does not replace planche work or handstand work. Both are what keep driving it, so both stay in the week.",
+		},
+		Frequency: "Two sessions a week at the most, both sides every session, and attempted fresh or not at all.",
+	},
+	{
+		Key: "inverted_cross", Phrase: "the inverted cross", Name: "Inverted cross",
+		Pattern: patternPush, StraightArm: true, Cost: 3,
+		Aliases: []string{"inverted cross", "reverse cross", "umgekehrtes kreuz", "inverted iron cross"},
+		Timeline: "Years on rings past a comfortable ring handstand, and the depth of the position is what " +
+			"takes the time rather than the strength.",
+		// The iron cross upside down, and the one element at this end of the
+		// catalogue with a peer-reviewed strength benchmark behind it. Schärer,
+		// Yusof and Capelli (Sports, 2025) measured elite and junior gymnasts
+		// on a five-second assisted hold and on two conditioning lifts, and
+		// found overhead pressing correlated with the hold strongly enough
+		// (r > 0.65) to be worth prescribing as the conditioning for it. That
+		// is why the accessories here are overhead pressing rather than the
+		// band work every rings ladder otherwise reaches for.
+		//
+		// No entry gate on the goal: the first rung is the ring support, so
+		// somebody without one is placed there and trains it.
+		Feeds: []string{"handstand"},
+		Ladder: []Step{
+			{Name: "Ring support", Movement: chain{"ring_support_hold"}, Metric: metricHold, Standard: 30,
+				Assist: chain{"ring_dip"}, Typical: "4 to 8 weeks, and the price of entry to any rings skill"},
+			{Name: "Ring handstand", Movement: chain{"ring_handstand"}, Metric: metricHold, Standard: 20,
+				Assist: chain{"handstand", "ring_support_hold"}, Typical: "6 to 18 months; comfortable means the rings stop moving",
+				Gate: []Requirement{
+					{Slug: "handstand", Metric: metricHold, Standard: 30,
+						Why: "A ring handstand is a handstand with the floor taken away. Thirty seconds of the ordinary one is the floor under it."},
+				}},
+			{Name: "Japanese handstand", Movement: chain{"japanese_handstand"}, Metric: metricHold, Standard: 15,
+				Assist: chain{"ring_handstand"}, Typical: "6 to 18 months",
+				Gate: []Requirement{
+					{Slug: "ring_handstand", Metric: metricHold, Standard: 15,
+						Why: "Opening the shoulders on rings only makes sense once the rings are still. Before that you are learning to wobble in a harder position."},
+				}},
+			{Name: "Band-assisted inverted cross", Movement: chain{"band_inverted_cross"}, Metric: metricHold, Standard: 15,
+				Assist: chain{"japanese_handstand"}, Typical: "a year or more, band or pulley coming down between blocks",
+				Gate: []Requirement{
+					{Slug: "japanese_handstand", Metric: metricHold, Standard: 10,
+						Why: "The Japanese handstand is the position this collapses into when it loses depth. Owning it first is how you can tell the difference."},
+				}},
+			{Name: "Inverted cross", Movement: chain{"inverted_cross"}, Metric: metricHold, Standard: 5,
+				Assist: chain{"band_inverted_cross"}, Typical: "the goal, and very few people arrive",
+				Gate: []Requirement{
+					{Slug: "band_inverted_cross", Metric: metricHold, Standard: 10,
+						Why: "The assisted hold is how this is measured as well as trained. Ten seconds of it is what the unassisted attempt is worth trying from."},
+				}},
+		},
+		Drills: chain{"band_inverted_cross", "japanese_handstand", "ring_handstand", "ring_support_hold"},
+		// Overhead pressing, because the benchmark study found it correlated
+		// with the hold rather than because it looks related.
+		Accessories: chain{"handstand_push_up", "wall_hspu", "band_face_pull", "ring_support_hold"},
+		Risks: []string{
+			"Depth is the whole skill. A shallow hold is a Japanese handstand with the arms open, and it trains that instead — film it from the front or you will not know which one you did.",
+			"The shoulder is at the end of its range, inverted, holding the athlete's weight on two points that move. Rings punish what a bar forgives.",
+			"The band or pulley comes down between blocks, never inside a session. A hold that breaks early means more assistance, not another attempt.",
+			"Overhead pressing is the conditioning that transfers here, and it is in the plan for that reason rather than as filler.",
+		},
+		Frequency: "Two sessions a week at the most, and attempted fresh — this is a balance problem before it is a strength one.",
+	},
+	{
 		Key: "front_lever_pull_up", Phrase: "the front lever pull-up", Name: "Front lever pull-up", Pattern: patternPull, StraightArm: true, Cost: 2,
 		Aliases:  []string{"front lever pull up", "front lever pullup", "fl pull up", "front lever pull-ups"},
 		Timeline: "Six to eighteen months past a held front lever.",
@@ -816,6 +1174,27 @@ var wristLoaded = map[string]bool{
 	"planche_kicks": true, "negative_to_planche": true, "planche_hold_to_press": true,
 	"l_sit_to_planche": true, "half_rom_planche_push_up": true,
 	"maltese_lean": true, "tuck_maltese": true, "straddle_maltese": true,
+	// The SAT rests the forearms and wrists on a straight bar and then loads
+	// them with a horizontal body. It is not a planche — nothing is going
+	// through the palm — but the wrist is held in extension against the bar
+	// for the length of every set, which is the mechanism the wrist section of
+	// the research is about. The rings version is what an angry one trains
+	// instead, and it is not on this list for exactly that reason.
+	"box_victorian": true, "tuck_sat": true, "adv_tuck_sat": true,
+	"straddle_sat": true, "sat": true, "band_sat": true,
+	// The korean dip and everything built on it finish with bodyweight on the
+	// palms with the hands behind the body, which is the wrist at the far end
+	// of extension carrying the lot. The rings victorian is deliberately not
+	// here: the ring turns with the forearm, which is the whole reason it is
+	// what an angry wrist trains instead.
+	"korean_dip": true, "hefesto_negative": true, "band_hefesto": true,
+	"tuck_hefesto": true, "hefesto": true,
+	// And the one that is worse than all of them: a planche angle with one
+	// wrist under it instead of two. There is no version of this that is not
+	// wrist-loaded, which is why it has no substitution below and why an angry
+	// wrist steps the athlete back down to the straddle planche instead.
+	"one_arm_planche_lean": true, "tuck_one_arm_planche": true,
+	"straddle_one_arm_planche": true, "one_arm_planche": true,
 }
 
 // extraRegions is everything else the category misses.

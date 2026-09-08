@@ -132,13 +132,36 @@ func (s *sessionBuilder) prescribe(w work) {
 				"The hold is trained past %s, not extended by sagging into it.", secs(standard))
 		}
 
+	case "weighted_hold":
+		// The rung's standard here is a load, not a duration: a weighted front
+		// lever is cleared at ten kilos, not at ten seconds. So the seconds
+		// come from the athlete's own best hold on it and the kilos from the
+		// standard, and the block prints both — which is the whole reason this
+		// measure exists.
+		seconds, best, basis := s.holdWork(slug, weightedHoldSeconds)
+		kg, load := s.addedHold(slug, w.Standard)
+		sets = s.setCount(w.Base)
+		if w.Light {
+			sets, seconds, kg = max(2, sets-1), max(3, seconds*2/3), roundLoad(kg*0.7)
+		}
+		lo, hi := band(seconds, holdBands)
+		block.Prescription = fmt.Sprintf("%d-%ds hold with +%s kg", lo, hi, kilos(kg))
+		block.Intensity = fmt.Sprintf("about %d%% of your best hold (%s)%s %s", int(s.week.Fraction*100),
+			secs(best), basis, load)
+		block.Tempo = ""
+		if block.Progression == "" {
+			block.Progression = "Next week: one more second at the same load. The belt only gets heavier " +
+				"once the seconds are there, because a weighted hold that breaks early is a heavy hold " +
+				"you cannot do."
+		}
+
 	case "weighted_reps":
 		reps, kg, basis := s.addedWork(slug)
 		sets = s.setCount(w.Base)
 		if w.Light {
 			sets, kg = max(2, sets-1), roundLoad(kg*0.7)
 		}
-		lo, hi := band(reps, repBands)
+		lo, hi := bandUnder(reps, repBands, repsWorthDoing(s.lib.Exercises[slug].Difficulty))
 		block.Prescription = fmt.Sprintf("%d-%d reps with +%s kg", lo, hi, kilos(kg))
 		block.Intensity = s.week.Effort + " " + basis
 		block.Tempo = "3s down, drive up"
@@ -157,12 +180,12 @@ func (s *sessionBuilder) prescribe(w work) {
 		}
 
 	default:
-		reps, best, basis := s.repWork(slug, w.Standard)
+		reps, most, best, basis := s.repWork(slug, w.Standard)
 		sets = s.setCount(w.Base)
 		if w.Light {
 			sets, reps = max(2, sets-1), max(2, reps*2/3)
 		}
-		lo, hi := band(reps, repBands)
+		lo, hi := bandUnder(reps, repBands, most)
 		block.Prescription = fmt.Sprintf("%d-%d reps", lo, hi)
 		block.Intensity = fmt.Sprintf("%s Your best set is %s%s.", s.week.Effort,
 			plural(int(best), "rep"), basis)
@@ -360,13 +383,27 @@ func (s *sessionBuilder) prep() {
 	})
 }
 
-// balanceChain is the antagonist to what this session trained hard, kept
-// deliberately light: accessory movements, not a second main lift.
+// balanceChain is the antagonist to what this session trained hard: the
+// pattern the day did not train, at the athlete's own level, and kept to
+// accessory dosage rather than turned into a second main lift.
+//
+// It used to be a fixed list ending in an australian row or a push-up, which
+// is a counterweight for a beginner and a formality for anyone else. The band
+// work stays on the end of it because it never stops being worth doing — a
+// face pull is prescribed for what it does to a shoulder, not for how hard it
+// is — and because it guarantees this block exists even when everything above
+// it has been filtered out.
 func (s *sessionBuilder) balanceChain() chain {
+	// One step under what they could do, because this block balances the day
+	// rather than being a second hard one, and never the goal's own work: an
+	// ice cream maker is not the counterweight to a front lever day, it is
+	// another front lever day.
 	if s.pushDay() {
-		return chain{"australian_row", "band_face_pull", "scapular_pull_up"}
+		return append(s.offGoalLine(s.poolFor(patternPull, s.day.Day-1, 1)),
+			"band_face_pull", "scapular_pull_up")
 	}
-	return chain{"push_up", "band_face_pull", "scapular_push_up"}
+	return append(s.offGoalLine(s.poolFor(patternPush, s.day.Day-1, 1)),
+		"band_face_pull", "scapular_push_up")
 }
 
 func (s *sessionBuilder) pushDay() bool {
@@ -401,7 +438,11 @@ func (s *sessionBuilder) skill(light bool) {
 	// then the main work below it. It is not extra volume; it is where the
 	// hardest thing gets attempted while the athlete can still hold a shape.
 	// A skill attempted at the end of a session is a skill rehearsed badly.
-	if !light && s.goal.StraightArm && s.rung+1 < len(s.ladder) {
+	//
+	// It is the second rung of the session's span, so it appears from the
+	// middle focus level up. At the lowest, the session is the rung and its
+	// drill and nothing else, which is the whole point of asking.
+	if !light && s.focus.Span >= 2 && s.goal.StraightArm && s.rung+1 < len(s.ladder) {
 		next := s.ladder[s.rung+1]
 		if len(s.unmetGate(next)) == 0 {
 			s.prescribe(work{
@@ -423,7 +464,7 @@ func (s *sessionBuilder) skill(light bool) {
 	before := len(s.blocks)
 	s.prescribe(work{
 		Intent: intent, Candidates: append(chain{}, step.Movement...),
-		Standard: step.Standard, Light: light, Base: 4, Rest: restForSkill(s.week, s.goal.StraightArm),
+		Standard: step.Standard, Light: light, Base: s.focus.Base, Rest: restForSkill(s.week, s.goal.StraightArm),
 		Notes: "Stop the set the moment the shape breaks, not when the arms give out. " +
 			"Several clean efforts beat one taken to collapse — a position held to failure rehearses the failure.",
 	})
@@ -433,6 +474,26 @@ func (s *sessionBuilder) skill(light bool) {
 		s.skillGone = true
 		s.noteSkillRemoved()
 		return
+	}
+
+	// The rung below, as volume. This is the third rung of the span and the
+	// block that answers the question this planner was getting wrong: what
+	// goes beside a maltese hold on a maltese day. The answer the elite
+	// programmes give is the rung under it — a maltese lean, a planche lean,
+	// a wide planche — held for more sets at a shorter hold, not an L-sit and
+	// not a back lever. Those are somebody else's skill, and a maximal skill
+	// day has room for exactly one.
+	if !light && s.focus.Span >= 3 && s.rung > 0 {
+		below := s.ladder[s.rung-1]
+		s.prescribe(work{
+			Intent: intent, Candidates: append(chain{}, below.Movement...),
+			Standard: below.Standard * 0.7, HoldStandard: below.Standard * 0.7,
+			Base: 4, MaxSets: 5, Rest: restSecondary,
+			Progression: "Volume at a position you already own. It moves up when the rung above it does, " +
+				"and it is the block to cut first if the session is running long.",
+			Notes: "The rung below the one you are training, for the sets the hard rung cannot carry. " +
+				"This is where the position gets normal rather than heroic, which is what actually makes it yours.",
+		})
 	}
 
 	// The drill that builds the rung, trained beside it rather than instead
@@ -481,6 +542,8 @@ func (s *sessionBuilder) test() {
 		prescription = fmt.Sprintf("3 attempts at a maximum hold — the target is %s", secs(step.Standard))
 	case "reps":
 		prescription = fmt.Sprintf("3 attempts at a maximum set — the target is %s", plural(int(step.Standard), "rep"))
+	case "weighted_hold":
+		prescription = fmt.Sprintf("3 attempts at a maximum hold with +%s kg on", kilos(step.Standard))
 	case "weighted_reps":
 		prescription = fmt.Sprintf("work up to a single — the target is +%s kg", kilos(step.Standard))
 	}
@@ -546,24 +609,31 @@ func (s *sessionBuilder) accessories() {
 	// shoulder in this sport ends up hurt, and it is entirely avoidable.
 	if s.day.Hard {
 		s.prescribe(work{
-			Intent: "accessory", Candidates: s.balanceChain(), Standard: 12, HoldStandard: 30,
+			Intent: "accessory", Candidates: s.keepOnLine(s.balanceChain()), Standard: 12, HoldStandard: 30,
 			MaxSets: 3, Rest: restAccessory,
 			Notes: "The counterweight to the hard work above it. This is the block that keeps the shoulder even.",
 		})
 	}
 
-	// The second is the goal's own supporting work, rotated by the day so a
-	// five-day week does not do the same accessory five times.
+	// The second is the goal's own supporting work, at this athlete's level and
+	// rotated by the day so a five-day week does not do the same accessory five
+	// times. Where the goal's own list has nothing left worth a set — every
+	// entry on it long since outgrown — the pattern's pool takes over rather
+	// than the list being prescribed anyway.
+	//
+	// On a skill day the whole thing is filtered through the one-line rule:
+	// another skill's rung is not accessory work here, it is a second skill.
 	s.prescribe(work{
 		Intent:     "accessory",
-		Candidates: rotate(append(append(chain{}, s.goal.Accessories...), "band_face_pull", "australian_row", "bulgarian_split"), s.day.Day-1),
+		Candidates: s.keepOnLine(s.supportChain()),
 		Standard:   12, HoldStandard: 30, MaxSets: 3, Rest: restAccessory,
 		Notes: "Volume, not a fight. Drop this before you drop a warm-up, and never before a main block.",
 	})
 
 	if s.day.Role != roleRecovery {
 		s.prescribe(work{
-			Intent: "accessory", Candidates: rotate(s.coreChain(), s.day.Day-1), Standard: 10, HoldStandard: 45,
+			Intent: "accessory", Candidates: s.keepOnLine(rotate(s.coreChain(), s.day.Day-1)),
+			Standard: 10, HoldStandard: 45,
 			MaxSets: 3, Rest: 90,
 			Notes: "The moment the lower back lifts off the floor or the hips sag, the set is finished.",
 		})
@@ -577,7 +647,13 @@ func (s *sessionBuilder) conditioning() {
 	if s.day.Hard || s.isTest || s.week.Phase == phaseDeload {
 		return
 	}
-	candidates := chain{"australian_row", "push_up", "bodyweight_squat", "hanging_knee_raise", "jump_squat"}
+	// Conditioning is meant to be submaximal — the clock caps the rest, and the
+	// movement has to stay clean under fatigue — but submaximal is relative,
+	// and six australian rows a minute is nothing at all to someone holding a
+	// front lever. So the band is wide here rather than absent.
+	candidates := s.keepOnLine(s.keepAtLevel(chain{"pull_up", "dip", "push_up", "australian_row",
+		"bodyweight_squat", "hanging_leg_raise", "hanging_knee_raise", "jump_squat"},
+		conditioningGap, 1))
 
 	if s.day.Role == roleRecovery {
 		s.literal("conditioning", candidates, 1, "AMRAP 8 minutes: 8 reps a round, resting whenever you need to", Block{
@@ -631,7 +707,13 @@ func (s *sessionBuilder) holdWork(slug string, standard float64) (seconds int, b
 // repWork prescribes reps against the athlete's best logged set. With no set
 // logged it works from the standard instead of from a fraction of a guess,
 // which is the difference between a first session of six reps and one of two.
-func (s *sessionBuilder) repWork(slug string, standard float64) (reps int, best float64, basis string) {
+//
+// The ceiling on it is the movement, not the caller. An accessory slot asks
+// for twelve reps because twelve is what an accessory is worth; hand that
+// number to a one-arm negative and the block says "8-15 reps" of something
+// nobody does more than three of. Since accessories are now chosen at the
+// athlete's own level, that stopped being a hypothetical.
+func (s *sessionBuilder) repWork(slug string, standard float64) (reps int, most int, best float64, basis string) {
 	fraction := 0.6
 	switch s.week.Phase {
 	case phaseIntensifation:
@@ -642,10 +724,76 @@ func (s *sessionBuilder) repWork(slug string, standard float64) (reps int, best 
 
 	best = s.rec.reps(slug)
 	if best <= 0 {
+		// No record, so the number comes from the slot that asked — and the
+		// slot does not know what movement it got. This is where the cap
+		// belongs.
+		most = repsWorthDoing(s.lib.Exercises[slug].Difficulty)
 		best = math.Max(standard, 5)
-		return clampInt(int(math.Round(best*0.7)), 4, 12), best, sourceNote("", false)
+		return clampInt(int(math.Round(best*0.7)), 2, most), most, best, sourceNote("", false)
 	}
-	return clampInt(int(math.Round(best*fraction)), 3, 20), best, sourceNote(s.rec.source(slug), true)
+	// A record outranks the cap, here as everywhere else in this planner. Six
+	// front lever rows is six front lever rows whatever the library rates the
+	// movement at, and telling somebody who logged six that nobody does more
+	// than three is the app arguing with its own evidence.
+	return clampInt(int(math.Round(best*fraction)), 2, 20), 20, best, sourceNote(s.rec.source(slug), true)
+}
+
+// repsWorthDoing is the most reps a movement of this difficulty is prescribed
+// for. It is the library's ten-point scale read as what a set of the thing
+// looks like: twenty push-ups is a set, twenty one-arm pull-ups is not a
+// number, it is a category error.
+func repsWorthDoing(difficulty int) int {
+	switch {
+	case difficulty >= 9:
+		return 3
+	case difficulty >= 8:
+		return 5
+	case difficulty >= 6:
+		return 8
+	case difficulty >= 4:
+		return 12
+	case difficulty >= 3:
+		return 15
+	default:
+		return 20
+	}
+}
+
+// weightedHoldSeconds is what a loaded static is held for when the athlete has
+// nothing logged on it. A weighted hold is short by design — the load is the
+// progression and the seconds are the quality check — so this is well under
+// what the same position unloaded would ask for.
+const weightedHoldSeconds = 12
+
+// addedHold sizes the belt for a hold rather than for a set of reps.
+//
+// None of addedWork's arithmetic applies here: Epley is a rep-max formula and
+// a hold has no reps to feed it. What is available is the athlete's own best
+// logged load on this movement, and the rung's standard when there is none —
+// which is honest, because the rung's standard is exactly the load the rung is
+// cleared at, and starting below it is the right direction to be wrong in.
+func (s *sessionBuilder) addedHold(slug string, standard float64) (kg float64, basis string) {
+	logged := s.rec.added(slug)
+	if logged <= 0 {
+		// Nothing on record. Half the rung's own standard, which is a load the
+		// athlete can hold for the seconds above rather than one that turns
+		// the block into a single.
+		return math.Max(roundLoad(standard*0.5), 2.5), fmt.Sprintf(
+			"The load is half of the %s kg this rung is cleared at, because nothing weighted is logged on it "+
+				"yet. Log one set with the belt on and the next plan works from your number instead.",
+			kilos(standard))
+	}
+	fraction := 0.8
+	switch s.week.Phase {
+	case phaseIntensifation:
+		fraction = 0.9
+	case phaseDeload:
+		fraction = 0.6
+	case phaseTest:
+		fraction = 1
+	}
+	return math.Max(roundLoad(logged*fraction), 2.5), fmt.Sprintf(
+		"The load is worked back from the %s kg you have logged on it.", kilos(logged))
 }
 
 // addedWork sizes the belt.
@@ -724,8 +872,9 @@ func (s *sessionBuilder) addedWork(slug string) (reps int, kg float64, basis str
 
 func (s *sessionBuilder) noteSkillRemoved() {
 	s.builder.restrictions = appendUnique(s.builder.restrictions, fmt.Sprintf(
-		"Every movement on the %s ladder loads an injured area, so the skill work itself is out until that "+
-			"resolves. What is left keeps the rest of you training in the meantime, which is the point.",
+		"Every rung of the %s ladder loads an injured area — the planner already stepped down as far as it "+
+			"could — so the skill work itself is out until that resolves. What is left keeps the rest of you "+
+			"training in the meantime, which is the point.",
 		strings.ToLower(s.goal.Name)))
 }
 
@@ -849,6 +998,36 @@ func band(target int, bands [][2]int) (int, int) {
 			d = -d
 		}
 		if d < distance {
+			best, distance = candidate, d
+		}
+	}
+	return best[0], best[1]
+}
+
+// bandUnder is band with a ceiling on the top of the range. The bands are
+// written for movements you can do ten of; prescribing "8-15 reps" of a
+// one-arm negative is the band, not the target, being wrong. Where the cap
+// leaves nothing the easiest band stands, because a range is still better than
+// a point value.
+func bandUnder(target int, bands [][2]int, most int) (int, int) {
+	eligible := make([][2]int, 0, len(bands))
+	for _, candidate := range bands {
+		if candidate[1] <= most {
+			eligible = append(eligible, candidate)
+		}
+	}
+	if len(eligible) == 0 {
+		return bands[0][0], bands[0][1]
+	}
+	// The widest band at the closest distance wins, so a target that sits on a
+	// band's top gets that band rather than the narrower one below it.
+	best, distance := eligible[0], 1<<30
+	for _, candidate := range eligible {
+		d := target - candidate[0]
+		if d < 0 {
+			d = -d
+		}
+		if d <= distance {
 			best, distance = candidate, d
 		}
 	}

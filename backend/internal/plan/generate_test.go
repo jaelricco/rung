@@ -253,29 +253,50 @@ func TestWeeklyHardSetsStayInsideTheEvidenceBand(t *testing.T) {
 
 func TestPrescriptionsMatchHowTheMovementIsMeasured(t *testing.T) {
 	lib := seededLibrary(t)
-	snap := snapshotOf(12, 72, rec("pull_up", 12, 0, 0), rec("dip", 14, 0, 0))
+	// Two athletes, because the rungs that carry the awkward measures are at
+	// the top of their ladders and a beginner never reaches them.
+	athletes := []training.Snapshot{
+		snapshotOf(12, 72, rec("pull_up", 12, 0, 0), rec("dip", 14, 0, 0)),
+		snapshotOf(20, 72, rec("pull_up", 20, 0, 0), rec("dip", 20, 0, 0),
+			rec("front_lever", 0, 0, 35), rec("weighted_front_lever", 0, 12, 14),
+			rec("full_planche", 0, 0, 12), rec("back_lever", 0, 0, 25)),
+	}
+	for _, goal := range allGoalKeys() {
+		for _, snap := range athletes {
+			checkMeasures(t, lib, goal, snap)
+		}
+	}
+}
 
-	for _, goal := range []string{"front lever", "l-sit", "handstand", "planche", "human flag"} {
-		p, _ := Generate(Request{Goal: goal, Weeks: 6, DaysPerWeek: 4}, snap, lib)
-		for _, session := range p.Sessions {
-			for _, block := range session.Blocks {
-				measure := lib.Exercises[block.ExerciseSlug].Measure
-				hold := strings.Contains(block.Prescription, "hold") || strings.Contains(block.Prescription, "maximum hold")
-				format := strings.Contains(block.Prescription, "EMOM") || strings.Contains(block.Prescription, "AMRAP") ||
-					strings.Contains(block.Prescription, "circuit") || strings.Contains(block.Prescription, "controlled reps") ||
-					strings.Contains(block.Prescription, "per position") || strings.Contains(block.Prescription, "attempt")
-				if measure == "static_hold" && !hold && !format {
-					t.Errorf("%s: %q is measured in seconds but was prescribed as %q",
-						goal, block.ExerciseSlug, block.Prescription)
-				}
-				if measure == "reps" && hold {
-					t.Errorf("%s: %q is measured in reps but was prescribed as a hold: %q",
-						goal, block.ExerciseSlug, block.Prescription)
-				}
-				if measure == "weighted_reps" && !strings.Contains(block.Prescription, "kg") {
-					t.Errorf("%s: %q takes added load but was prescribed without any: %q",
-						goal, block.ExerciseSlug, block.Prescription)
-				}
+func checkMeasures(t *testing.T, lib Library, goal string, snap training.Snapshot) {
+	t.Helper()
+	p, _ := Generate(Request{Goal: goal, Weeks: 6, DaysPerWeek: 4}, snap, lib)
+	for _, session := range p.Sessions {
+		for _, block := range session.Blocks {
+			measure := lib.Exercises[block.ExerciseSlug].Measure
+			hold := strings.Contains(block.Prescription, "hold") || strings.Contains(block.Prescription, "maximum hold")
+			format := strings.Contains(block.Prescription, "EMOM") || strings.Contains(block.Prescription, "AMRAP") ||
+				strings.Contains(block.Prescription, "circuit") || strings.Contains(block.Prescription, "controlled reps") ||
+				strings.Contains(block.Prescription, "per position") || strings.Contains(block.Prescription, "attempt")
+			if measure == "static_hold" && !hold && !format {
+				t.Errorf("%s: %q is measured in seconds but was prescribed as %q",
+					goal, block.ExerciseSlug, block.Prescription)
+			}
+			if measure == "reps" && hold {
+				t.Errorf("%s: %q is measured in reps but was prescribed as a hold: %q",
+					goal, block.ExerciseSlug, block.Prescription)
+			}
+			if measure == "weighted_reps" && !strings.Contains(block.Prescription, "kg") {
+				t.Errorf("%s: %q takes added load but was prescribed without any: %q",
+					goal, block.ExerciseSlug, block.Prescription)
+			}
+			// A weighted hold is both numbers or it is a different
+			// exercise: seconds without the belt, or a belt without the
+			// seconds, is not the set the rung is measured on.
+			if measure == "weighted_hold" && !format &&
+				(!hold || !strings.Contains(block.Prescription, "kg")) {
+				t.Errorf("%s: %q is a hold with load on it and was prescribed as %q",
+					goal, block.ExerciseSlug, block.Prescription)
 			}
 		}
 	}

@@ -609,7 +609,585 @@ skill attempted at the end of a session is a skill rehearsed badly.
 
 ---
 
-## 10. What this means for an algorithm
+## 10. How much of a week one skill may have
+
+§7 asked what a week costs the tendons and §9 asked what one session looks
+like. Neither asked the question in between, which is the one an athlete
+actually has an opinion about: *how much of my week does this new skill get?*
+The planner answered it silently — as much as the session order allowed — and
+that answer is wrong in both directions. Someone fitting a maltese into a week
+they otherwise like does not want it eating the week. Someone who has cleared
+the calendar for it does not want two sets and an apology.
+
+### A note on these sources, and on what could not be read
+
+The material below was gathered from three coaches whose channels were named
+as the sources for this pass — [Doctor Yaad](https://www.youtube.com/@DoctorYaad)
+(Yaad Mohammad, MD, calisthenics coach and athlete),
+[King Dailong](https://www.youtube.com/@kingdailong) (Daï-Long Huynh, whose
+maltese programme is the floor ladder §9 is built on) and
+[Nicky Lyan](https://www.youtube.com/@NICKYLYAN) — plus the tendon literature
+one of them interviewed.
+
+The transcripts themselves could not be read. The environment this pass ran in
+has an egress policy that blocks youtube.com along with the coaches' own sites,
+so what follows comes from search over that material — the podcast pages,
+programme documents, article versions and interviews — rather than from a
+verbatim transcript. Several of the numbers below therefore carry a confidence
+one step below the papers cited in §2 to §5, and every one of them is
+attributed so it can be replaced by a better reading. Where a claim rests on a
+single search summary rather than a source read end to end, it says so.
+
+### Tendon adaptation saturates, and it saturates fast
+
+This is the finding that changes the arithmetic, and unlike the rest of this
+section it comes from a named researcher rather than from coaching consensus:
+Keith Baar (UC Davis), interviewed on the Doctor Yaad podcast and in several
+other places
+([Doctor Yaad](https://doctoryaad.com/articles/how-to-get-bulletproof-tendons-ft-professor-keith-baar-doctor-yaad-podcast),
+[Tim Ferriss #797](https://tim.blog/2025/02/26/dr-keith-baar/),
+[Just-Fly Sports](https://www.just-fly-sports.com/podcast-392/),
+[summary of the protocol](https://boxlifemagazine.com/secret-static-holds-build-stronger-tendons/)):
+
+- **About ten minutes of loading gives a tendon its maximum anabolic signal.**
+  Past that the growth signal does not rise; the wear does.
+- **Ten minutes of load, then six to eight hours of rest, then ten minutes
+  again, roughly doubles the collagen response** of one continuous bout. Two
+  short exposures beat one long one, and the gap between them is the active
+  ingredient.
+- **Isometrics build a stiffer tendon than the same time under tension spent
+  on reps.** Four 30-second holds across an eight-minute window produced a
+  bigger *and* stronger tendon; the same total time as dynamic repetitions
+  produced a bigger tendon with no strength gain and slightly *lower*
+  stiffness.
+- **Hold length depends on whether the tendon is healthy.** Short holds
+  (1–10 s) for a healthy tendon; 30 s for an injured one, because a damaged
+  region is stress-shielded by the tissue around it and needs longer to see
+  the load. Ramp on over 3–5 s, hold, ramp off over 3–5 s — "low-jerk".
+- **Three days immobilised costs 15–20% of a tendon's collagen.** Tendon is not
+  slow to lose, only slow to build.
+
+Read against the rest of this document, that says something blunt: **a maximal
+skill day has a ceiling on useful volume, and it is low.** Sets past it are
+bought at full tissue cost and no adaptation. It also retrospectively explains
+why §1's grease-the-groove prescription works, and why the deload evidence in
+§2 does not contradict it — frequency is the lever, duration is not.
+
+### The frequency that actually moves a static
+
+Doctor Yaad's planche material puts it at **two to three sessions a week per
+maximal static, at least 48 hours apart** — more often and the wrists and
+shoulders start reporting it, less often and the stimulus does not land — with
+**4 to 6 sets of 5 to 15 seconds** per session at a fraction of the best hold,
+and technique ahead of duration: *a 5-second hold with a correct posterior
+pelvic tilt is worth more than a 15-second hold with a banana back*. He also
+prescribes keeping the full variant in the week alongside the easier one —
+negatives or band-assisted attempts at least weekly — so the nervous system
+keeps seeing the goal pattern while the strength is built on the sub-variant
+([summary of his planche guidance](https://doctoryaad.com/articles/should-you-skip-the-straddle-planche-i-asked-the-experts),
+[FitnessFAQs #65, on programme design](https://creators.spotify.com/pod/profile/fitnessfaqs/episodes/65---How-To-Design-The-Perfect-Calisthenics-Program---Dr-Yaad-Mohammad-e30kaja)).
+
+That is the same 2–3 the elite-split source in §7 gives for high-strain statics,
+arrived at from a different direction, and it is the number the focus dial's
+top position is capped at.
+
+### The maltese, in its own programme's proportions
+
+The programme this app's floor ladder comes from
+([Daï-Long Huynh](https://street-workout.fandom.com/wiki/Da%C3%AF-Long_Huynh);
+the programme documents themselves are paid, and are described rather than
+reproduced) runs **six training days and one rest day around three skill
+sessions: one planche, one maltese, and one mixed**. Work is in short sets —
+1 to 8 reps — with **4 to 8 minutes of rest**, and at least 5 minutes between
+sets of anything maximal. The progression order is straddle planche → full
+planche → maltese on parallel bars → maltese on the floor.
+
+The proportion is the point. **For the athlete whose entire sport is the
+maltese, the maltese is one day in six, and a shared day makes two.** That is
+where this app's ceiling of 40% comes from: it is a little above what the
+sport's own specialists do, so it is a genuine ceiling rather than a
+restatement of the average, and nothing in the app is allowed past it.
+
+### A skill day belongs to one line
+
+Across the coaching material the session has the same shape, and it is not four
+arbitrary exercises: **the most specific thing first — the isometric itself —
+then a dynamic version of the same line (a pseudo planche push-up, a planche
+raise, a lean), and only then isolation accessories**
+([worked example](https://www.thebodyweighttribe.com/blog/how-to-train-for-the-planche)).
+The rest of the week carries the *other* skills, handstands, mobility and
+ordinary bent-arm work — separately.
+
+The consequence is the rule this planner was missing. What goes beside a
+maltese hold on a maltese day is a **maltese lean, a wide planche, a planche
+lean** — the rung above it and the rung below it. It is not an L-sit and not a
+back lever. Those are not accessories, they are a second skill in an
+accessory's clothes, and they spend from the budget §7 is about while adding
+nothing to the position being trained. A skill day has room for exactly one
+line.
+
+### Nicky Lyan's frame: specificity, volume, normalisation
+
+Nicky Lyan's material organises the same ideas as principles rather than
+protocols — *specificity*, *volume work*, and **normalisation**, the idea that
+a skill is owned when the position stops being an event and becomes ordinary
+([his channel](https://www.youtube.com/@NICKYLYAN),
+[the written version](https://nickylyan.com/products/how-to-actually-get-better-at-calisthenics)).
+The detail behind the framework is in paid material and is not reproduced here;
+what is taken is the framing, and it maps onto exactly one block: the rung
+*below* the one being trained, run for more sets at a comfortable hold. That is
+what normalisation costs, and it is the block a plan built only from maximal
+work does not have.
+
+### Maintenance is cheap, which is what makes a focused week affordable
+
+Trained adults hold strength and muscle on a fraction of the volume that built
+them — around **one third**, and for younger trained lifters as little as
+**one ninth**, with roughly **2–5 sets per muscle group per week** and a single
+weekly exposure generally enough to hold neuromuscular adaptation
+([Bret Contreras' review of the maintenance literature](https://bretcontreras.com/how-much-training-is-necessary-to-maintain-strength-and-muscle/),
+[maintenance volume summary](https://bonytobeastly.com/maintenance-training-volume/)).
+
+That is the number that makes §7's rule affordable. Keeping the planche in the
+week while chasing a maltese does not cost a second planche programme; it costs
+two or three sets. So the fed skill stays, at maintenance, at every level of
+the dial — and it is not charged to the new skill's share, because it is not
+the new skill's work.
+
+### What the dial does
+
+Three positions, and a ceiling none of them crosses. The share is measured as
+the goal's own ladder work against the week's working sets, warm-ups excluded,
+on ordinary training weeks — a deload deliberately cuts accessories and keeps
+the skill, so measuring it there would trim the one block that week exists to
+protect.
+
+| | Share of the week | Skill sessions | Rungs per session | Tendon budget |
+| --- | --- | --- | --- | --- |
+| **Keep it in the week** | ≤ 20% | 1 | the rung and its drill | its own cost |
+| **Train it properly** | ≤ 30% | 2 | + the rung above, as the opener | its own cost |
+| **Build the week around it** | ≤ 40% | 3 | + the rung below, as volume | one unit more |
+
+The ceiling is enforced on the finished week rather than assumed from the way
+it was built: sets come off the largest skill block first, down to a floor of
+two, and only then does a session give up a rung of its span — the drill, then
+the rung below, then the opener, in the order they add value. The rung the
+session is named after is never removed. A week that still cannot be brought
+under says so rather than pretending.
+
+The 48-hour rule outranks the dial. A three-day week gets two skill sessions at
+every level above the lowest, because a third would land inside the recovery of
+the second, and the top of the dial is a cap rather than a target.
+
+---
+
+## 11. An accessory has a level too
+
+The focus dial in §10 decided how much of the week the skill gets. It said
+nothing about what fills the rest of the session, and what filled it was a
+fixed list. Fixed lists have one failure mode, and it gets worse the better the
+athlete is: they keep prescribing the movement that used to be hard.
+
+The report that surfaced it is worth quoting in shape, because it is the honest
+test of every accessory rule: *I can hold a front lever and a straddle planche
+and I am training the front lever pull-up. An australian row is not accessory
+work for me. A hollow body hold is not accessory work for me. Give me front
+lever tuck rows, weighted pull-ups, dragon flags.* Every word of that is right,
+and the planner was doing exactly what was described — three of the twenty
+accessory lists in the catalogue named `australian_row` and thirteen named
+`hollow_body_hold`, and the antagonist block was a fixed `australian_row` or
+`push_up` at every level of the sport.
+
+### Why tiers were the wrong fix
+
+The core chain already *had* tiers — three of them — and it still produced the
+complaint, because every tier keyed on one movement: a hanging leg raise or an
+L-sit hold. An athlete whose log is full of levers and planches and empty of
+hanging leg raises fell straight through to the bottom of it and was prescribed
+planks. That is not a missing tier, it is the wrong evidence. Any rule that
+asks "have you logged *this* movement" fails for the athlete who got strong
+some other way.
+
+Two numbers already in the app answer it without any new tiers at all. The
+exercise library rates every movement 1 to 10 for difficulty. The athlete's
+records name the hardest thing they have done. The band between them is the
+tier, and it needs nothing kept in step: a movement added to the library joins
+the right level by being rated, and an athlete moves up it by logging a set.
+
+### The rules that fall out
+
+**Level is per pattern, not overall.** Someone holding a maltese is not
+therefore ready for a one-arm pull-up, and someone with a front lever is not
+therefore a runner. The ceiling a movement is measured against is the hardest
+thing on record in the same kind of work — pull, push, legs, core — with
+statics measured against the overall figure, because that is what the ladders
+are rated on.
+
+**A pattern with nothing logged does not make a beginner.** Somebody with a
+full planche has been training for years whatever their pull-up column says. So
+the floor under an unlogged category is the overall figure less two: one useful
+step down rather than a reset to push-ups.
+
+**Movements that scale with load are exempt from the floor.** A weighted
+pull-up is as hard as the plate on the belt, and a band face pull is prescribed
+for what it does to a shoulder rather than for how hard it is. Neither is ever
+"too easy for this athlete".
+
+**Inside the band, what they have a record for comes first.** The point of
+scaling accessories up is to stop prescribing work the athlete outgrew, not to
+fill their week with movements nobody has a number for. A block priced from a
+rung's standard rather than from a logged set is a guess, and a guess is
+tolerable for one block and wrong for three.
+
+**The rep count is capped by the movement, not by the slot that asked.** An
+accessory slot asks for twelve reps because twelve is what an accessory is
+worth. Hand that number to a one-arm negative and the block reads "8-15 reps"
+of something nobody does more than three of. The library's difficulty rating
+reads directly as what a set of the thing looks like:
+
+| Difficulty | Most reps prescribed |
+| --- | --- |
+| 9–10 | 3 |
+| 8 | 5 |
+| 6–7 | 8 |
+| 4–5 | 12 |
+| 3 | 15 |
+| 1–2 | 20 |
+
+**The antagonist is one step easier, and never the goal's own work.** That
+block exists to balance the day. A block that trains the same thing balances
+nothing — an ice cream maker is not the counterweight to a front lever day, it
+is another front lever day — and a maximal set is not a counterweight either.
+
+**Scaling up must not scale a beginner up.** The first version of this rule
+prescribed deficit handstand push-ups in a plan for somebody's first pull-up,
+because the band closed over nothing and the fallback handed back the first
+entry of a list written hardest-first. Two guards: a level never falls below
+one, so the bottom of the library stays reachable; and when nothing in a list
+is at the athlete's level, the fallback sorts it easiest-first, because that is
+the only safe direction to be wrong in.
+
+### Where the one-line rule ended up
+
+§10 filtered another skill's rungs out of a skill day's supporting slots. Two
+things changed once the pools reached into the rest of the catalogue.
+
+It now covers **the whole line rather than just the rungs** — an ice cream
+maker is a front lever drill rather than a front lever, and putting one on a
+planche day is exactly the mistake the rule is about — and it applies on
+**every day of the week rather than only the skill days**. The argument for the
+skill day was rehearsal: one line per session. The argument for the rest of the
+week is the tendon budget of §7, and it is the stronger one — a back lever on
+the day *after* a maltese day is loading the same tissue during the recovery
+that day exists to provide.
+
+And it narrowed in the other direction, to **straight-arm work only**. The rule
+exists because one maximal static spends from the same account as another. A
+hard *bent-arm* movement that happens to sit on somebody else's ladder is not
+that: a typewriter pull-up is the antagonist a maltese day wants, and refusing
+it because a one-arm pull-up is climbed through one leaves the counterweight to
+a heavy push day as a band face pull.
+
+---
+
+## 12. Filling out the maximal tier
+
+§7 opened the tier above the full planche and §9 rebuilt its maltese on the
+floor. Both were push, and both stopped short. Counted afterwards, every skill
+the app rated as costing three units of the tendon budget — the group the
+baseline page draws as "Maximal" — was a pushing skill: maltese, iron cross,
+planche press. Nothing you hang from was in it, and the two hardest things you
+can do on your hands were not in it either.
+
+That was not a judgement about what counts as maximal. It was the extent of the
+catalogue, and it had two consequences worth naming. The tendon budget
+under-counted every athlete training a maximal pull, because the skill they
+were training was either absent or rated at one unit. And the focus dial of §10
+could not ration a week around a skill it did not know about.
+
+Four skills fill the gap. Three of them are the front lever's directions out —
+open the arms on a bar, open them on rings, or take one hand off — and the
+fourth is the one skill at this end of the catalogue that is a pull rather than
+a hold.
+
+### The SAT is to the front lever what the maltese is to the planche
+
+The **SAT** is the front lever with the arms opened to the maximum, held on a
+straight bar — the bar's answer to the rings **Victorian**
+([Calisteniapp's statics diagram](https://calisteniapp.com/articles/calisthenics-statics),
+[GorNation, straight bar victorian](https://www.gornation.com/blogs/calisthenics-exercises/straight-bar-victorian),
+[GorNation, victorian](https://www.gornation.com/blogs/calisthenics-exercises/victorian)).
+The relationship is exactly the one §9 described for the maltese: the same
+skill, with the hands travelling outward. So it gets the same shape of ladder,
+including the rung that tradition runs through — a **wide-grip front lever**,
+which is to the SAT what the wide planche is to the maltese, and which no
+published progression seems to name.
+
+The prerequisite the sources give is unusually emphatic, and it is not "a front
+lever". It is a front lever that is **owned**: a long clean hold, front lever
+pull-ups, and a front lever touch. That is the §7 pattern again — the
+prerequisite does not stop mattering once you are past it — so the front lever
+is what the first rung of this ladder *is*, the gates above it ask for twelve
+then twenty seconds, and the tuck SAT is gated on a front lever touch rather
+than on more seconds of the same hold.
+
+The ladder: held front lever → **box victorian** (forearms on a box or a low
+bar, the earliest honest loading) → **wide-grip front lever** → **tuck SAT** →
+**advanced tuck SAT** → **straddle SAT** → **SAT**, with a band-assisted SAT as
+the assist beside the top three and the assistance coming down between blocks
+rather than inside a session.
+
+There is deliberately no entry gate on the goal itself. §9 settled that
+question: gates belong on rungs. Here it falls out for free, because the first
+rung *is* the front lever — an athlete who does not have one is placed there
+and trains it, and nothing has to refuse them.
+
+**The wrist.** The SAT rests the forearms and wrists on a straight bar and then
+loads them with a horizontal body. It is not a planche and nothing goes through
+the palm, but the wrist is held in extension against the bar for the length of
+every set, which is the mechanism §8 is about. So the SAT rungs are on the
+wrist-loading list, and — unlike most of the maltese ladder — they have a real
+neutral-wrist substitution: the rings victorian, where the ring turns with the
+forearm instead of the forearm being pressed against a bar. It is a harder
+skill, not a consolation; it simply asks nothing of the wrist.
+
+### The one-arm front lever is the other direction out
+
+The **one-arm front lever** is the same hands, one of them. The sources agree
+on the shape — a strong full front lever first, then assisted work, then the
+one-arm progressions, with bending the working elbow as the regression inside a
+rung rather than a rung of its own
+([Street Workout wiki](https://street-workout.fandom.com/wiki/One_arm_front_lever),
+[GorNation tutorial](https://www.gornation.com/blogs/calisthenics-exercises/one-arm-front-lever),
+[Calisthenics 101](https://www.calisthenics-101.co.uk/how-to-front-lever)) — and
+on the failure mode: rushing it from a lever that is reached rather than held.
+
+The ladder follows the ordinary lever progression, because shortening a lever
+looks the same whichever arm is holding it: held front lever → **assisted one
+arm** (second hand on a band, a strap or a lower grip) → **one-arm tuck** →
+**one-arm advanced tuck** → **one-arm straddle** → **one-arm front lever**.
+
+Two things are specific to it and are gates rather than advice. **Grip fails
+first** for most people on this ladder, and a hand that is slipping is a
+shoulder taking a jerk — so the one-arm tuck is gated on a twenty-second
+one-arm dead hang, which is the cheapest available test of whether the grip
+will hold. And **one arm carries what two were carrying**, so the straddle is
+gated on a twenty-five-second two-arm lever: the two-arm hold is the only
+honest measure of whether there is enough there to halve.
+
+The other risk has no gate because no number expresses it: this is the most
+asymmetric loading in the sport, the shoulder is resisting rotation as well as
+holding a lever, and a side left two rungs behind is the side that gets hurt.
+That one is in the plan's own risk list, in those words.
+
+### Both of them keep the front lever in the week
+
+Both declare the front lever as what feeds them, so it holds its maintenance
+slot for the length of the plan rather than being dropped for the new skill —
+§7's rule, and the reason the maltese ladder keeps the planche. At three units
+each they also mean what they say to the budget of §7: two of these at once is
+six units against a ceiling of five, and the planner will name one to park.
+
+### A gate nobody is asked about is a gate nobody can pass
+
+Adding these exposed a fault that was already there. The baseline form derives
+its questions from the ladder's *rungs*, so a rung gated on something off the
+ladder — the maltese on a full planche, the SAT on a front lever touch — asked
+the athlete for nothing, read "nothing logged or declared" for ever, and held
+them a rung below where they actually were. The form now asks for every gate
+and every entry standard as well, and a test holds it there.
+
+### The victorian is the SAT on rings
+
+They are one skill on two implements — the front lever with the arms opened to
+the maximum — and the sources treat them that way, giving the same prerequisite
+for both: a front lever that is *owned*, meaning the long hold, the pull-ups
+and the touch, not a personal best
+([GorNation, victorian](https://www.gornation.com/blogs/calisthenics-exercises/victorian),
+[Calisthenics world](https://calisthenicsworld.org/victorian/)).
+
+The rings ladder differs from the bar one in one rung and one risk. It runs
+**tuck (20 s) → one leg (10 s) → straddle → full**, banded where the athlete
+needs it — the one-leg hold is a rung the bar version has no equivalent for,
+the same way the wide-grip front lever is a rung the rings version does not
+need. And the wrist question disappears, because the ring turns with the
+forearm instead of the forearm being pressed against a bar. That is exactly why
+the victorian is what §8's substitution logic trains the SAT as, rung for rung.
+
+Rings punish what a bar forgives, which is the compensating cost: the hold is
+unstable in every direction, so a rung is held clean or it is not held.
+
+### The hefesto is the one that is a pull
+
+Every other skill at this end of the catalogue is a hold. The hefesto is a
+pull, and it is pulled from the worst position the shoulder has: from a german
+hang, arms behind the body, over the bar, finishing in a korean dip
+([Calisthenics world](https://calisthenicsworld.org/hefesto/),
+[Calisteniapp tutorial](https://calisteniapp.com/articles/hefesto-tutorial),
+[BARSTARZZ](https://barstarzz.com/hefesto-backwards-muscle-up-tutorial/)).
+The cue the sources agree on is **pull to the armpits, not to the lower back**.
+
+Its ladder is therefore mostly other people's skills, and that is not a
+shortcut — it is what the movement is assembled from:
+
+> german hang → back lever → korean dip → hefesto negatives → band-assisted →
+> tuck hefesto → hefesto
+
+Two of those are gates with numbers behind them. The korean dip asks for **15
+strict dips and a 30-second german hang**, which is the base the sources put
+under it, and below that you are asking an unprepared shoulder to work at the
+end of its range
+([More Than Lifting](https://morethanlifting.com/how-to-do-korean-dips/),
+[Caliverse](https://www.caliverse.app/exercises/korean-dips-97)). The negatives
+ask for the korean dip itself, because a negative is lowered out of a position
+you have to be able to get into — and the sources are unanimous that the
+eccentric is where this is actually earned and that skipping it is what hurts
+people.
+
+The shoulder position has **a hard anatomical limit at roughly ninety degrees**
+of extension. That is not a range to train into; sharp pain there is a stop.
+And the korean dip and everything built on it finish with bodyweight on the
+palms with the hands behind the body, which is the wrist at the far end of
+extension carrying the lot — so those rungs are wrist-loading and, unlike the
+SAT, they have no neutral-wrist form at all. The rings do not save this one.
+
+### Two faults the hefesto exposed
+
+**A rung an injury takes away is not the whole ladder.** The planner used to
+place an athlete and then discover, block by block, that the rung's movement
+was banned — at which point the session stopped being about the skill and said
+so. That is right when the whole ladder is gone and wrong when it is not, and
+the hefesto makes the difference impossible to miss: its first two rungs are a
+german hang and a back lever, neither of which touches a wrist, while
+everything above them is wrist-loading. A sore wrist should cost that athlete
+the top of the ladder, not the skill. Placement now steps down to the highest
+rung that survives the filters, and says which rung it came from and why.
+
+**An opener is a rung, and rungs have gates.** The session's first block is two
+or three sets of the rung *above* the one being trained, attempted fresh. For
+the hefesto that meant somebody with no shoulder-extension tolerance at all
+being shown a back lever. The rung above now carries its own gate — twenty
+seconds of german hang — and the opener is simply not written when it is unmet,
+which is the machinery that already existed being pointed at the right rung.
+
+### A hold with weight on it is a thing, and the library could not say so
+
+Every exercise declares one of four measures, and the measure decides what a
+set of it looks like: reps, reps with added load, a hold in seconds, or an
+attempt that was made or missed. There is no fifth, and there needed to be. A
+weighted front lever — which §1's progression names as the honest way past a
+twenty-second lever — is held for seconds *and* carries kilos, and neither
+candidate says both.
+
+The workaround was in the seed's own comment: "Record added kg only". So the
+rung asked for kilos, the exercise claimed to be measured in seconds, and the
+planner — which prescribes from the measure and places from the rung — wrote
+out a hold and dropped the load on the floor. An athlete past a twenty-second
+front lever was handed three sets of a four-to-eight-second hold with no
+mention of the belt that is the entire point of the rung, and every plan that
+kept a front lever at maintenance under a SAT, a victorian or a one-arm front
+lever repeated it.
+
+Nothing about the data was missing. A set row has always had reps, weight and
+seconds columns, all nullable and independent; a record carries all three. It
+was only the two enumerations — what an exercise may be measured in, what a
+logged set may be — that could not spell the combination.
+
+So there is a fifth measure, `weighted_hold`, and the prescription for it says
+both numbers. The seconds come from a fraction of the athlete's own best hold,
+as every static does; the kilos come from what they have logged on the belt, or
+from half the rung's standard when nothing is logged, and the block says which.
+Progression is stated in the order that keeps it safe: **one more second at the
+same load, and the belt only gets heavier once the seconds are there** — a
+weighted hold that breaks early is a heavy hold you cannot do. The test week is
+passed on both numbers or not at all.
+
+**The invariant that would have caught it.** A metric and a measure are two
+descriptions of the same set written in different files, and when they disagree
+nothing errors — the block is simply written in the wrong units and the number
+the rung is about disappears. Every rung, gate and entry standard in the
+catalogue is now checked against the exercise it names, with added load the one
+metric allowed two measures, because a weighted pull-up is reps with a belt and
+a weighted front lever is seconds with one.
+
+### The one-arm planche is a balance skill with a strength requirement
+
+Every other maximal skill in this document is a strength problem with a
+technique component. The athletes who have this one describe it the other way
+round: *mainly a balancing move, but a decent amount of strength is also
+required*, and what they name as the prerequisites is **a good straddle planche
+and a great one-arm handstand** — two ladders, not one
+([Street Workout wiki](https://street-workout.fandom.com/wiki/One_arm_planche)).
+
+The position is also not what the name suggests. **The body curves sideways**,
+away from the supporting hand, because a symmetric one puts the mass where
+there is nothing under it. Fighting for a square shape here is fighting the
+skill, and it is how the supporting shoulder ends up loaded in rotation.
+
+So it is the first goal in the catalogue fed by two skills, and its rungs are
+gated on both: the straddle planche for the push half, the tuck and straddle
+one-arm handstand for the balance half. Somebody with one and not the other is
+held where they are and told which number is missing — a better answer than
+half a plan for a skill made of two halves.
+
+> straddle planche → one-arm planche lean → tuck one-arm planche →
+> straddle one-arm planche → one-arm planche
+
+Its ladder starts at the **straddle** planche rather than the full one, which
+is what the sources ask for and also what keeps the rungs in difficulty order.
+And it is the one skill in the catalogue with no version that spares a wrist: a
+planche angle with one hand under it instead of two, and no rings, parallettes
+or fists that change it. An angry wrist therefore steps the athlete back down
+to two arms rather than substituting — the §12 rule, doing exactly what it was
+added for.
+
+### The inverted cross has a benchmark, which almost nothing here does
+
+The inverted cross is the iron cross upside down: inverted on rings with the
+arms straight out from the shoulders. The prerequisites the coaching sources
+give are **a comfortable ring handstand and a Japanese handstand**, with
+maltese-press strength helping the rest
+([Street Workout wiki](https://street-workout.fandom.com/wiki/Inverted_cross),
+[GymnasticBodies](https://www.gymnasticbodies.com/forum/topic/9565-inverted-cross-technique/)).
+
+Two things make this element unusual for a document that has spent most of its
+length apologising for coaching consensus.
+
+**It has a peer-reviewed strength benchmark.** Schärer, Yusof and Capelli
+measured nine elite and ten junior artistic gymnasts on a five-second assisted
+inverted cross and on two conditioning lifts — an inverted cross with dumbbells
+and a seated overhead barbell press. Elites were 22.4% stronger on the hold and
+33.2% stronger on the press, and both lifts correlated with the hold at
+**r > 0.65, p < 0.01**
+([Sports 2025, 13(5):146](https://www.mdpi.com/2075-4663/13/5/146);
+[PMC12115426](https://pmc.ncbi.nlm.nih.gov/articles/PMC12115426/)). That is a
+real, citable answer to "what should I do besides the skill", and it is why the
+accessories on this ladder are overhead pressing rather than the band work
+every other rings ladder reaches for. A test holds them there, so a later tidy
+cannot quietly swap it back.
+
+It also tells you how the skill is *measured*: the study's max-strength test is
+an assisted five-second hold with a pulley. Assistance is not only how this is
+trained, it is the instrument — which is why the rung below the full hold is
+the banded one and why it is gated at ten seconds rather than at a feeling.
+
+**The failure mode is depth, not strength.** A shallow inverted cross is a
+Japanese handstand with the arms open, and it trains that instead. So the
+Japanese handstand is a rung of this ladder rather than a footnote: owning the
+thing the skill collapses into is how an athlete can tell which one they just
+did. Film it from the front, or you do not know.
+
+> ring support → ring handstand → Japanese handstand → band-assisted inverted
+> cross → inverted cross
+
+Neither ladder carries an entry gate on the goal, for the reason §12 gave: the
+first rung of each is something an ordinary strong athlete already trains — a
+straddle planche, a ring support — so a beginner is placed on the base and
+trains it, and nothing has to refuse them.
+
+---
+
+## 13. What this means for an algorithm
 
 Rules the generator implements directly, each traceable to a section above:
 
@@ -654,3 +1232,52 @@ Rules the generator implements directly, each traceable to a section above:
     before anything has tired (§9).
 21. Anything it cannot do — diagnose, prescribe a diet, promise a full planche
     in eight weeks — it declines to do, in writing (§1, §3, §5).
+22. **Ask how much of the week the skill gets**, in three steps, and hold the
+    week to the answer — measured as the goal's own ladder work against the
+    week's working sets, warm-ups excluded (§10).
+23. **No skill takes more than 40% of a training week**, whatever was asked
+    for. The specialists' own programmes put one maximal skill at one day in
+    six, and a tendon's adaptation signal saturates after about ten minutes of
+    loading, so the way past the ceiling is another session on another day and
+    never a longer one (§10).
+24. **A skill day carries one line.** The work beside the main hold is the rung
+    above it, the rung below it, or a drill for it. Another skill's rung is not
+    accessory work there, and is filtered out of the supporting slots (§10).
+25. **The session is a span of the ladder, and the focus decides how wide.**
+    One rung at the bottom of the dial; the rung above as the opener at the
+    middle; the rung below as the volume block at the top — which is where
+    normalisation happens and the block a plan of maximal work alone lacks
+    (§9, §10).
+26. **Focus costs tendon budget.** A week built around a maximal static claims
+    a unit more than one that merely contains it, so the other skills give way
+    sooner — the sets land on the same tissue either way (§7, §10).
+27. **Maintenance of the skills a goal is built on is not charged to the goal.**
+    Holding a planche while chasing a maltese costs two or three sets a week,
+    not a second programme (§7, §10).
+28. **Choose accessories from the athlete's own level, per pattern**, as a band
+    around the hardest thing they have on record rather than from a fixed list
+    or a tier keyed on one movement (§11).
+29. **Cap a rep count by the movement**, never by the slot that asked for it
+    (§11).
+30. **The antagonist is one step easier than the athlete's ceiling and never
+    the goal's own work**, because a block that trains the same thing balances
+    nothing (§11).
+31. **Ask the athlete for every gate and entry standard**, not only for the
+    rungs: a gate nobody is asked about is a gate nobody can pass (§12).
+32. **Keep both sides of the sport at the top of the catalogue.** A "maximal"
+    tier made only of pushing skills under-counts the tendon budget of every
+    athlete training a maximal pull, and gives the focus dial nothing to
+    ration (§12).
+33. **Step down the ladder when an injury takes a rung**, to the highest rung
+    that survives the filters, and say which one it came from. Losing the skill
+    is the answer only when every rung is gone (§12).
+34. **Prescribe a loaded static in both of its numbers**, seconds and kilos,
+    and progress the seconds before the load (§12).
+35. **Check every rung's metric against its exercise's measure.** They are one
+    set described in two files, and a disagreement is silent: the block comes
+    out in the wrong units and the number the rung is about vanishes (§12).
+36. **A skill made of two skills is gated on both**, and keeps both in the week
+    (§12).
+37. **Where there is a measured benchmark, prescribe from it.** The inverted
+    cross is conditioned with overhead pressing because a study found the
+    correlation, not because the movements look alike (§12).

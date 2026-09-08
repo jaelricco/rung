@@ -32,8 +32,18 @@ func Generate(req Request, snap training.Snapshot, lib Library) (Plan, []string)
 	b.weighLoad()
 	b.place()
 
+	b.rungSlugs = map[string]bool{}
+	for _, slug := range b.currentStep().Movement {
+		b.rungSlugs[slug] = true
+	}
+
 	weeks := b.schedule()
-	shape := weekShape(b.req.DaysPerWeek)
+	shape := weekShape(b.req.DaysPerWeek, b.focus.Exposures)
+	for _, day := range shape {
+		if day.Role == roleSkill || day.Role == roleLightSkill {
+			b.skillDays++
+		}
+	}
 
 	p := Plan{
 		Weeks:        b.req.Weeks,
@@ -58,13 +68,20 @@ func Generate(req Request, snap training.Snapshot, lib Library) (Plan, []string)
 		}
 	}
 
-	b.finish(&p, weeks)
-
 	// The algorithm is written against a library that a migration could change
 	// underneath it, so its own output goes through the same check the model's
-	// does. If that leaves nothing at all, say so in the plan rather than
-	// handing back a shape with no training in it.
+	// does. It runs before the focus ceiling is measured, so the ceiling is
+	// measured on the week that survived the check rather than on the one that
+	// was written.
 	warnings := Validate(&p, lib, b.req.Weeks)
+
+	// The ceiling is enforced on the finished week rather than assumed from
+	// the way it was built, and finish reports what it measured.
+	b.share = b.capFocusShare(&p, weeks)
+	b.finish(&p, weeks)
+
+	// If the check left nothing at all, say so in the plan rather than handing
+	// back a shape with no training in it.
 	if len(p.Sessions) == 0 {
 		p.Summary = "This plan could not be built: the exercise library the app prescribes from came back " +
 			"empty, so there was nothing legal to put in a session. Nothing is wrong with your training — " +
@@ -81,6 +98,11 @@ type Request struct {
 	Weeks       int
 	DaysPerWeek int
 	Notes       string
+	// Focus is how much of the week the goal is allowed to take: one of the
+	// three levels in focus.go. Empty is the middle one, which is what the
+	// planner did before the dial existed — so an older client that does not
+	// send it gets exactly the plan it used to get.
+	Focus string
 }
 
 // clamp brings a request into the range the rest of the planner assumes.
@@ -94,6 +116,7 @@ func (r *Request) clamp() {
 		r.DaysPerWeek = 3
 	}
 	r.Goal = strings.TrimSpace(r.Goal)
+	r.Focus = focusFor(strings.TrimSpace(r.Focus)).Key
 }
 
 // ---------- the builder ----------
@@ -140,6 +163,27 @@ type builder struct {
 	heldBack string
 	load     *Load
 
+	// How much of the week the goal gets, and the movements that are on its
+	// own line rather than on somebody else's. Both decide the shape of a
+	// skill day: how many rungs it spans, and what is allowed to fill the
+	// slots beside them.
+	focus focusSpec
+	share *Focus
+	line  map[string]bool
+	// hardest is the difficulty of the hardest movement the athlete has on
+	// record, as the library rates it, overall and per category. It is what
+	// places their accessory work, so that someone holding a front lever is
+	// not handed an australian row to balance a session.
+	hardest   int
+	hardestIn map[string]int
+	// rungSlugs is the movement of the rung being trained. The share cap may
+	// take sets off it but never takes it out: a session that has lost the
+	// thing it is named after is not a lighter session, it is a different one.
+	rungSlugs map[string]bool
+	fedLine   map[string]bool
+	offLine   map[string]bool
+	skillDays int
+
 	restrictions []string
 	notes        []string
 	// progressionExtras collects rules the session assembly discovers as it
@@ -164,6 +208,11 @@ func newBuilder(req Request, snap training.Snapshot, lib Library) *builder {
 	// The catalogue is package state shared by every request, so the ladder
 	// this plan may trim is a copy of it.
 	b.owned, b.answered = ownedEquipment(snap.Equipment)
+	b.hardest, b.hardestIn = b.gaugeLevel()
+	b.focus = focusFor(req.Focus)
+	b.line = b.lineOf(goal)
+	b.fedLine = b.fedLineOf(goal)
+	b.offLine = b.offLineOf(goal)
 	b.ladder = append([]Step(nil), goal.Ladder...)
 	b.aimAtNamedTarget()
 	b.gaugeReadiness()
@@ -403,6 +452,49 @@ func (b *builder) place() {
 			break
 		}
 	}
+
+	b.stepDownToWhatIsTrainable()
+}
+
+// stepDownToWhatIsTrainable moves the athlete to the highest rung an injury or
+// their equipment has not taken away.
+//
+// The planner used to place them and then discover, block by block, that the
+// rung's movement was banned — at which point the session stopped being about
+// the skill at all and said so. That is the right answer when the whole ladder
+// is gone and the wrong one when it is not, and the hefesto is what made the
+// difference obvious: its first two rungs are a german hang and a back lever,
+// neither of which touches a wrist, while everything above them finishes with
+// bodyweight on the palms behind the body. A sore wrist should cost that
+// athlete the top of the ladder, not the skill.
+func (b *builder) stepDownToWhatIsTrainable() {
+	if b.trainable(b.currentStep()) {
+		return
+	}
+	for i := b.rung - 1; i >= 0; i-- {
+		if !b.trainable(b.ladder[i]) {
+			continue
+		}
+		b.restrictions = append(b.restrictions, fmt.Sprintf(
+			"%s is where your records put you, and nothing on it can be trained around what you have "+
+				"open, so this plan works at %s instead. That is a lower rung, not a smaller goal: the "+
+				"ladder is climbed from wherever you can stand on it.",
+			b.ladder[b.rung].Name, strings.ToLower(b.ladder[i].Name)))
+		b.rung = i
+		return
+	}
+}
+
+// trainable reports whether any movement this rung is measured on survives the
+// injury and equipment filters, once substitutions have been applied.
+func (b *builder) trainable(step Step) bool {
+	for _, slug := range step.Movement {
+		slug = b.substituteFor(slug)
+		if b.lib.Has(slug) && !b.banned[slug] {
+			return true
+		}
+	}
+	return false
 }
 
 // unmetGate reports the rung's own prerequisites that this athlete has not
@@ -597,15 +689,13 @@ func (b *builder) legChain() chain {
 	}
 }
 
+// The core chain used to be three tiers keyed on a hanging leg raise and an
+// L-sit, which is how an athlete whose log is full of levers and empty of leg
+// raises ended up prescribed planks. It is now the pool at their own level:
+// the evidence is the hardest thing they have done, whatever movement that
+// happened to be.
 func (b *builder) coreChain() chain {
-	switch {
-	case b.rec.reps("hanging_leg_raise") >= 10 || b.rec.hold("l_sit") >= 20:
-		return chain{"toes_to_bar", "dragon_flag_negative", "hanging_leg_raise", "ab_wheel_rollout"}
-	case b.rec.reps("hanging_knee_raise") >= 8 || b.rec.hold("hollow_body_hold") >= 30:
-		return chain{"hanging_leg_raise", "hollow_rock", "ab_wheel_rollout", "hollow_body_hold"}
-	default:
-		return chain{"hollow_body_hold", "hanging_knee_raise", "plank", "arch_body_hold"}
-	}
+	return b.keepAtLevel(accessoryPools[patternCore], accessoryGap, 0)
 }
 
 // ---------- the week and the block of weeks ----------
@@ -697,12 +787,77 @@ type daySpec struct {
 	Hard bool
 }
 
-// weekShape places the sessions across the week. Two rules decide every entry:
-// 48 hours between hard sessions of the same pattern, and no more than four
-// hard sessions in a week however many days are trained. Above four days the
-// extra days are technique and recovery, which is what the fifth and sixth
-// day of a week are actually good for.
-func weekShape(days int) []daySpec {
+// weekShape places the sessions across the week. Three rules decide every
+// entry: 48 hours between hard sessions of the same pattern, no more than four
+// hard sessions in a week however many days are trained, and no more skill
+// exposures than the focus level allows. Above four days the extra days are
+// technique and recovery, which is what the fifth and sixth day of a week are
+// actually good for.
+//
+// The focus is what turns the same six days into three different weeks. It
+// does not add days the 48-hour rule would not allow — a three-day week gets
+// two skill days at every level above the lowest, because a third would land
+// inside the recovery of the second — it only ever takes them away.
+func weekShape(days int, exposures int) []daySpec {
+	return holdExposures(baseShape(days), exposures)
+}
+
+// holdExposures demotes skill days beyond what the focus allows, from the end
+// of the week backwards and the light technique days first. A demoted hard day
+// still trains — it becomes the opposite pattern, which is what the week
+// needed anyway — and a demoted light day becomes recovery.
+func holdExposures(shape []daySpec, exposures int) []daySpec {
+	if exposures < 1 {
+		exposures = 1
+	}
+	count := func() int {
+		n := 0
+		for _, d := range shape {
+			if d.Role == roleSkill || d.Role == roleLightSkill {
+				n++
+			}
+		}
+		return n
+	}
+	demote := func(role dayRole, to dayRole, hard bool) bool {
+		for i := len(shape) - 1; i >= 0; i-- {
+			if shape[i].Role == role {
+				shape[i].Role, shape[i].Hard = to, hard
+				return true
+			}
+		}
+		return false
+	}
+	// The light day is a top-up; the hard day is the point of the plan. So the
+	// top-ups go first, and only then does a real skill day become the
+	// opposite pattern.
+	for count() > exposures {
+		if demote(roleLightSkill, roleRecovery, false) {
+			continue
+		}
+		if !demote(roleSkill, roleOpposite, true) {
+			break
+		}
+	}
+	return space(shape)
+}
+
+// space is the 48-hour rule applied after the demotions, because a demotion
+// can break it. Turning Thursday's skill day into a second push day when
+// Friday is already one puts two hard sessions for the same pattern back to
+// back, which is the one thing the week shape exists to prevent. The later of
+// the pair stays in the week and stops being hard.
+func space(shape []daySpec) []daySpec {
+	for i := 1; i < len(shape); i++ {
+		previous, day := shape[i-1], shape[i]
+		if day.Day == previous.Day+1 && day.Hard && previous.Hard && day.Role == previous.Role {
+			shape[i].Hard = false
+		}
+	}
+	return shape
+}
+
+func baseShape(days int) []daySpec {
 	switch days {
 	case 1:
 		return []daySpec{{1, roleSkill, true}}

@@ -31,6 +31,8 @@
 				return '15s hold';
 			case 'weighted_reps':
 				return '5 reps + 10kg';
+			case 'weighted_hold':
+				return '10s hold + 10kg';
 			case 'skill_attempt':
 				return '5 attempts';
 			default:

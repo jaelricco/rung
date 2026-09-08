@@ -108,7 +108,11 @@
 
 	function fieldFor(question) {
 		if (question.measure === 'static_hold') return { unit: 'seconds', key: 'hold_seconds' };
-		if (question.measure === 'weighted_reps') return { unit: 'added kg', key: 'added_kg' };
+		// A weighted hold is asked for as a load: the planner branches on the
+		// kilos, and the seconds come from the unloaded version of the same
+		// position, which the form asks for one row above.
+		if (question.measure === 'weighted_reps' || question.measure === 'weighted_hold')
+			return { unit: 'added kg', key: 'added_kg' };
 		return { unit: 'reps', key: 'reps' };
 	}
 
@@ -365,7 +369,7 @@
 							id={question.exercise_slug}
 							type="number"
 							min="0"
-							step={question.measure === 'weighted_reps' ? '1.25' : '1'}
+							step={fieldFor(question).unit === 'added kg' ? '1.25' : '1'}
 							bind:value={answers[question.exercise_slug]}
 							placeholder={fieldFor(question).unit}
 						/>
@@ -401,7 +405,7 @@
 							id={question.exercise_slug}
 							type="number"
 							min="0"
-							step={question.measure === 'weighted_reps' ? '1.25' : '1'}
+							step={fieldFor(question).unit === 'added kg' ? '1.25' : '1'}
 							bind:value={answers[question.exercise_slug]}
 							placeholder={fieldFor(question).unit}
 						/>
