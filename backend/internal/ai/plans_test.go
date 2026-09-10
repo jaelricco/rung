@@ -2,9 +2,12 @@ package ai
 
 import (
 	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 
+	"calisthenics/api/internal/httpx"
 	"calisthenics/api/internal/plan"
 	"calisthenics/api/internal/training"
 )
@@ -183,5 +186,58 @@ func TestResearchTravelsWithThePlanAsOpaqueProvenance(t *testing.T) {
 	}
 	if back.Research.Summary != found.Summary || back.Research.SearchesUsed != 4 {
 		t.Errorf("research did not survive the round trip: %+v", back.Research)
+	}
+}
+
+// The browser posts one object to whichever route the "sharpen it with AI"
+// checkbox selects, and that object names the skill twice — once as "skill",
+// once as "goal". Decoding here is strict, so a field this struct did not know
+// about failed the request outright, before the endpoint's own fallback could
+// hand back the plan the algorithm had already written. The whole design of
+// SkillPlan is that a model it cannot reach costs sharpening and never the
+// plan; a rejected body broke that from the first line.
+func TestTheEndpointTakesTheSameBodyAsTheAlgorithmRoute(t *testing.T) {
+	// Exactly what frontend/src/routes/plan/+page.svelte sends.
+	const posted = `{"skill":"Front lever","goal":"Front lever","weeks":8,` +
+		`"days_per_week":3,"focus":"standard","starts_on":"2026-09-07",` +
+		`"notes":"","no_research":true,"save":false}`
+
+	var in skillPlanRequest
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/api/v1/ai/skill-plan", strings.NewReader(posted))
+	if !httpx.Decode(w, r, &in) {
+		t.Fatalf("the body the browser posts was rejected: %s", w.Body.String())
+	}
+	if in.goal() != "Front lever" {
+		t.Errorf("goal read as %q", in.goal())
+	}
+	if in.Weeks != 8 || in.DaysPerWeek != 3 || in.Focus != "standard" || !in.NoResearch {
+		t.Errorf("the rest of the body did not survive: %+v", in)
+	}
+}
+
+// Either name alone is enough, and Goal wins when they disagree — the same
+// precedence plan.generateRequest applies, so one body cannot mean two things
+// depending on which route it reaches.
+func TestEitherNameForTheSkillIsAccepted(t *testing.T) {
+	for _, tc := range []struct {
+		name, body, want string
+	}{
+		{"skill only", `{"skill":"Muscle-up"}`, "Muscle-up"},
+		{"goal only", `{"goal":"Muscle-up"}`, "Muscle-up"},
+		{"goal wins", `{"skill":"Planche","goal":"Muscle-up"}`, "Muscle-up"},
+		{"neither", `{"weeks":8}`, ""},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var in skillPlanRequest
+			w := httptest.NewRecorder()
+			r := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(tc.body))
+			if !httpx.Decode(w, r, &in) {
+				t.Fatalf("rejected: %s", w.Body.String())
+			}
+			if got := in.goal(); got != tc.want {
+				t.Errorf("goal() = %q, want %q", got, tc.want)
+			}
+		})
 	}
 }

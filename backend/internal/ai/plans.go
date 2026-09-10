@@ -69,7 +69,14 @@ type (
 )
 
 type skillPlanRequest struct {
-	Skill       string `json:"skill"`
+	Skill string `json:"skill"`
+	// Goal is Skill under the name the algorithm's route uses. The browser
+	// posts one body to whichever route the "sharpen it" checkbox selects, and
+	// plan.generateRequest already takes both for that reason; accepting only
+	// one here failed the request at the decoder, before any of the fallback
+	// below could run — which turned "the model could not be reached" into no
+	// plan at all, the one outcome this endpoint is built never to have.
+	Goal        string `json:"goal"`
 	Weeks       int    `json:"weeks"`
 	DaysPerWeek int    `json:"days_per_week"`
 	StartsOn    string `json:"starts_on"`
@@ -82,6 +89,16 @@ type skillPlanRequest struct {
 	// NoResearch skips the web-search pass. The plan is written from the
 	// snapshot and the library alone, which is faster and cheaper.
 	NoResearch bool `json:"no_research"`
+}
+
+// goal reads the skill being worked toward from whichever of the two names it
+// arrived under, preferring Goal exactly as plan.generateRequest does, so one
+// body gets the same answer from either route.
+func (in skillPlanRequest) goal() string {
+	if in.Goal != "" {
+		return in.Goal
+	}
+	return in.Skill
 }
 
 type planResponse = plan.Response
@@ -142,6 +159,9 @@ func (h *Handler) SkillPlan(w http.ResponseWriter, r *http.Request) {
 	if !httpx.Decode(w, r, &in) {
 		return
 	}
+	// Settled once, so everything downstream — the prompt, the research, the
+	// name the plan is saved under — reads a single field.
+	in.Skill = in.goal()
 	if strings.TrimSpace(in.Skill) == "" {
 		httpx.Fail(w, http.StatusBadRequest, "Name the skill you want to work toward.")
 		return
