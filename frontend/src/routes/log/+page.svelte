@@ -96,13 +96,22 @@
 {/if}
 
 <div class="form-width" style="display:grid;gap:0.7rem">
-	{#each sets as set, index (index)}
-		{@const measure = measureFor(set.exercise_slug)}
+	<!-- Every binding below writes through sets[index] rather than through the
+	     each-item value. It reads as the long way round, and it is the only way
+	     that works here: this each block is the sole child of its container, so
+	     Svelte compiles it as a controlled block, and under the dev build the
+	     per-item source it hands the binding is already gone by the time the
+	     setter runs — changing the exercise threw and the set kept whatever it
+	     was created with. Indexing the array touches the one signal that is
+	     always live, and behaves identically in the production build, which
+	     never had the fault. The item is named _set to keep it that way. -->
+	{#each sets as _set, index (index)}
+		{@const measure = measureFor(sets[index].exercise_slug)}
 		<div class="panel">
 			<div class="row">
 				<div style="flex:2 1 220px">
 					<label for={`ex-${index}`}>Exercise</label>
-					<select id={`ex-${index}`} bind:value={set.exercise_slug}>
+					<select id={`ex-${index}`} bind:value={sets[index].exercise_slug}>
 						{#each Object.entries(byCategory) as [category, list] (category)}
 							<optgroup label={category}>
 								{#each list as exercise (exercise.slug)}
@@ -116,28 +125,28 @@
 				{#if measure === 'reps' || measure === 'weighted_reps'}
 					<div>
 						<label for={`reps-${index}`}>Reps</label>
-						<input id={`reps-${index}`} type="number" min="0" bind:value={set.reps} />
+						<input id={`reps-${index}`} type="number" min="0" bind:value={sets[index].reps} />
 					</div>
 				{/if}
 
 				{#if measure === 'weighted_reps' || measure === 'weighted_hold'}
 					<div>
 						<label for={`kg-${index}`}>Added kg</label>
-						<input id={`kg-${index}`} type="number" step="0.5" bind:value={set.weight_kg} />
+						<input id={`kg-${index}`} type="number" step="0.5" bind:value={sets[index].weight_kg} />
 					</div>
 				{/if}
 
 				{#if measure === 'static_hold' || measure === 'weighted_hold'}
 					<div>
 						<label for={`hold-${index}`}>Hold (s)</label>
-						<input id={`hold-${index}`} type="number" step="0.5" min="0" bind:value={set.hold_seconds} />
+						<input id={`hold-${index}`} type="number" step="0.5" min="0" bind:value={sets[index].hold_seconds} />
 					</div>
 				{/if}
 
 				{#if measure === 'skill_attempt'}
 					<div>
 						<label for={`made-${index}`}>Result</label>
-						<select id={`made-${index}`} bind:value={set.success}>
+						<select id={`made-${index}`} bind:value={sets[index].success}>
 							<option value={true}>Made</option>
 							<option value={false}>Missed</option>
 						</select>
