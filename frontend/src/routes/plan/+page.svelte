@@ -1,11 +1,11 @@
 <script>
-	import { api } from '$lib/api.js';
+	import { api } from '#lib/api.js';
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
-	import AiProgress from '$lib/AiProgress.svelte';
-	import Failure from '$lib/Failure.svelte';
-	import SessionDetail from '$lib/SessionDetail.svelte';
-	import { DAY_SHORT, weekSlots, sessionShape, isoDate, mondayOf, addDays, formatDate } from '$lib/week.js';
+	import AiProgress from '#lib/AiProgress.svelte';
+	import Failure from '#lib/Failure.svelte';
+	import SessionDetail from '#lib/SessionDetail.svelte';
+	import { DAY_SHORT, weekSlots, sessionShape, isoDate, mondayOf, addDays, formatDate } from '#lib/week.js';
 
 	// The baseline page hands the goal back here once its numbers are in.
 	let skill = $state(page.url.searchParams.get('goal') ?? '');

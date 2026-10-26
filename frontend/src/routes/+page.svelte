@@ -1,8 +1,8 @@
 <script>
-	import { api } from '$lib/api.js';
-	import { session } from '$lib/session.svelte.js';
-	import AiProgress from '$lib/AiProgress.svelte';
-	import Failure from '$lib/Failure.svelte';
+	import { api } from '#lib/api.js';
+	import { session } from '#lib/session.svelte.js';
+	import AiProgress from '#lib/AiProgress.svelte';
+	import Failure from '#lib/Failure.svelte';
 
 	const TIERS = ['untested', 'beginner', 'novice', 'intermediate', 'advanced', 'elite'];
 

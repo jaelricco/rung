@@ -2,8 +2,8 @@
 	import '../app.css';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
-	import { session, loadUser, signOut } from '$lib/session.svelte.js';
-	import { theme, initTheme, setTheme } from '$lib/theme.svelte.js';
+	import { session, loadUser, signOut } from '#lib/session.svelte.js';
+	import { theme, initTheme, setTheme } from '#lib/theme.svelte.js';
 
 	let { children } = $props();
 

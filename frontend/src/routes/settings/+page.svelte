@@ -1,6 +1,6 @@
 <script>
-	import SignInMethods from '$lib/SignInMethods.svelte';
-	import AiConnector from '$lib/AiConnector.svelte';
+	import SignInMethods from '#lib/SignInMethods.svelte';
+	import AiConnector from '#lib/AiConnector.svelte';
 </script>
 
 <p class="eyebrow" style="margin-top:2rem">Settings</p>

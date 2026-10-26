@@ -1,8 +1,8 @@
 <script>
-	import { api } from '$lib/api.js';
-	import { session } from '$lib/session.svelte.js';
-	import SessionEditor from '$lib/SessionEditor.svelte';
-	import { DAY_SHORT, blankSession, cleanBody, editableBody, isoDate, mondayOf, addDays, formatDate } from '$lib/week.js';
+	import { api } from '#lib/api.js';
+	import { session } from '#lib/session.svelte.js';
+	import SessionEditor from '#lib/SessionEditor.svelte';
+	import { DAY_SHORT, blankSession, cleanBody, editableBody, isoDate, mondayOf, addDays, formatDate } from '#lib/week.js';
 
 	const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 

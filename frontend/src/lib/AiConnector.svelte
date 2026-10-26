@@ -1,6 +1,6 @@
 <script>
-	import { api } from '$lib/api.js';
-	import Failure from '$lib/Failure.svelte';
+	import { api } from '#lib/api.js';
+	import Failure from '#lib/Failure.svelte';
 
 	// The AI connector: which provider account this athlete's coaching runs on.
 	// Laid out as a card with the providers as tiles, because picking between

@@ -6,10 +6,10 @@
 	// real names, and the six phases are always all six — a phase with nothing
 	// in it says so, because a missing heading reads as "skip this" and the
 	// phase that gets skipped is the one nobody sees.
-	import { api } from '$lib/api.js';
+	import { api } from '#lib/api.js';
 	import { page } from '$app/state';
-	import { formatDate } from '$lib/week.js';
-	import Failure from '$lib/Failure.svelte';
+	import { formatDate } from '#lib/week.js';
+	import Failure from '#lib/Failure.svelte';
 
 	const INTENTS = {
 		prep: 'Prep',
