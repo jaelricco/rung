@@ -13,3 +13,8 @@ backups/
 .secrets/
 *.pem
 id_ed25519*
+
+# Swift / Xcode
+ios/.build/
+ios/Rung.xcodeproj/
+ios/.swiftpm/

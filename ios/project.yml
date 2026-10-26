@@ -1,0 +1,43 @@
+# XcodeGen generates Rung.xcodeproj from this file.
+#
+# A .pbxproj is written here rather than committed because it cannot be
+# checked from the machine this was authored on, and a hand-written one that
+# is subtly wrong fails in Xcode with a message about nothing. This is twelve
+# lines a person can read and `xcodegen generate` turns into the real thing.
+#
+#   brew install xcodegen && cd ios && xcodegen generate && open Rung.xcodeproj
+name: Rung
+options:
+  bundleIdPrefix: fit.rung
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+
+packages:
+  RungKit:
+    path: .
+
+targets:
+  Rung:
+    type: application
+    platform: iOS
+    sources:
+      - path: App
+    dependencies:
+      - package: RungKit
+        product: RungKit
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: fit.rung.app
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        SWIFT_VERSION: "6.0"
+        # Strict concurrency is on in the package already; keeping the app on
+        # the same setting means a type that is safe in RungKit does not turn
+        # unsafe the moment a view touches it.
+        SWIFT_STRICT_CONCURRENCY: complete
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Rung
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
+        TARGETED_DEVICE_FAMILY: "1"

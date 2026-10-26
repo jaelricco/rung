@@ -1,0 +1,226 @@
+# The iOS app, built on the Mac that is registered as a runner for this
+# repository. Everything here needs Xcode, which is why none of it sits in
+# ci.yml beside the Go and SvelteKit jobs — those run on GitHub's Linux
+# runners and must not start queueing behind a machine that is sometimes
+# asleep.
+#
+# Two stages. The build and the tests need nothing but the Mac, and run on
+# every change to ios/. The TestFlight upload needs an App Store Connect key
+# and an app record, and skips with a notice until those exist — the same
+# shape the deploy job uses for DEPLOY_HOST.
+name: iOS
+
+on:
+  push:
+    branches: [main]
+    paths: ["ios/**", ".github/workflows/ios.yml"]
+  pull_request:
+    paths: ["ios/**", ".github/workflows/ios.yml"]
+  workflow_dispatch:
+    inputs:
+      upload:
+        description: "Archive and upload to TestFlight"
+        type: boolean
+        default: false
+
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Xcode build
+    # GitHub gives every self-hosted runner `self-hosted`, its OS and its
+    # architecture as labels, so this targets the Mac without depending on a
+    # custom label somebody has to remember to set.
+    runs-on: [self-hosted, macOS]
+    # A self-hosted runner is somebody's actual machine, with its keychain and
+    # its checkouts on it. A pull request from a fork must never get to run
+    # code on it, so only branches of this repository build here.
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.pull_request.head.repo.full_name == github.repository
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: What this machine has
+        run: |
+          sw_vers
+          xcodebuild -version
+          swift --version
+
+      # RungKit is plain Swift and carries the tests worth trusting: the
+      # models against real captured API responses. It is run first and on
+      # its own, so a failure here reads as "the contract moved" rather than
+      # being buried in a thousand lines of xcodebuild.
+      - name: RungKit
+        working-directory: ios
+        run: |
+          set -o pipefail
+          { swift build && swift test; } 2>&1 | tee "$RUNNER_TEMP/rungkit.log"
+
+      - name: Report a RungKit failure
+        if: failure()
+        uses: ./.github/actions/report
+        with:
+          title: "ios: RungKit failed"
+          file: ${{ runner.temp }}/rungkit.log
+          token: ${{ github.token }}
+
+      - name: Generate the Xcode project
+        working-directory: ios
+        run: |
+          # Generated rather than committed: a pbxproj cannot be reviewed and
+          # a bad one fails with a message about nothing.
+          if ! command -v xcodegen >/dev/null; then
+            echo "::error::xcodegen is not installed on this runner. brew install xcodegen"
+            exit 1
+          fi
+          xcodegen generate
+
+      # No signing: this proves the app compiles, which is the thing that has
+      # never been proven. Signing belongs to the upload job, where there is a
+      # certificate to sign with.
+      - name: Build the app
+        working-directory: ios
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -project Rung.xcodeproj \
+            -scheme Rung \
+            -destination 'generic/platform=iOS Simulator' \
+            -configuration Debug \
+            CODE_SIGNING_ALLOWED=NO \
+            2>&1 | tee "$RUNNER_TEMP/xcodebuild.log"
+
+      - name: Report a build failure
+        if: failure()
+        uses: ./.github/actions/report
+        with:
+          title: "ios: xcodebuild failed"
+          file: ${{ runner.temp }}/xcodebuild.log
+          token: ${{ github.token }}
+
+  testflight:
+    name: TestFlight
+    needs: build
+    if: github.event_name == 'workflow_dispatch' && inputs.upload
+    runs-on: [self-hosted, macOS]
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Check whether an App Store Connect key is configured
+        id: check
+        env:
+          KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+          PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
+          TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          # The secrets context cannot be read in an `if:`, so presence
+          # becomes a step output, as the deploy job does it.
+          missing=""
+          [ -z "$KEY_ID" ]      && missing="$missing APPSTORE_KEY_ID"
+          [ -z "$ISSUER_ID" ]   && missing="$missing APPSTORE_ISSUER_ID"
+          [ -z "$PRIVATE_KEY" ] && missing="$missing APPSTORE_PRIVATE_KEY"
+          [ -z "$TEAM_ID" ]     && missing="$missing APPLE_TEAM_ID"
+          if [ -n "$missing" ]; then
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Not uploading:$missing not set. See ios/README.md for where each comes from."
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Generate the Xcode project
+        if: steps.check.outputs.configured == 'true'
+        working-directory: ios
+        run: xcodegen generate
+
+      # The build number has to rise on every upload or App Store Connect
+      # refuses the build. The run number is monotonic and needs nothing
+      # stored anywhere.
+      - name: Archive
+        if: steps.check.outputs.configured == 'true'
+        working-directory: ios
+        env:
+          TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          set -o pipefail
+          xcodebuild archive \
+            -project Rung.xcodeproj \
+            -scheme Rung \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/Rung.xcarchive" \
+            -allowProvisioningUpdates \
+            DEVELOPMENT_TEAM="$TEAM_ID" \
+            CURRENT_PROJECT_VERSION="${{ github.run_number }}" \
+            2>&1 | tee "$RUNNER_TEMP/archive.log"
+
+      - name: Export the ipa
+        if: steps.check.outputs.configured == 'true'
+        working-directory: ios
+        env:
+          TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          set -o pipefail
+          cat > "$RUNNER_TEMP/export.plist" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>teamID</key><string>${TEAM_ID}</string>
+            <key>uploadSymbols</key><true/>
+            <key>destination</key><string>export</string>
+          </dict></plist>
+          PLIST
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/Rung.xcarchive" \
+            -exportPath "$RUNNER_TEMP/export" \
+            -exportOptionsPlist "$RUNNER_TEMP/export.plist" \
+            -allowProvisioningUpdates \
+            2>&1 | tee -a "$RUNNER_TEMP/archive.log"
+
+      # The .p8 is written to a file because altool and notarytool read it
+      # from one, and removed again whatever happens — a private key left on
+      # a machine that is somebody's laptop is not an acceptable leftover.
+      - name: Upload to TestFlight
+        if: steps.check.outputs.configured == 'true'
+        env:
+          KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+          PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
+        run: |
+          set -o pipefail
+          keydir="$RUNNER_TEMP/private_keys"
+          trap 'rm -rf "$keydir"' EXIT
+          mkdir -p "$keydir"
+          chmod 700 "$keydir"
+          printf '%s' "$PRIVATE_KEY" > "$keydir/AuthKey_${KEY_ID}.p8"
+          chmod 600 "$keydir/AuthKey_${KEY_ID}.p8"
+
+          ipa=$(find "$RUNNER_TEMP/export" -name '*.ipa' -maxdepth 1 | head -n 1)
+          if [ -z "$ipa" ]; then
+            echo "::error::the export produced no .ipa"
+            exit 1
+          fi
+
+          API_PRIVATE_KEYS_DIR="$keydir" xcrun altool --upload-app \
+            --type ios --file "$ipa" \
+            --apiKey "$KEY_ID" --apiIssuer "$ISSUER_ID" \
+            2>&1 | tee "$RUNNER_TEMP/upload.log"
+
+      - name: Report an upload failure
+        if: failure()
+        uses: ./.github/actions/report
+        with:
+          title: "ios: TestFlight upload failed"
+          file: ${{ runner.temp }}/upload.log
+          token: ${{ github.token }}
