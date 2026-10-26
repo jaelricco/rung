@@ -1,0 +1,226 @@
+{
+ "from": "2026-10-19",
+ "to": "2026-12-21",
+ "sessions": [
+  {
+   "id": "e33f95ae-6427-4dd0-a462-f58f6f374d18",
+   "plan_id": "b83c6520-f721-4f6a-b095-e6a7059b4602",
+   "routine_id": null,
+   "source": "plan",
+   "scheduled_on": "2026-10-26",
+   "title": "Front lever \u00b7 pull",
+   "focus": "Tuck while you are fresh, then the pull strength it is built on. 2 to 3 reps in reserve. This block is about sets that stay clean.",
+   "body": {
+    "load": "hard",
+    "week": 1,
+    "focus": "Tuck while you are fresh, then the pull strength it is built on. 2 to 3 reps in reserve. This block is about sets that stay clean.",
+    "title": "Front lever \u00b7 pull",
+    "blocks": [
+     {
+      "sets": 2,
+      "notes": "Elbows locked, load taken slowly. If the inner elbow is already sore before you start, that is the session telling you to skip its straight-arm work.",
+      "intent": "prep",
+      "intensity": "light \u2014 this is preparation, not training",
+      "progression": "Unchanged for the whole plan. It is the price of straight-arm work, not a thing to progress.",
+      "prescription": "12 slow reps per position",
+      "rest_seconds": 45,
+      "exercise_slug": "elbow_prep_circuit"
+     },
+     {
+      "sets": 2,
+      "notes": "Move the shoulder blade, not the elbow.",
+      "intent": "prep",
+      "intensity": "half effort",
+      "progression": "Unchanged. It is a warm-up.",
+      "prescription": "10 controlled reps",
+      "rest_seconds": 45,
+      "exercise_slug": "scapular_pull_up"
+     },
+     {
+      "sets": 3,
+      "notes": "Nothing logged on this movement yet, so the numbers here are the rung's own standard rather than yours: treat the first session as finding out. Work up to one honest effort, log it, and everything after it scales from a real number. The volume stays deliberately below what you could probably do \u2014 new tissue load is where straight-arm injuries come from, not the set that felt hard. Hardest thing first, while you are completely fresh, and deliberately few sets of it. Stop the moment the shape is not there \u2014 this block is a look at the next position, not a fight with it.",
+      "intent": "skill",
+      "intensity": "about 55% of your best hold (5s) (estimated from the rung's own standard \u2014 nothing logged or declared for this yet)",
+      "progression": "This is the rung above the one you are training. It moves when the rung below it does.",
+      "prescription": "3-6s hold",
+      "rest_seconds": 420,
+      "exercise_slug": "adv_tuck_front_lever"
+     },
+     {
+      "sets": 2,
+      "notes": "Stop the set the moment the shape breaks, not when the arms give out. Several clean efforts beat one taken to collapse \u2014 a position held to failure rehearses the failure.",
+      "intent": "skill",
+      "intensity": "about 55% of your best hold (18s)",
+      "progression": "Next week: one more second on every set, at the same quality. The hold is trained past 20s, not extended by sagging into it.",
+      "prescription": "10-20s hold",
+      "rest_seconds": 300,
+      "exercise_slug": "tuck_front_lever"
+     },
+     {
+      "sets": 3,
+      "notes": "Nothing logged on this movement yet, so the numbers here are the rung's own standard rather than yours: treat the first session as finding out. Work up to one honest effort, log it, and everything after it scales from a real number. The volume stays deliberately below what you could probably do \u2014 new tissue load is where straight-arm injuries come from, not the set that felt hard. The drill, not the test. It is what makes the position above it possible.",
+      "tempo": "2s down, no bounce at the bottom",
+      "intent": "skill",
+      "intensity": "2 to 3 reps in reserve. This block is about sets that stay clean. Your best set is 8 reps (estimated from the rung's own standard \u2014 nothing logged or declared for this yet).",
+      "progression": "Next week: one more rep per set. When every set reaches the top of its range, add a set or add load rather than more reps.",
+      "prescription": "5-10 reps",
+      "rest_seconds": 210,
+      "exercise_slug": "tuck_front_lever_row"
+     },
+     {
+      "sets": 3,
+      "notes": "Full range, no bounce. The set is over when the speed of the rep changes, not when the count runs out.",
+      "tempo": "3s down, drive up",
+      "intent": "strength",
+      "intensity": "2 to 3 reps in reserve. This block is about sets that stay clean. A deliberately conservative starting load: with no bodyweight on file and no weighted set logged, there is nothing honest to calculate from. Add your bodyweight in your profile.",
+      "progression": "Next week: +1.25 to 2.5 kg, but only once every set has hit the rep target cleanly. A missed target means repeating the load, not pushing through it.",
+      "prescription": "5-10 reps with +5 kg",
+      "rest_seconds": 210,
+      "exercise_slug": "weighted_pull_up"
+     },
+     {
+      "sets": 3,
+      "notes": "The counterweight to the hard work above it. This is the block that keeps the shoulder even.",
+      "tempo": "2s down, no bounce at the bottom",
+      "intent": "accessory",
+      "intensity": "2 to 3 reps in reserve. This block is about sets that stay clean. Your best set is 12 reps (estimated from the rung's own standard \u2014 nothing logged or declared for this yet).",
+      "progression": "Next week: one more rep per set. When every set reaches the top of its range, add a set or add load rather than more reps.",
+      "prescription": "8-15 reps",
+      "rest_seconds": 120,
+      "exercise_slug": "push_up"
+     },
+     {
+      "sets": 3,
+      "notes": "Volume, not a fight. Drop this before you drop a warm-up, and never before a main block.",
+      "tempo": "2s down, no bounce at the bottom",
+      "intent": "accessory",
+      "intensity": "2 to 3 reps in reserve. This block is about sets that stay clean. Your best set is 11 reps.",
+      "progression": "Next week: one more rep per set. When every set reaches the top of its range, add a set or add load rather than more reps.",
+      "prescription": "8-15 reps",
+      "rest_seconds": 120,
+      "exercise_slug": "pull_up"
+     },
+     {
+      "sets": 3,
+      "notes": "The moment the lower back lifts off the floor or the hips sag, the set is finished.",
+      "tempo": "2s down, no bounce at the bottom",
+      "intent": "accessory",
+      "intensity": "2 to 3 reps in reserve. This block is about sets that stay clean. Your best set is 10 reps (estimated from the rung's own standard \u2014 nothing logged or declared for this yet).",
+      "progression": "Next week: one more rep per set. When every set reaches the top of its range, add a set or add load rather than more reps.",
+      "prescription": "8-15 reps",
+      "rest_seconds": 90,
+      "exercise_slug": "hollow_rock"
+     }
+    ],
+    "cooldown": "Two minutes of easy shoulder extension and light elbow flexion. Straight-arm work is the one thing this app will not let you skip the after-care on.",
+    "day_of_week": 1,
+    "duration_minutes": 95,
+    "warmup_protocols": [
+     "joint_warmup",
+     "muscular_warmup",
+     "mobility_warmup",
+     "straight_arm_warmup"
+    ]
+   },
+   "completed_at": null,
+   "workout_id": null,
+   "done_protocols": [],
+   "done_blocks": []
+  },
+  {
+   "id": "4d453168-6e5f-4891-943b-d88a32df0ecb",
+   "plan_id": "b83c6520-f721-4f6a-b095-e6a7059b4602",
+   "routine_id": null,
+   "source": "plan",
+   "scheduled_on": "2026-10-28",
+   "title": "Push and legs",
+   "focus": "The pattern the skill days do not train, so nothing hard repeats inside 48 hours. 2 to 3 reps in reserve. This block is about sets that stay clean.",
+   "body": {
+    "load": "hard",
+    "week": 1,
+    "focus": "The pattern the skill days do not train, so nothing hard repeats inside 48 hours. 2 to 3 reps in reserve. This block is about sets that stay clean.",
+    "title": "Push and legs",
+    "blocks": [
+     {
+      "sets": 2,
+      "notes": "Move the shoulder blade, not the elbow.",
+      "intent": "prep",
+      "intensity": "half effort",
+      "progression": "Unchanged. It is a warm-up.",
+      "prescription": "10 controlled reps",
+      "rest_seconds": 45,
+      "exercise_slug": "scapular_push_up"
+     },
+     {
+      "sets": 3,
+      "notes": "Full range, no bounce. The set is over when the speed of the rep changes, not when the count runs out.",
+      "tempo": "2s down, no bounce at the bottom",
+      "intent": "strength",
+      "intensity": "2 to 3 reps in reserve. This block is about sets that stay clean. Your best set is 8 reps (estimated from the rung's own standard \u2014 nothing logged or declared for this yet).",
+      "progression": "Next week: one more rep per set. When every set reaches the top of its range, add a set or add load rather than more reps.",
+      "prescription": "5-10 reps",
+      "rest_seconds": 210,
+      "exercise_slug": "push_up"
+     },
+     {
+      "sets": 3,
+      "notes": "Full range, no bounce. The set is over when the speed of the rep changes, not when the count runs out.",
+      "tempo": "2s down, no bounce at the bottom",
+      "intent": "strength",
+      "intensity": "2 to 3 reps in reserve. This block is about sets that stay clean. Your best set is 12 reps (estimated from the rung's own standard \u2014 nothing logged or declared for this yet).",
+      "progression": "Next week: one more rep per set. When every set reaches the top of its range, add a set or add load rather than more reps.",
+      "prescription": "8-15 reps",
+      "rest_seconds": 210,
+      "exercise_slug": "bodyweight_squat"
+     },
+     {
+      "sets": 3,
+      "notes": "The counterweight to the hard work above it. This is the block that keeps the shoulder even.",
+      "tempo": "2s down, no bounce at the bottom",
+      "intent": "accessory",
+      "intensity": "2 to 3 reps in reserve. This block is about sets that stay clean. Your best set is 12 reps (estimated from the rung's own standard \u2014 nothing logged or declared for this yet).",
+      "progression": "Next week: one more rep per set. When every set reaches the top of its range, add a set or add load rather than more reps.",
+      "prescription": "8-15 reps",
+      "rest_seconds": 120,
+      "exercise_slug": "band_assisted_pull_up"
+     },
+     {
+      "sets": 3,
+      "notes": "Volume, not a fight. Drop this before you drop a warm-up, and never before a main block.",
+      "tempo": "2s down, no bounce at the bottom",
+      "intent": "accessory",
+      "intensity": "2 to 3 reps in reserve. This block is about sets that stay clean. Your best set is 12 reps (estimated from the rung's own standard \u2014 nothing logged or declared for this yet).",
+      "progression": "Next week: one more rep per set. When every set reaches the top of its range, add a set or add load rather than more reps.",
+      "prescription": "8-15 reps",
+      "rest_seconds": 120,
+      "exercise_slug": "dip"
+     },
+     {
+      "sets": 3,
+      "notes": "The moment the lower back lifts off the floor or the hips sag, the set is finished.",
+      "intent": "accessory",
+      "intensity": "about 55% of your best hold (18s) (estimated from the rung's own standard \u2014 nothing logged or declared for this yet)",
+      "progression": "Next week: one more second on every set, at the same quality. The hold is trained past 45s, not extended by sagging into it.",
+      "prescription": "10-20s hold",
+      "rest_seconds": 90,
+      "exercise_slug": "hollow_body_hold"
+     }
+    ],
+    "cooldown": "Two minutes of easy shoulder extension and light elbow flexion. Straight-arm work is the one thing this app will not let you skip the after-care on.",
+    "day_of_week": 3,
+    "duration_minutes": 55,
+    "warmup_protocols": [
+     "joint_warmup",
+     "muscular_warmup",
+     "mobility_warmup",
+     "shoulder_warmup"
+    ]
+   },
+   "completed_at": null,
+   "workout_id": null,
+   "done_protocols": [],
+   "done_blocks": []
+  }
+ ],
+ "events": []
+}

@@ -1,0 +1,98 @@
+[
+ {
+  "slug": "arch_body_hold",
+  "name": "Arch body hold",
+  "category": "core",
+  "measure": "static_hold",
+  "difficulty": 1,
+  "description": "Face down, chest and legs lifted. The posterior half of the hollow."
+ },
+ {
+  "slug": "hanging_knee_raise",
+  "name": "Hanging knee raise",
+  "category": "core",
+  "measure": "reps",
+  "difficulty": 1,
+  "description": "Knees to chest from a hang, controlled on the way down."
+ },
+ {
+  "slug": "hollow_body_hold",
+  "name": "Hollow body hold",
+  "category": "core",
+  "measure": "static_hold",
+  "difficulty": 1,
+  "description": "Lower back pressed flat."
+ },
+ {
+  "slug": "plank",
+  "name": "Plank",
+  "category": "core",
+  "measure": "static_hold",
+  "difficulty": 1,
+  "description": "Forearms down, ribs tucked, glutes on."
+ },
+ {
+  "slug": "side_plank",
+  "name": "Side plank",
+  "category": "core",
+  "measure": "static_hold",
+  "difficulty": 1,
+  "description": "Stacked hips, body in one line."
+ },
+ {
+  "slug": "hollow_rock",
+  "name": "Hollow rock",
+  "category": "core",
+  "measure": "reps",
+  "difficulty": 2,
+  "description": "Rock in the hollow position without losing the flat back."
+ },
+ {
+  "slug": "ab_wheel_rollout",
+  "name": "Ab wheel rollout",
+  "category": "core",
+  "measure": "reps",
+  "difficulty": 3,
+  "description": "Standing or from knees."
+ },
+ {
+  "slug": "copenhagen_plank",
+  "name": "Copenhagen plank",
+  "category": "core",
+  "measure": "static_hold",
+  "difficulty": 3,
+  "description": "Side plank with the top leg on a bench. Adductor strength for flags and levers."
+ },
+ {
+  "slug": "hanging_leg_raise",
+  "name": "Hanging leg raise",
+  "category": "core",
+  "measure": "reps",
+  "difficulty": 3,
+  "description": "Straight legs to bar."
+ },
+ {
+  "slug": "compression_leg_lift",
+  "name": "Seated compression lift",
+  "category": "core",
+  "measure": "reps",
+  "difficulty": 3,
+  "description": "Sitting with legs straight, lift the heels off the floor and hold. Builds active compression."
+ },
+ {
+  "slug": "toes_to_bar",
+  "name": "Toes to bar",
+  "category": "core",
+  "measure": "reps",
+  "difficulty": 4,
+  "description": "Straight legs from a hang until the toes touch the bar."
+ },
+ {
+  "slug": "dragon_flag_negative",
+  "name": "Dragon flag negative",
+  "category": "core",
+  "measure": "reps",
+  "difficulty": 5,
+  "description": "From shoulders on the bench, lower the straight body slowly."
+ }
+]
