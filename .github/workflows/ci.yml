@@ -110,7 +110,7 @@ jobs:
         run: |
           set -o pipefail
           {
-            npm install --no-audit --no-fund
+            npm ci --no-audit --no-fund
             npm run build
           } 2>&1 | tee "$RUNNER_TEMP/frontend.log"
 
