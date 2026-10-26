@@ -72,11 +72,19 @@ struct RootView: View {
 }
 
 struct MainTabs: View {
+    // The `Tab` value type and the TabView builder that takes it are iOS 18,
+    // and this app's floor is 17 — which still covers every iPhone back to
+    // the XS. Nothing here needs what the newer API adds (typed selection,
+    // a sidebar adaptation), so the older one is not a workaround, it is the
+    // right size for three fixed tabs.
     var body: some View {
         TabView {
-            Tab("Standing", systemImage: "chart.bar.fill") { StandingView() }
-            Tab("Log", systemImage: "plus.circle.fill") { LogSessionView() }
-            Tab("Calendar", systemImage: "calendar") { CalendarView() }
+            StandingView()
+                .tabItem { Label("Standing", systemImage: "chart.bar.fill") }
+            LogSessionView()
+                .tabItem { Label("Log", systemImage: "plus.circle.fill") }
+            CalendarView()
+                .tabItem { Label("Calendar", systemImage: "calendar") }
         }
     }
 }
