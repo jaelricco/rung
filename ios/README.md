@@ -22,10 +22,14 @@ The split is deliberate. Everything that can be checked without a Mac lives in
 swift build && swift test     # 16 tests, runs on Linux or macOS
 ```
 
-`App/` is SwiftUI and needs Xcode. **It has never been compiled.** It was
-written against a verified `RungKit` and the real API, but the first `⌘B` on a
-Mac should be expected to turn up the usual crop of signature and
-availability mistakes. Treat it as a reviewed draft, not as working code.
+`App/` is SwiftUI and needs Xcode, so it is built by CI on the Mac
+registered as a runner for this repository — see below. It compiles there
+against Xcode 26.4 and Swift 6, for both simulator architectures.
+
+What it has **not** had is a person using it. Every screen compiles and
+every model is tested against real API responses; nobody has yet signed in
+on a phone and logged a set through it. Expect the first run to turn up
+layout and flow problems rather than crashes.
 
 ## Building it
 
@@ -57,7 +61,11 @@ long forms you fill in once at a desk, and they would be worse on a phone.
 
 ## Known gaps
 
-- The SwiftUI layer is uncompiled, as above.
+- Never run by a person. It compiles and its models are tested; no one has
+  signed in on a phone and logged a set through it yet.
+- No automated test touches the views. RungKit has sixteen; `App/` has a
+  compiler and nothing else. UI tests would need a simulator booted in CI,
+  which is a bigger step than it sounds on a self-hosted runner.
 - No offline queue. A set logged without signal fails with the server's own
   message rather than waiting — the obvious next thing, and the one that
   needs most care, since a silently-queued set that never sends is worse
