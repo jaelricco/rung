@@ -1,6 +1,6 @@
 <script>
 	import { goto } from '$app/navigation';
-	import { api } from '$lib/api.js';
+	import { api } from '#lib/api.js';
 
 	let exercises = $state([]);
 	let sets = $state([]);

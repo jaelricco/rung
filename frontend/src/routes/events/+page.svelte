@@ -1,7 +1,7 @@
 <script>
-	import { api } from '$lib/api.js';
-	import AiProgress from '$lib/AiProgress.svelte';
-	import Failure from '$lib/Failure.svelte';
+	import { api } from '#lib/api.js';
+	import AiProgress from '#lib/AiProgress.svelte';
+	import Failure from '#lib/Failure.svelte';
 
 	const DISCIPLINES = [
 		'', 'weighted', 'statics', 'dynamics', 'streetlifting', 'freestyle', 'endurance', 'mixed'

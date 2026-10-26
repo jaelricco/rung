@@ -1,8 +1,8 @@
 <script>
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
-	import { api } from '$lib/api.js';
-	import { session } from '$lib/session.svelte.js';
+	import { api } from '#lib/api.js';
+	import { session } from '#lib/session.svelte.js';
 
 	let mode = $state('signin');
 	let email = $state('');

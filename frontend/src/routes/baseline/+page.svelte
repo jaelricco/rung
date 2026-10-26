@@ -1,6 +1,6 @@
 <script>
-	import { api } from '$lib/api.js';
-	import Failure from '$lib/Failure.svelte';
+	import { api } from '#lib/api.js';
+	import Failure from '#lib/Failure.svelte';
 	import { page } from '$app/state';
 
 	// What the athlete can do, before they have logged it here.

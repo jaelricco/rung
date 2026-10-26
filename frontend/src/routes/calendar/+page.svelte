@@ -1,8 +1,8 @@
 <script>
-	import { api } from '$lib/api.js';
+	import { api } from '#lib/api.js';
 	import { page } from '$app/state';
-	import { session } from '$lib/session.svelte.js';
-	import SessionEditor from '$lib/SessionEditor.svelte';
+	import { session } from '#lib/session.svelte.js';
+	import SessionEditor from '#lib/SessionEditor.svelte';
 	import {
 		DAY_SHORT,
 		sessionShape,
@@ -13,7 +13,7 @@
 		mondayOf,
 		addDays,
 		formatDate
-	} from '$lib/week.js';
+	} from '#lib/week.js';
 
 	// Five weeks is a month view: the block a training cycle is read in, and
 	// what fits on a screen without scrolling the header away.

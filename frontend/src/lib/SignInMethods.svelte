@@ -1,6 +1,6 @@
 <script>
 	import { page } from '$app/state';
-	import { api } from '$lib/api.js';
+	import { api } from '#lib/api.js';
 
 	// How this athlete gets into their own account. Nothing here touches the
 	// AI features: signing in with a provider says who you are, and neither
