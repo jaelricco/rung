@@ -70,20 +70,59 @@ long forms you fill in once at a desk, and they would be worse on a phone.
   passes it through, so joining the two is a UI decision that has not been
   made rather than a missing endpoint.
 
+## CI
+
+`.github/workflows/ios.yml` builds this on the Mac registered as a runner for
+the repository, on every change under `ios/`. It runs the RungKit tests
+first, on their own, so a failure reads as "the contract moved" rather than
+being buried in xcodebuild output — then generates the project and compiles
+the app unsigned.
+
+It needs two things installed on that machine:
+
+```bash
+brew install xcodegen
+xcode-select -p          # a full Xcode, not just the command line tools
+```
+
+The job targets `[self-hosted, macOS]`. Those labels are assigned by GitHub
+to every self-hosted runner, so no custom label has to be kept in sync. It
+refuses to run for pull requests from forks: a self-hosted runner is a real
+machine with a real keychain, and fork code has no business on it.
+
 ## Getting it to TestFlight
 
-Everything below needs a Mac and the Apple Developer account, so none of it
-was done here.
+The upload is the second job in the same workflow, run by hand:
+**Actions ▸ iOS ▸ Run workflow**, with *Archive and upload to TestFlight*
+ticked. It skips with a notice until these four repository secrets exist,
+the same way the deploy job skips without `DEPLOY_HOST`:
 
-1. **Developer Program** — the bundle ID `fit.rung.app` has to be registered
-   under your team, or changed in `project.yml` to one that is.
+| Secret | Where it comes from |
+| --- | --- |
+| `APPLE_TEAM_ID` | Apple Developer ▸ Membership — ten characters |
+| `APPSTORE_KEY_ID` | App Store Connect ▸ Users and Access ▸ Integrations ▸ App Store Connect API, the key's ID |
+| `APPSTORE_ISSUER_ID` | the same page, above the key list — one per account |
+| `APPSTORE_PRIVATE_KEY` | the `.p8` that page downloads **once**, pasted whole, `BEGIN`/`END` lines included |
+
+Give the API key the **App Manager** role; Developer cannot upload builds.
+
+The build number comes from the workflow run number, so it rises on its own
+and nothing has to be committed or remembered — App Store Connect rejects a
+build whose number it has seen before.
+
+The steps below still have to be done by hand, once, before the first
+upload can succeed.
+
+1. **Developer Program** — register the bundle ID `fit.rung.app` under your
+   team, or change it in `project.yml` to one that is.
 2. **App Store Connect** — create the app record: name, primary language,
    bundle ID, SKU.
-3. **Signing** — Xcode's automatic signing is enough for TestFlight. The
-   first archive will create the distribution certificate and provisioning
-   profile.
-4. **Archive** — `Product ▸ Archive` with the scheme on *Any iOS Device*,
-   then *Distribute App ▸ TestFlight & App Store*.
+3. **Signing** — the workflow archives with `-allowProvisioningUpdates`, so
+   the first run creates the distribution certificate and profile itself.
+   That needs the Mac to be signed into the Apple ID once, in Xcode ▸
+   Settings ▸ Accounts.
+4. **Archive and upload** — the workflow, or `Product ▸ Archive` in Xcode if
+   you would rather watch it the first time.
 5. **Export compliance** — the app makes HTTPS calls and nothing else, so
    the answer is the standard exemption. Setting
    `ITSAppUsesNonExemptEncryption = NO` in the Info.plist stops it being
@@ -95,8 +134,8 @@ was done here.
    and App Store Connect will not let the build out to external testers
    until it is.
 
-Steps 1 to 4 are roughly an hour once the code compiles. Step 7 is the one
-that stalls submissions, so it is worth filling in first.
+Steps 1 to 3 are roughly an hour. Step 7 is the one that stalls
+submissions, so it is worth filling in first.
 
 ## A note on the API
 
